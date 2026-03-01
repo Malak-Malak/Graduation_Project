@@ -1,0 +1,6 @@
+@GP_BackEnd_HostAddress = http://localhost:5197
+
+GET {{GP_BackEnd_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

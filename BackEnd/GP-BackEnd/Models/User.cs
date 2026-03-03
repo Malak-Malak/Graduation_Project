@@ -1,7 +1,6 @@
 
 using System.ComponentModel.DataAnnotations;
-
-namespace GPMS.Domain.Entities
+namespace GP_BackEnd.Models
 {
     /// Represents any system user (Admin, Student, Supervisor).
 

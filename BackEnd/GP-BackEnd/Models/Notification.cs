@@ -1,9 +1,7 @@
-
-using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace GPMS.Domain.Entities
+namespace GP_BackEnd.Models
 {
 
     /// Represents system notifications for users.

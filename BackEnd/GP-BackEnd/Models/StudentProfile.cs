@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace GPMS.Domain.Entities
+namespace GP_BackEnd.Models
 {
 
     /// Stores additional academic information for students only.
@@ -10,9 +10,6 @@ namespace GPMS.Domain.Entities
     {
         [Key]
         public int Id { get; set; }
-
-        /// Foreign Key linking to Users table.
-        [ForeignKey("User")]
         public int UserId { get; set; }
 
         public string FullName { get; set; }

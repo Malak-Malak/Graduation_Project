@@ -1,8 +1,7 @@
 
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
-namespace GPMS.Domain.Entities
+namespace GP_BackEnd.Models
 {
 
     /// Represents files uploaded to a task.
@@ -10,18 +9,11 @@ namespace GPMS.Domain.Entities
     {
         [Key]
         public int Id { get; set; }
-
         public string FilePath { get; set; }
-
         public DateTime UploadedAt { get; set; }
-
-        [ForeignKey("Task")]
-        public int TaskId { get; set; }
-
-        [ForeignKey("User")]
+        public int TaskItemId { get; set; }       
         public int UserId { get; set; }
-
-        public TaskItem Task { get; set; }
+        public TaskItem TaskItem { get; set; }  
         public User User { get; set; }
     }
 }

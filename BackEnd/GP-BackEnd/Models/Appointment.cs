@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace GPMS.Domain.Entities
+namespace GP_BackEnd.Models
 {
 
     /// Represents a meeting appointment between team and supervisor.

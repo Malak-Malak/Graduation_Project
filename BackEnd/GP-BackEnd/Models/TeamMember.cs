@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace GPMS.Domain.Entities
+namespace GP_BackEnd.Models
 {
     /// Many-to-Many relationship between Teams and Students.
 

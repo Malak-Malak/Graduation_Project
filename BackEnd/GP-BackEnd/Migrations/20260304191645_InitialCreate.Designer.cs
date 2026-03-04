@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GP_BackEnd.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260303141036_InitialCreate")]
+    [Migration("20260304191645_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -36,18 +36,67 @@ namespace GP_BackEnd.Migrations
                     b.Property<DateTime>("DateTime")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Link")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("SupervisorId")
+                        .HasColumnType("int");
 
                     b.Property<int>("TeamId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("SupervisorId");
+
                     b.HasIndex("TeamId");
 
                     b.ToTable("Appointments");
+                });
+
+            modelBuilder.Entity("GP_BackEnd.Models.Feedback", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ParentFeedbackId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SenderId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("TaskItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TeamId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentFeedbackId");
+
+                    b.HasIndex("SenderId");
+
+                    b.HasIndex("TaskItemId");
+
+                    b.HasIndex("TeamId");
+
+                    b.ToTable("Feedbacks");
                 });
 
             modelBuilder.Entity("GP_BackEnd.Models.Notification", b =>
@@ -116,7 +165,7 @@ namespace GP_BackEnd.Migrations
                     b.ToTable("Projects");
                 });
 
-            modelBuilder.Entity("GP_BackEnd.Models.StudentProfile", b =>
+            modelBuilder.Entity("GP_BackEnd.Models.RegistrationRequest", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -124,29 +173,20 @@ namespace GP_BackEnd.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Department")
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("FullName")
+                    b.Property<string>("UniversityEmail")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsGraduate")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("TotalNumOfCreditCards")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
-                    b.ToTable("StudentProfiles");
+                    b.ToTable("RegistrationRequests");
                 });
 
             modelBuilder.Entity("GP_BackEnd.Models.TaskAttachment", b =>
@@ -177,41 +217,6 @@ namespace GP_BackEnd.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("TaskAttachments");
-                });
-
-            modelBuilder.Entity("GP_BackEnd.Models.TaskComment", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("ParentCommentId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("TaskItemId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ParentCommentId");
-
-                    b.HasIndex("TaskItemId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("TaskComments");
                 });
 
             modelBuilder.Entity("GP_BackEnd.Models.TaskItem", b =>
@@ -339,6 +344,46 @@ namespace GP_BackEnd.Migrations
                     b.ToTable("TeamProgressReports");
                 });
 
+            modelBuilder.Entity("GP_BackEnd.Models.UniversityRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Department")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsGraduate")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Password")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UniversityEmail")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("UniversityRecords");
+                });
+
             modelBuilder.Entity("GP_BackEnd.Models.User", b =>
                 {
                     b.Property<int>("Id")
@@ -371,13 +416,91 @@ namespace GP_BackEnd.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("GP_BackEnd.Models.UserProfile", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Department")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsGraduate")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("TotalNumOfCreditCards")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("UserProfiles");
+                });
+
             modelBuilder.Entity("GP_BackEnd.Models.Appointment", b =>
                 {
+                    b.HasOne("GP_BackEnd.Models.User", "Supervisor")
+                        .WithMany()
+                        .HasForeignKey("SupervisorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("GP_BackEnd.Models.Team", "Team")
                         .WithMany("Appointments")
                         .HasForeignKey("TeamId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Supervisor");
+
+                    b.Navigation("Team");
+                });
+
+            modelBuilder.Entity("GP_BackEnd.Models.Feedback", b =>
+                {
+                    b.HasOne("GP_BackEnd.Models.Feedback", "ParentFeedback")
+                        .WithMany("Replies")
+                        .HasForeignKey("ParentFeedbackId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("GP_BackEnd.Models.User", "Sender")
+                        .WithMany("Feedbacks")
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GP_BackEnd.Models.TaskItem", "TaskItem")
+                        .WithMany("Feedbacks")
+                        .HasForeignKey("TaskItemId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("GP_BackEnd.Models.Team", "Team")
+                        .WithMany("Feedbacks")
+                        .HasForeignKey("TeamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ParentFeedback");
+
+                    b.Navigation("Sender");
+
+                    b.Navigation("TaskItem");
 
                     b.Navigation("Team");
                 });
@@ -404,17 +527,6 @@ namespace GP_BackEnd.Migrations
                     b.Navigation("Supervisor");
                 });
 
-            modelBuilder.Entity("GP_BackEnd.Models.StudentProfile", b =>
-                {
-                    b.HasOne("GP_BackEnd.Models.User", "User")
-                        .WithOne("StudentProfile")
-                        .HasForeignKey("GP_BackEnd.Models.StudentProfile", "UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("GP_BackEnd.Models.TaskAttachment", b =>
                 {
                     b.HasOne("GP_BackEnd.Models.TaskItem", "TaskItem")
@@ -428,32 +540,6 @@ namespace GP_BackEnd.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.Navigation("TaskItem");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("GP_BackEnd.Models.TaskComment", b =>
-                {
-                    b.HasOne("GP_BackEnd.Models.TaskComment", "ParentComment")
-                        .WithMany("Replies")
-                        .HasForeignKey("ParentCommentId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("GP_BackEnd.Models.TaskItem", "TaskItem")
-                        .WithMany("Comments")
-                        .HasForeignKey("TaskItemId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("GP_BackEnd.Models.User", "User")
-                        .WithMany("TaskComments")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("ParentComment");
 
                     b.Navigation("TaskItem");
 
@@ -530,6 +616,22 @@ namespace GP_BackEnd.Migrations
                     b.Navigation("Team");
                 });
 
+            modelBuilder.Entity("GP_BackEnd.Models.UserProfile", b =>
+                {
+                    b.HasOne("GP_BackEnd.Models.User", "User")
+                        .WithOne("UserProfile")
+                        .HasForeignKey("GP_BackEnd.Models.UserProfile", "UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("GP_BackEnd.Models.Feedback", b =>
+                {
+                    b.Navigation("Replies");
+                });
+
             modelBuilder.Entity("GP_BackEnd.Models.Project", b =>
                 {
                     b.Navigation("ProgressReports");
@@ -539,21 +641,18 @@ namespace GP_BackEnd.Migrations
                     b.Navigation("Teams");
                 });
 
-            modelBuilder.Entity("GP_BackEnd.Models.TaskComment", b =>
-                {
-                    b.Navigation("Replies");
-                });
-
             modelBuilder.Entity("GP_BackEnd.Models.TaskItem", b =>
                 {
                     b.Navigation("Attachments");
 
-                    b.Navigation("Comments");
+                    b.Navigation("Feedbacks");
                 });
 
             modelBuilder.Entity("GP_BackEnd.Models.Team", b =>
                 {
                     b.Navigation("Appointments");
+
+                    b.Navigation("Feedbacks");
 
                     b.Navigation("ProgressReports");
 
@@ -564,18 +663,18 @@ namespace GP_BackEnd.Migrations
 
             modelBuilder.Entity("GP_BackEnd.Models.User", b =>
                 {
-                    b.Navigation("Notifications");
+                    b.Navigation("Feedbacks");
 
-                    b.Navigation("StudentProfile")
-                        .IsRequired();
+                    b.Navigation("Notifications");
 
                     b.Navigation("SupervisedTeams");
 
                     b.Navigation("TaskAttachments");
 
-                    b.Navigation("TaskComments");
-
                     b.Navigation("TeamMembers");
+
+                    b.Navigation("UserProfile")
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

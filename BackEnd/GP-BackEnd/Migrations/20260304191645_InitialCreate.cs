@@ -12,6 +12,40 @@ namespace GP_BackEnd.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
+                name: "RegistrationRequests",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    UniversityEmail = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    RequestedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RegistrationRequests", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "UniversityRecords",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    UniversityEmail = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Username = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Password = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    FullName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Role = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Department = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    IsGraduate = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UniversityRecords", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Users",
                 columns: table => new
                 {
@@ -75,12 +109,13 @@ namespace GP_BackEnd.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "StudentProfiles",
+                name: "UserProfiles",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     UserId = table.Column<int>(type: "int", nullable: false),
+                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     FullName = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Department = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     TotalNumOfCreditCards = table.Column<int>(type: "int", nullable: false),
@@ -88,9 +123,9 @@ namespace GP_BackEnd.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_StudentProfiles", x => x.Id);
+                    table.PrimaryKey("PK_UserProfiles", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_StudentProfiles_Users_UserId",
+                        name: "FK_UserProfiles_Users_UserId",
                         column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "Id",
@@ -131,7 +166,9 @@ namespace GP_BackEnd.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     DateTime = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    TeamId = table.Column<int>(type: "int", nullable: false)
+                    Link = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    TeamId = table.Column<int>(type: "int", nullable: false),
+                    SupervisorId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -142,6 +179,12 @@ namespace GP_BackEnd.Migrations
                         principalTable: "Teams",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Appointments_Users_SupervisorId",
+                        column: x => x.SupervisorId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -231,6 +274,48 @@ namespace GP_BackEnd.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Feedbacks",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Content = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    SenderId = table.Column<int>(type: "int", nullable: false),
+                    TeamId = table.Column<int>(type: "int", nullable: false),
+                    TaskItemId = table.Column<int>(type: "int", nullable: true),
+                    ParentFeedbackId = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Feedbacks", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Feedbacks_Feedbacks_ParentFeedbackId",
+                        column: x => x.ParentFeedbackId,
+                        principalTable: "Feedbacks",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Feedbacks_TaskItems_TaskItemId",
+                        column: x => x.TaskItemId,
+                        principalTable: "TaskItems",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Feedbacks_Teams_TeamId",
+                        column: x => x.TeamId,
+                        principalTable: "Teams",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Feedbacks_Users_SenderId",
+                        column: x => x.SenderId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "TaskAttachments",
                 columns: table => new
                 {
@@ -258,44 +343,34 @@ namespace GP_BackEnd.Migrations
                         onDelete: ReferentialAction.Restrict);
                 });
 
-            migrationBuilder.CreateTable(
-                name: "TaskComments",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Content = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    TaskItemId = table.Column<int>(type: "int", nullable: false),
-                    UserId = table.Column<int>(type: "int", nullable: false),
-                    ParentCommentId = table.Column<int>(type: "int", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_TaskComments", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_TaskComments_TaskComments_ParentCommentId",
-                        column: x => x.ParentCommentId,
-                        principalTable: "TaskComments",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_TaskComments_TaskItems_TaskItemId",
-                        column: x => x.TaskItemId,
-                        principalTable: "TaskItems",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_TaskComments_Users_UserId",
-                        column: x => x.UserId,
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
+            migrationBuilder.CreateIndex(
+                name: "IX_Appointments_SupervisorId",
+                table: "Appointments",
+                column: "SupervisorId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Appointments_TeamId",
                 table: "Appointments",
+                column: "TeamId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Feedbacks_ParentFeedbackId",
+                table: "Feedbacks",
+                column: "ParentFeedbackId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Feedbacks_SenderId",
+                table: "Feedbacks",
+                column: "SenderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Feedbacks_TaskItemId",
+                table: "Feedbacks",
+                column: "TaskItemId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Feedbacks_TeamId",
+                table: "Feedbacks",
                 column: "TeamId");
 
             migrationBuilder.CreateIndex(
@@ -309,12 +384,6 @@ namespace GP_BackEnd.Migrations
                 column: "SupervisorId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_StudentProfiles_UserId",
-                table: "StudentProfiles",
-                column: "UserId",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
                 name: "IX_TaskAttachments_TaskItemId",
                 table: "TaskAttachments",
                 column: "TaskItemId");
@@ -322,21 +391,6 @@ namespace GP_BackEnd.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_TaskAttachments_UserId",
                 table: "TaskAttachments",
-                column: "UserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_TaskComments_ParentCommentId",
-                table: "TaskComments",
-                column: "ParentCommentId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_TaskComments_TaskItemId",
-                table: "TaskComments",
-                column: "TaskItemId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_TaskComments_UserId",
-                table: "TaskComments",
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
@@ -378,6 +432,12 @@ namespace GP_BackEnd.Migrations
                 name: "IX_Teams_SupervisorId",
                 table: "Teams",
                 column: "SupervisorId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserProfiles_UserId",
+                table: "UserProfiles",
+                column: "UserId",
+                unique: true);
         }
 
         /// <inheritdoc />
@@ -387,22 +447,28 @@ namespace GP_BackEnd.Migrations
                 name: "Appointments");
 
             migrationBuilder.DropTable(
+                name: "Feedbacks");
+
+            migrationBuilder.DropTable(
                 name: "Notifications");
 
             migrationBuilder.DropTable(
-                name: "StudentProfiles");
+                name: "RegistrationRequests");
 
             migrationBuilder.DropTable(
                 name: "TaskAttachments");
-
-            migrationBuilder.DropTable(
-                name: "TaskComments");
 
             migrationBuilder.DropTable(
                 name: "TeamMembers");
 
             migrationBuilder.DropTable(
                 name: "TeamProgressReports");
+
+            migrationBuilder.DropTable(
+                name: "UniversityRecords");
+
+            migrationBuilder.DropTable(
+                name: "UserProfiles");
 
             migrationBuilder.DropTable(
                 name: "TaskItems");

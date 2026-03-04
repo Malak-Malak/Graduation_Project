@@ -21,5 +21,6 @@ namespace GP_BackEnd.Models
         public int TeamId { get; set; }
         public int SupervisorId { get; set; }
         public Team Team { get; set; }
+        public User Supervisor { get; set; }
     }
 }

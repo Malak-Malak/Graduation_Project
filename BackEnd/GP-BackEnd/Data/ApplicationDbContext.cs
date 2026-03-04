@@ -15,12 +15,14 @@ namespace GP_BackEnd.Data
         public DbSet<Team> Teams { get; set; }
         public DbSet<TeamMember> TeamMembers { get; set; }
         public DbSet<TaskItem> TaskItems { get; set; }
-        public DbSet<TaskComment> TaskComments { get; set; }
         public DbSet<TaskAttachment> TaskAttachments { get; set; }
         public DbSet<Appointment> Appointments { get; set; }
         public DbSet<Notification> Notifications { get; set; }
-        public DbSet<UserProfile> StudentProfiles { get; set; }         
+        public DbSet<UserProfile> UserProfiles { get; set; }
         public DbSet<TeamProgressReport> TeamProgressReports { get; set; }
+        public DbSet<Feedback> Feedbacks { get; set; }
+        public DbSet<RegistrationRequest> RegistrationRequests { get; set; }
+        public DbSet<UniversityRecord> UniversityRecords { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -68,27 +70,6 @@ namespace GP_BackEnd.Data
                 .HasForeignKey(ti => ti.ProjectId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // TaskComment -> TaskItem
-            modelBuilder.Entity<TaskComment>()
-                .HasOne(tc => tc.TaskItem)
-                .WithMany(ti => ti.Comments)
-                .HasForeignKey(tc => tc.TaskItemId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            // TaskComment -> User
-            modelBuilder.Entity<TaskComment>()
-                .HasOne(tc => tc.User)
-                .WithMany(u => u.TaskComments)
-                .HasForeignKey(tc => tc.UserId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // TaskComment self-reference (replies)
-            modelBuilder.Entity<TaskComment>()
-                .HasOne(tc => tc.ParentComment)
-                .WithMany(tc => tc.Replies)
-                .HasForeignKey(tc => tc.ParentCommentId)
-                .OnDelete(DeleteBehavior.Restrict);
-
             // TaskAttachment -> TaskItem
             modelBuilder.Entity<TaskAttachment>()
                 .HasOne(ta => ta.TaskItem)
@@ -124,6 +105,13 @@ namespace GP_BackEnd.Data
                 .HasForeignKey(a => a.TeamId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // Appointment -> Supervisor (User)
+            modelBuilder.Entity<Appointment>()
+                .HasOne(a => a.Supervisor)
+                .WithMany()
+                .HasForeignKey(a => a.SupervisorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             // Notification -> User
             modelBuilder.Entity<Notification>()
                 .HasOne(n => n.User)
@@ -131,11 +119,39 @@ namespace GP_BackEnd.Data
                 .HasForeignKey(n => n.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // StudentProfile -> User
+            // UserProfile -> User (one-to-one)
             modelBuilder.Entity<UserProfile>()
                 .HasOne(sp => sp.User)
                 .WithOne(u => u.UserProfile)
                 .HasForeignKey<UserProfile>(sp => sp.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Feedback -> Sender (User)
+            modelBuilder.Entity<Feedback>()
+                .HasOne(f => f.Sender)
+                .WithMany(u => u.Feedbacks)
+                .HasForeignKey(f => f.SenderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Feedback -> Team
+            modelBuilder.Entity<Feedback>()
+                .HasOne(f => f.Team)
+                .WithMany(t => t.Feedbacks)
+                .HasForeignKey(f => f.TeamId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Feedback -> TaskItem (optional)
+            modelBuilder.Entity<Feedback>()
+                .HasOne(f => f.TaskItem)
+                .WithMany(ti => ti.Feedbacks)
+                .HasForeignKey(f => f.TaskItemId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Feedback self-reference (replies)
+            modelBuilder.Entity<Feedback>()
+                .HasOne(f => f.ParentFeedback)
+                .WithMany(f => f.Replies)
+                .HasForeignKey(f => f.ParentFeedbackId)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

@@ -24,8 +24,7 @@ namespace GP_BackEnd.Models
 
         public DateTime CreatedAt { get; set; }
 
-
-        public StudentProfile StudentProfile { get; set; }
+        public UserProfile UserProfile { get; set; }
         public ICollection<TeamMember> TeamMembers { get; set; }
         public ICollection<TaskComment> TaskComments { get; set; }
         public ICollection<TaskAttachment> TaskAttachments { get; set; }

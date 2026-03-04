@@ -16,10 +16,10 @@ namespace GP_BackEnd.Models
 
         /// Appointment status (Pending, Approved, Rejected).
         public string Status { get; set; }
-
+        public string Link { get; set; }
         [ForeignKey("Team")]
         public int TeamId { get; set; }
-
+        public int SupervisorId { get; set; }
         public Team Team { get; set; }
     }
 }

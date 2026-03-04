@@ -19,7 +19,7 @@ namespace GP_BackEnd.Data
         public DbSet<TaskAttachment> TaskAttachments { get; set; }
         public DbSet<Appointment> Appointments { get; set; }
         public DbSet<Notification> Notifications { get; set; }
-        public DbSet<StudentProfile> StudentProfiles { get; set; }
+        public DbSet<UserProfile> StudentProfiles { get; set; }         
         public DbSet<TeamProgressReport> TeamProgressReports { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -132,11 +132,11 @@ namespace GP_BackEnd.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
             // StudentProfile -> User
-            modelBuilder.Entity<StudentProfile>()
-    .HasOne(sp => sp.User)
-    .WithOne(u => u.StudentProfile)
-    .HasForeignKey<StudentProfile>(sp => sp.UserId)
-    .OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<UserProfile>()
+                .HasOne(sp => sp.User)
+                .WithOne(u => u.UserProfile)
+                .HasForeignKey<UserProfile>(sp => sp.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

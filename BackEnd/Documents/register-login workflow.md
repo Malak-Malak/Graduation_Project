@@ -2,19 +2,21 @@
 
 ###### 
 
-###### **1. User submits university email → RegistrationRequest created (Status: Pending)**
+###### **User goes to "Request Access" page and submits their university email**
 
-###### **2. System parses email → checks UniversityRecord table**
+###### **System checks the email against the university records table**
 
-######    **- If Supervisor → just check email exists in UniversityRecord**
+###### **If the user is a student, they must be a graduate (IsGraduate = true)**
 
-######    **- If Student → check email exists AND IsGraduate = true**
+###### **If the user is a supervisor, just being in the university records is enough**
 
-###### **3. Admin sees pending requests in dashboard**
+###### **If checks pass, a RegistrationRequest is created with status Pending**
 
-###### **4. Admin approves → System automatically creates User account**
+###### **User waits for admin approval**
 
-######    **using username \& password from UniversityRecord table**
+###### 
 
-###### **5. User can now login with university portal credentials**
+###### 
+
+###### 
 

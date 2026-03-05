@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "Meq/LrqmCh0=",
+  "dgSpecHash": "+ceDtFjgDlQ=",
   "success": true,
   "projectFilePath": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\GP-BackEnd.csproj",
   "expectedPackageFiles": [
@@ -49,6 +49,8 @@
     "C:\\Users\\X1 Zano\\.nuget\\packages\\microsoft.sqlserver.server\\1.0.0\\microsoft.sqlserver.server.1.0.0.nupkg.sha512",
     "C:\\Users\\X1 Zano\\.nuget\\packages\\microsoft.win32.systemevents\\6.0.0\\microsoft.win32.systemevents.6.0.0.nupkg.sha512",
     "C:\\Users\\X1 Zano\\.nuget\\packages\\mono.texttemplating\\3.0.0\\mono.texttemplating.3.0.0.nupkg.sha512",
+    "C:\\Users\\X1 Zano\\.nuget\\packages\\npgsql\\9.0.1\\npgsql.9.0.1.nupkg.sha512",
+    "C:\\Users\\X1 Zano\\.nuget\\packages\\npgsql.entityframeworkcore.postgresql\\9.0.1\\npgsql.entityframeworkcore.postgresql.9.0.1.nupkg.sha512",
     "C:\\Users\\X1 Zano\\.nuget\\packages\\swashbuckle.aspnetcore\\9.0.0\\swashbuckle.aspnetcore.9.0.0.nupkg.sha512",
     "C:\\Users\\X1 Zano\\.nuget\\packages\\swashbuckle.aspnetcore.swagger\\9.0.0\\swashbuckle.aspnetcore.swagger.9.0.0.nupkg.sha512",
     "C:\\Users\\X1 Zano\\.nuget\\packages\\swashbuckle.aspnetcore.swaggergen\\9.0.0\\swashbuckle.aspnetcore.swaggergen.9.0.0.nupkg.sha512",

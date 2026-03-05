@@ -157,3 +157,5 @@ C:\Users\X1 Zano\OneDrive\Desktop\Graduation_Project\BackEnd\GP-BackEnd\bin\Debu
 C:\Users\X1 Zano\OneDrive\Desktop\Graduation_Project\BackEnd\GP-BackEnd\obj\Debug\net9.0\staticwebassets.upToDateCheck.txt
 C:\Users\X1 Zano\OneDrive\Desktop\Graduation_Project\BackEnd\GP-BackEnd\bin\Debug\net9.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
 C:\Users\X1 Zano\OneDrive\Desktop\Graduation_Project\BackEnd\GP-BackEnd\bin\Debug\net9.0\BCrypt.Net-Next.dll
+C:\Users\X1 Zano\OneDrive\Desktop\Graduation_Project\BackEnd\GP-BackEnd\bin\Debug\net9.0\Npgsql.dll
+C:\Users\X1 Zano\OneDrive\Desktop\Graduation_Project\BackEnd\GP-BackEnd\bin\Debug\net9.0\Npgsql.EntityFrameworkCore.PostgreSQL.dll

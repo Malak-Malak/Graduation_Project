@@ -118,5 +118,83 @@
       }
     ],
     "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.TeamController",
+    "Method": "GetAvailableStudents",
+    "RelativePath": "api/Team/available-students",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.TeamController",
+    "Method": "CreateTeam",
+    "RelativePath": "api/Team/create",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "GP_BackEnd.DTOs.Team.CreateTeamDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.TeamController",
+    "Method": "LeaveTeam",
+    "RelativePath": "api/Team/leave",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.TeamController",
+    "Method": "GetMyTeam",
+    "RelativePath": "api/Team/my-team",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.TeamController",
+    "Method": "RespondToJoinRequest",
+    "RelativePath": "api/Team/respond-to-join-request",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "GP_BackEnd.DTOs.Team.RespondToJoinRequestDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.TeamController",
+    "Method": "SendJoinRequest",
+    "RelativePath": "api/Team/send-join-request",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "GP_BackEnd.DTOs.Team.SendJoinRequestDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
   }
 ]

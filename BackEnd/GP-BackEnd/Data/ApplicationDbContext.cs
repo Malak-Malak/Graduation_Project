@@ -23,6 +23,7 @@ namespace GP_BackEnd.Data
         public DbSet<Feedback> Feedbacks { get; set; }
         public DbSet<RegistrationRequest> RegistrationRequests { get; set; }
         public DbSet<UniversityRecord> UniversityRecords { get; set; }
+        public DbSet<TeamJoinRequest> TeamJoinRequests { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -40,6 +41,13 @@ namespace GP_BackEnd.Data
                 .HasOne(t => t.Supervisor)
                 .WithMany(u => u.SupervisedTeams)
                 .HasForeignKey(t => t.SupervisorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Team -> CreatedBy (User)
+            modelBuilder.Entity<Team>()
+                .HasOne(t => t.CreatedBy)
+                .WithMany()
+                .HasForeignKey(t => t.CreatedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             // TeamMember -> Team
@@ -152,6 +160,20 @@ namespace GP_BackEnd.Data
                 .HasOne(f => f.ParentFeedback)
                 .WithMany(f => f.Replies)
                 .HasForeignKey(f => f.ParentFeedbackId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // TeamJoinRequest -> Team
+            modelBuilder.Entity<TeamJoinRequest>()
+                .HasOne(jr => jr.Team)
+                .WithMany()
+                .HasForeignKey(jr => jr.TeamId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // TeamJoinRequest -> Student (User)
+            modelBuilder.Entity<TeamJoinRequest>()
+                .HasOne(jr => jr.Student)
+                .WithMany()
+                .HasForeignKey(jr => jr.StudentId)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

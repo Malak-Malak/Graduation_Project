@@ -77,6 +77,8 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<AdminService>();
+builder.Services.AddScoped<TeamService>();
+
 
 var app = builder.Build();
 

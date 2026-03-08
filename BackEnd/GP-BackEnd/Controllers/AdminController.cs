@@ -64,5 +64,22 @@ namespace GP_BackEnd.Controllers
             var requests = await _adminService.GetAllRequestsAsync();
             return Ok(requests);
         }
+        // GET: api/admin/university-records
+        [HttpGet("university-records")]
+        public async Task<IActionResult> GetAllUniversityRecords()
+        {
+            var records = await _adminService.GetAllUniversityRecordsAsync();
+            return Ok(records);
+        }
+
+        // GET: api/admin/university-records/{email}
+        [HttpGet("university-records/{email}")]
+        public async Task<IActionResult> GetUniversityRecordByEmail(string email)
+        {
+            var record = await _adminService.GetUniversityRecordByEmailAsync(email);
+            if (record == null)
+                return NotFound("University record not found.");
+            return Ok(record);
+        }
     }
 }

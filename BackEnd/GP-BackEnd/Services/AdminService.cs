@@ -118,5 +118,41 @@ namespace GP_BackEnd.Services
                 })
                 .ToListAsync();
         }
+        // Get all university records
+        public async Task<List<UniversityRecordDto>> GetAllUniversityRecordsAsync()
+        {
+            return await _context.UniversityRecords
+                .Select(r => new UniversityRecordDto
+                {
+                    Id = r.Id,
+                    UniversityEmail = r.UniversityEmail,
+                    Username = r.Username,
+                    FullName = r.FullName,
+                    Role = r.Role,
+                    Department = r.Department,
+                    IsGraduate = r.IsGraduate
+                })
+                .ToListAsync();
+        }
+
+        // Get specific university record by email
+        public async Task<UniversityRecordDto?> GetUniversityRecordByEmailAsync(string email)
+        {
+            var record = await _context.UniversityRecords
+                .FirstOrDefaultAsync(r => r.UniversityEmail == email);
+
+            if (record == null) return null;
+
+            return new UniversityRecordDto
+            {
+                Id = record.Id,
+                UniversityEmail = record.UniversityEmail,
+                Username = record.Username,
+                FullName = record.FullName,
+                Role = record.Role,
+                Department = record.Department,
+                IsGraduate = record.IsGraduate
+            };
+        }
     }
 }

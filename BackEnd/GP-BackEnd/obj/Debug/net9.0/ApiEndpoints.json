@@ -53,6 +53,32 @@
   },
   {
     "ContainingType": "GP_BackEnd.Controllers.AdminController",
+    "Method": "GetAllUniversityRecords",
+    "RelativePath": "api/Admin/university-records",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.AdminController",
+    "Method": "GetUniversityRecordByEmail",
+    "RelativePath": "api/Admin/university-records/{email}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "email",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.AdminController",
     "Method": "GetAllUsers",
     "RelativePath": "api/Admin/users",
     "HttpMethod": "GET",

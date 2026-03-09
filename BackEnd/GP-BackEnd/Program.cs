@@ -42,19 +42,23 @@ builder.Services.AddSwaggerGen(options =>
 //    options.UseSqlServer(
 //        builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("DefaultConnection")));
 
-if (builder.Environment.IsDevelopment())
-{
-    builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseSqlServer(
-            builder.Configuration.GetConnectionString("DefaultConnection")));
-}
-else
-{
-    builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseNpgsql(
-            builder.Configuration.GetConnectionString("DefaultConnection")));
-}
+
+//if (builder.Environment.IsDevelopment())
+//{
+//    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+//        options.UseSqlServer(
+//            builder.Configuration.GetConnectionString("DefaultConnection")));
+//}
+//else
+//{
+//    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+//        options.UseNpgsql(
+//            builder.Configuration.GetConnectionString("DefaultConnection")));
+//}
 
 
 // JWT Settings

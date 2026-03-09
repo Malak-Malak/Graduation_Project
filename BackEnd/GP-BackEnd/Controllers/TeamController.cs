@@ -69,7 +69,7 @@ namespace GP_BackEnd.Controllers
         }
 
         // POST api/team/send-join-request
-        [HttpPost("send-join-request")]
+        [HttpPost("send-join-request-to-a-team")]
         public async Task<IActionResult> SendJoinRequest([FromBody] SendJoinRequestDto dto)
         {
             var senderId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
@@ -82,7 +82,7 @@ namespace GP_BackEnd.Controllers
         }
 
         // POST api/team/request-to-join
-        [HttpPost("request-to-join")]
+        [HttpPost("invite-a-student-to-join")]
         public async Task<IActionResult> RequestToJoinTeam([FromBody] JoinTeamRequestDto dto)
         {
             var studentId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));

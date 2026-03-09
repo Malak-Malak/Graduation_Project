@@ -16,6 +16,8 @@ namespace GP_BackEnd.Models
 
         [ForeignKey("User")]
         public int UserId { get; set; }
+        public bool HasRequestedLeave { get; set; } = false;
+        public string LeaveStatus { get; set; } = "None";
 
         public Team Team { get; set; }
         public User User { get; set; }

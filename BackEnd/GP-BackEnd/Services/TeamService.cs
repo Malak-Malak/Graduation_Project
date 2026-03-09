@@ -17,13 +17,11 @@ namespace GP_BackEnd.Services
         // Create a team
         public async Task<bool> CreateTeamAsync(int studentId, CreateTeamDto dto)
         {
-            // Check if student is already in a team
             var existingMember = await _context.TeamMembers
                 .AnyAsync(tm => tm.UserId == studentId);
 
             if (existingMember) return false;
 
-            // Check if student already created a pending team
             var existingTeam = await _context.Teams
                 .AnyAsync(t => t.CreatedByUserId == studentId && t.Status == "Pending");
 
@@ -40,7 +38,6 @@ namespace GP_BackEnd.Services
             _context.Teams.Add(team);
             await _context.SaveChangesAsync();
 
-            // Add creator as first team member
             var teamMember = new TeamMember
             {
                 TeamId = team.Id,
@@ -49,16 +46,14 @@ namespace GP_BackEnd.Services
 
             _context.TeamMembers.Add(teamMember);
 
-            // Notify supervisor
-            var notification = new Notification
+            _context.Notifications.Add(new Notification
             {
                 Title = "New Team Request",
                 Message = $"A student has requested you to supervise their team: {dto.ProjectTitle}",
                 CreatedAt = DateTime.UtcNow,
                 UserId = dto.SupervisorId
-            };
+            });
 
-            _context.Notifications.Add(notification);
             await _context.SaveChangesAsync();
             return true;
         }
@@ -81,10 +76,9 @@ namespace GP_BackEnd.Services
                 .ToListAsync();
         }
 
-        // Send join request to a student
+        // Send join request to a student (Invitation from team)
         public async Task<bool> SendJoinRequestAsync(int senderId, SendJoinRequestDto dto)
         {
-            // Check if sender is in a team
             var senderMember = await _context.TeamMembers
                 .FirstOrDefaultAsync(tm => tm.UserId == senderId);
 
@@ -95,19 +89,16 @@ namespace GP_BackEnd.Services
 
             if (team == null) return false;
 
-            // Check team is not full
             var memberCount = await _context.TeamMembers
                 .CountAsync(tm => tm.TeamId == team.Id);
 
             if (memberCount >= 4) return false;
 
-            // Check if student already has a pending request from this team
             var existingRequest = await _context.TeamJoinRequests
                 .AnyAsync(jr => jr.TeamId == team.Id && jr.StudentId == dto.StudentId && jr.Status == "Pending");
 
             if (existingRequest) return false;
 
-            // Check if student is already in a team
             var studentInTeam = await _context.TeamMembers
                 .AnyAsync(tm => tm.UserId == dto.StudentId);
 
@@ -118,30 +109,29 @@ namespace GP_BackEnd.Services
                 TeamId = team.Id,
                 StudentId = dto.StudentId,
                 Status = "Pending",
+                RequestType = "Invitation",  // fixed
                 SentAt = DateTime.UtcNow
             };
 
             _context.TeamJoinRequests.Add(joinRequest);
 
-            // Notify student
-            var notification = new Notification
+            _context.Notifications.Add(new Notification
             {
                 Title = "Team Join Request",
                 Message = $"You have been invited to join team: {team.ProjectTitle}",
                 CreatedAt = DateTime.UtcNow,
                 UserId = dto.StudentId
-            };
+            });
 
-            _context.Notifications.Add(notification);
             await _context.SaveChangesAsync();
             return true;
         }
 
-        // Student responds to join request
+        // Student responds to invitation from team
         public async Task<bool> RespondToJoinRequestAsync(int studentId, RespondToJoinRequestDto dto)
         {
             var joinRequest = await _context.TeamJoinRequests
-                .FirstOrDefaultAsync(jr => jr.Id == dto.JoinRequestId && jr.StudentId == studentId);
+                .FirstOrDefaultAsync(jr => jr.Id == dto.JoinRequestId && jr.StudentId == studentId && jr.RequestType == "Invitation");
 
             if (joinRequest == null) return false;
 
@@ -149,13 +139,11 @@ namespace GP_BackEnd.Services
             {
                 joinRequest.Status = "Accepted";
 
-                var teamMember = new TeamMember
+                _context.TeamMembers.Add(new TeamMember
                 {
                     TeamId = joinRequest.TeamId,
                     UserId = studentId
-                };
-
-                _context.TeamMembers.Add(teamMember);
+                });
             }
             else
             {
@@ -201,30 +189,208 @@ namespace GP_BackEnd.Services
             };
         }
 
-        // Leave team
-        public async Task<bool> LeaveTeamAsync(int studentId)
+        // Student requests to leave team
+        public async Task<bool> RequestLeaveTeamAsync(int studentId)
         {
             var teamMember = await _context.TeamMembers
                 .FirstOrDefaultAsync(tm => tm.UserId == studentId);
 
             if (teamMember == null) return false;
+            if (teamMember.HasRequestedLeave) return false;
+
+            teamMember.HasRequestedLeave = true;
+            teamMember.LeaveStatus = "Pending";
 
             var team = await _context.Teams
                 .FirstOrDefaultAsync(t => t.Id == teamMember.TeamId);
 
-            _context.TeamMembers.Remove(teamMember);
-
-            // Check if team has no members left → disband
-            var remainingMembers = await _context.TeamMembers
-                .CountAsync(tm => tm.TeamId == teamMember.TeamId && tm.UserId != studentId);
-
-            if (remainingMembers == 0)
+            _context.Notifications.Add(new Notification
             {
-                _context.Teams.Remove(team);
+                Title = "Leave Request",
+                Message = "A student has requested to leave your team.",
+                CreatedAt = DateTime.UtcNow,
+                UserId = team.SupervisorId
+            });
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        // Supervisor approves or rejects leave request
+        public async Task<bool> RespondToLeaveRequestAsync(int supervisorId, int teamMemberId, bool isApproved)
+        {
+            var teamMember = await _context.TeamMembers
+                .Include(tm => tm.Team)
+                .FirstOrDefaultAsync(tm => tm.Id == teamMemberId && tm.Team.SupervisorId == supervisorId);
+
+            if (teamMember == null) return false;
+            if (!teamMember.HasRequestedLeave) return false;
+
+            if (isApproved)
+            {
+                _context.Notifications.Add(new Notification
+                {
+                    Title = "Leave Request Approved",
+                    Message = "Your request to leave the team has been approved.",
+                    CreatedAt = DateTime.UtcNow,
+                    UserId = teamMember.UserId
+                });
+
+                var teamId = teamMember.TeamId;
+                _context.TeamMembers.Remove(teamMember);
+
+                var remainingMembers = await _context.TeamMembers
+                    .CountAsync(tm => tm.TeamId == teamId && tm.Id != teamMemberId);
+
+                if (remainingMembers == 0)
+                {
+                    var team = await _context.Teams.FindAsync(teamId);
+                    if (team != null) _context.Teams.Remove(team);
+                }
+            }
+            else
+            {
+                teamMember.HasRequestedLeave = false;
+                teamMember.LeaveStatus = "Rejected";
+
+                _context.Notifications.Add(new Notification
+                {
+                    Title = "Leave Request Rejected",
+                    Message = "Your request to leave the team has been rejected.",
+                    CreatedAt = DateTime.UtcNow,
+                    UserId = teamMember.UserId
+                });
             }
 
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        // Get all available teams
+        public async Task<List<AvailableTeamDto>> GetAvailableTeamsAsync()
+        {
+            return await _context.Teams
+                .Where(t => t.Status == "Pending" || t.Status == "Active")
+                .Select(t => new AvailableTeamDto
+                {
+                    Id = t.Id,
+                    ProjectTitle = t.ProjectTitle,
+                    SupervisorName = t.Supervisor.UserProfile != null
+                        ? t.Supervisor.UserProfile.FullName
+                        : t.Supervisor.Username,
+                    MembersCount = t.TeamMembers.Count,
+                    RemainingSlots = 4 - t.TeamMembers.Count
+                })
+                .Where(t => t.RemainingSlots > 0)
+                .ToListAsync();
+        }
+
+        // Student requests to join a team
+        public async Task<bool> RequestToJoinTeamAsync(int studentId, JoinTeamRequestDto dto)
+        {
+            var existingMember = await _context.TeamMembers
+                .AnyAsync(tm => tm.UserId == studentId);
+
+            if (existingMember) return false;
+
+            var existingRequest = await _context.TeamJoinRequests
+                .AnyAsync(jr => jr.TeamId == dto.TeamId && jr.StudentId == studentId && jr.Status == "Pending");
+
+            if (existingRequest) return false;
+
+            var memberCount = await _context.TeamMembers
+                .CountAsync(tm => tm.TeamId == dto.TeamId);
+
+            if (memberCount >= 4) return false;
+
+            _context.TeamJoinRequests.Add(new TeamJoinRequest
+            {
+                TeamId = dto.TeamId,
+                StudentId = studentId,
+                Status = "Pending",
+                RequestType = "Request",
+                SentAt = DateTime.UtcNow
+            });
+
+            var teamMembers = await _context.TeamMembers
+                .Where(tm => tm.TeamId == dto.TeamId)
+                .ToListAsync();
+
+            foreach (var member in teamMembers)
+            {
+                _context.Notifications.Add(new Notification
+                {
+                    Title = "New Join Request",
+                    Message = "A student has requested to join your team.",
+                    CreatedAt = DateTime.UtcNow,
+                    UserId = member.UserId
+                });
+            }
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        // Team member responds to student's join request
+        public async Task<bool> RespondToStudentRequestAsync(int memberId, RespondToJoinRequestDto dto)
+        {
+            var joinRequest = await _context.TeamJoinRequests
+                .FirstOrDefaultAsync(jr => jr.Id == dto.JoinRequestId && jr.RequestType == "Request");
+
+            if (joinRequest == null) return false;
+
+            var isMember = await _context.TeamMembers
+                .AnyAsync(tm => tm.TeamId == joinRequest.TeamId && tm.UserId == memberId);
+
+            if (!isMember) return false;
+
+            if (dto.IsAccepted)
+            {
+                joinRequest.Status = "Accepted";
+
+                _context.TeamMembers.Add(new TeamMember
+                {
+                    TeamId = joinRequest.TeamId,
+                    UserId = joinRequest.StudentId
+                });
+
+                _context.Notifications.Add(new Notification
+                {
+                    Title = "Join Request Accepted",
+                    Message = "Your request to join the team has been accepted.",
+                    CreatedAt = DateTime.UtcNow,
+                    UserId = joinRequest.StudentId
+                });
+            }
+            else
+            {
+                joinRequest.Status = "Rejected";
+
+                _context.Notifications.Add(new Notification
+                {
+                    Title = "Join Request Rejected",
+                    Message = "Your request to join the team has been rejected.",
+                    CreatedAt = DateTime.UtcNow,
+                    UserId = joinRequest.StudentId
+                });
+            }
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        // Get all supervisors
+        public async Task<List<TeamMemberDto>> GetAllSupervisorsAsync()
+        {
+            return await _context.Users
+                .Where(u => u.Role == "Supervisor")
+                .Select(u => new TeamMemberDto
+                {
+                    UserId = u.Id,
+                    Username = u.Username,
+                    FullName = u.UserProfile != null ? u.UserProfile.FullName : ""
+                })
+                .ToListAsync();
         }
     }
 }

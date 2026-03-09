@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -36,8 +37,12 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// DB
-// DB - use PostgreSQL on Production (Railway), SQL Server locally
+////TEMPORARY - SQL Server only for migration generation
+//builder.Services.AddDbContext<ApplicationDbContext>(options =>
+//    options.UseSqlServer(
+//        builder.Configuration.GetConnectionString("DefaultConnection")));
+
+
 if (builder.Environment.IsDevelopment())
 {
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -50,6 +55,8 @@ else
         options.UseNpgsql(
             builder.Configuration.GetConnectionString("DefaultConnection")));
 }
+
+
 // JWT Settings
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
@@ -79,9 +86,8 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<AdminService>();
 builder.Services.AddScoped<TeamService>();
 
-
 var app = builder.Build();
-
+// Auto migrate on Railway
 if (!app.Environment.IsDevelopment())
 {
     using (var scope = app.Services.CreateScope())
@@ -91,6 +97,7 @@ if (!app.Environment.IsDevelopment())
     }
 }
 
+// Seed admin account
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -107,11 +114,8 @@ using (var scope = app.Services.CreateScope())
         context.SaveChanges();
     }
 }
-
 app.UseSwagger();
 app.UseSwaggerUI();
-
-//app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

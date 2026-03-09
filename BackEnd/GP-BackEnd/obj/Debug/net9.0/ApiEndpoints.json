@@ -131,6 +131,16 @@
   },
   {
     "ContainingType": "GP_BackEnd.Controllers.TeamController",
+    "Method": "GetAvailableTeams",
+    "RelativePath": "api/Team/available-teams",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.TeamController",
     "Method": "CreateTeam",
     "RelativePath": "api/Team/create",
     "HttpMethod": "POST",
@@ -147,16 +157,6 @@
   },
   {
     "ContainingType": "GP_BackEnd.Controllers.TeamController",
-    "Method": "LeaveTeam",
-    "RelativePath": "api/Team/leave",
-    "HttpMethod": "POST",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "GP_BackEnd.Controllers.TeamController",
     "Method": "GetMyTeam",
     "RelativePath": "api/Team/my-team",
     "HttpMethod": "GET",
@@ -167,8 +167,66 @@
   },
   {
     "ContainingType": "GP_BackEnd.Controllers.TeamController",
+    "Method": "RequestLeave",
+    "RelativePath": "api/Team/request-leave",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.TeamController",
+    "Method": "RequestToJoinTeam",
+    "RelativePath": "api/Team/request-to-join",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "GP_BackEnd.DTOs.Team.JoinTeamRequestDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.TeamController",
     "Method": "RespondToJoinRequest",
     "RelativePath": "api/Team/respond-to-join-request",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "GP_BackEnd.DTOs.Team.RespondToJoinRequestDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.TeamController",
+    "Method": "RespondToLeaveRequest",
+    "RelativePath": "api/Team/respond-to-leave-request",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "GP_BackEnd.DTOs.Team.RespondToLeaveRequestDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.TeamController",
+    "Method": "RespondToStudentRequest",
+    "RelativePath": "api/Team/respond-to-student-request",
     "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,
@@ -195,6 +253,16 @@
         "IsRequired": true
       }
     ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.TeamController",
+    "Method": "GetAllSupervisors",
+    "RelativePath": "api/Team/supervisors",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
     "ReturnTypes": []
   }
 ]

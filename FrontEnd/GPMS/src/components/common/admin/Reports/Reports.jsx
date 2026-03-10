@@ -1,5 +1,5 @@
 import {
-    Box, Paper, Typography, Stack, Button, Grid, MenuItem, Select, FormControl, InputLabel,
+    Box, Paper, Typography, Stack, Button,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import {
@@ -32,18 +32,15 @@ const activityData = [
     { week: "W6", students: 340, supervisors: 85 },
 ];
 
-function ChartCard({ title, subtitle, children, action }) {
+function ChartCard({ title, subtitle, children }) {
     const theme = useTheme();
     const t = theme.palette.custom;
     return (
         <Paper elevation={1} sx={{ p: 2.5, borderRadius: 3, bgcolor: theme.palette.background.paper }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={2.5}>
-                <Box>
-                    <Typography variant="h4" sx={{ color: t.textPrimary }}>{title}</Typography>
-                    {subtitle && <Typography sx={{ fontSize: "0.78rem", color: t.textTertiary, mt: 0.3 }}>{subtitle}</Typography>}
-                </Box>
-                {action}
-            </Stack>
+            <Box mb={2.5}>
+                <Typography variant="h4" sx={{ color: t.textPrimary }}>{title}</Typography>
+                {subtitle && <Typography sx={{ fontSize: "0.78rem", color: t.textTertiary, mt: 0.3 }}>{subtitle}</Typography>}
+            </Box>
             {children}
         </Paper>
     );
@@ -62,192 +59,61 @@ export default function Reports() {
     };
 
     return (
-        // <Box sx={{ maxWidth: "100%" }}>
-        //     <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={3}>
-        //         <Box>
-        //             <Typography variant="h2" sx={{ color: t.textPrimary, mb: 0.5 }}>Reports & Analytics</Typography>
-        //             <Typography sx={{ color: t.textSecondary, fontSize: "0.9rem" }}>Spring 2025 semester overview</Typography>
-        //         </Box>
-        //         <Button variant="outlined" startIcon={<DownloadOutlinedIcon />}
-        //             sx={{ borderColor: t.borderLight, color: t.textSecondary, "&:hover": { borderColor: t.accentPrimary, color: t.accentPrimary } }}>
-        //             Export PDF
-        //         </Button>
-        //     </Stack>
-
-        //     <Grid container spacing={3} >
-        //         {/* Submissions over time */}
-        //         <Grid item xs={12} md={4} >
-        //             <ChartCard title="File Submissions & Meetings" subtitle="Monthly activity — Spring 2025">
-        //                 <ResponsiveContainer width="100%" height={240}>
-        //                     <BarChart data={submissionsData} barSize={14} barCategoryGap="30%">
-        //                         <CartesianGrid strokeDasharray="3 3" stroke={t.borderLight} vertical={false} />
-        //                         <XAxis dataKey="month" tick={{ fontSize: 12, fill: t.textTertiary }} axisLine={false} tickLine={false} />
-        //                         <YAxis tick={{ fontSize: 12, fill: t.textTertiary }} axisLine={false} tickLine={false} />
-        //                         <RTooltip contentStyle={tooltipStyle} cursor={{ fill: `${t.accentPrimary}08` }} />
-        //                         <Bar dataKey="files" name="Files" fill={t.accentPrimary} radius={[4, 4, 0, 0]} />
-        //                         <Bar dataKey="meetings" name="Meetings" fill={t.accentSecondary} radius={[4, 4, 0, 0]} />
-        //                         <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, color: t.textSecondary }} />
-        //                     </BarChart>
-        //                 </ResponsiveContainer>
-        //             </ChartCard>
-        //         </Grid>
-
-        //         {/* Project status pie */}
-        //         <Grid item xs={12} md={4} >
-        //             <ChartCard title="Project Status" subtitle="48 total projects">
-        //                 <ResponsiveContainer width="100%" height={200}>
-        //                     <PieChart>
-        //                         <Pie data={completionData} cx="50%" cy="50%" innerRadius={55} outerRadius={80}
-        //                             paddingAngle={3} dataKey="value">
-        //                             {completionData.map((entry) => (
-        //                                 <Cell key={entry.name} fill={entry.color} />
-        //                             ))}
-        //                         </Pie>
-        //                         <RTooltip contentStyle={tooltipStyle} />
-        //                     </PieChart>
-        //                 </ResponsiveContainer>
-        //                 <Stack spacing={0.8} mt={1}>
-        //                     {completionData.map((d) => (
-        //                         <Stack key={d.name} direction="row" alignItems="center" justifyContent="space-between">
-        //                             <Stack direction="row" alignItems="center" gap={1}>
-        //                                 <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: d.color }} />
-        //                                 <Typography sx={{ fontSize: "0.8rem", color: t.textSecondary }}>{d.name}</Typography>
-        //                             </Stack>
-        //                             <Typography sx={{ fontSize: "0.8rem", fontWeight: 600, color: t.textPrimary }}>{d.value}</Typography>
-        //                         </Stack>
-        //                     ))}
-        //                 </Stack>
-        //             </ChartCard>
-        //         </Grid>
-
-        //         {/* User activity */}
-        //         <Grid item xs={12} md={4}>
-        //             <ChartCard title="User Activity" subtitle="Weekly logins and interactions">
-        //                 <ResponsiveContainer width="100%" height={220}>
-        //                     <LineChart data={activityData}>
-        //                         <CartesianGrid strokeDasharray="3 3" stroke={t.borderLight} vertical={false} />
-        //                         <XAxis dataKey="week" tick={{ fontSize: 12, fill: t.textTertiary }} axisLine={false} tickLine={false} />
-        //                         <YAxis tick={{ fontSize: 12, fill: t.textTertiary }} axisLine={false} tickLine={false} />
-        //                         <RTooltip contentStyle={tooltipStyle} />
-        //                         <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, color: t.textSecondary }} />
-        //                         <Line type="monotone" dataKey="students" name="Students" stroke={t.accentPrimary} strokeWidth={2} dot={{ r: 4, fill: t.accentPrimary }} activeDot={{ r: 6 }} />
-        //                         <Line type="monotone" dataKey="supervisors" name="Supervisors" stroke={t.accentSecondary} strokeWidth={2} dot={{ r: 4, fill: t.accentSecondary }} activeDot={{ r: 6 }} />
-        //                     </LineChart>
-        //                 </ResponsiveContainer>
-        //             </ChartCard>
-        //         </Grid>
-        //     </Grid>
-        // </Box>
-        <Box sx={{ width: "100%" }}>
-
-            <Stack
-                direction={{ xs: "column", sm: "row" }}
-                justifyContent="space-between"
-                alignItems={{ xs: "flex-start", sm: "center" }}
-                mb={3}
-                gap={2}
-            >
+        <Box sx={{ maxWidth: 1100 }}>
+            <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }} mb={3} gap={2}>
                 <Box>
-                    <Typography variant="h2" sx={{ color: t.textPrimary, mb: 0.5 }}>
-                        Reports & Analytics
-                    </Typography>
-
-                    <Typography sx={{ color: t.textSecondary, fontSize: "0.9rem" }}>
-                        Spring 2025 semester overview
-                    </Typography>
+                    <Typography variant="h2" sx={{ color: t.textPrimary, mb: 0.5 }}>Reports & Analytics</Typography>
+                    <Typography sx={{ color: t.textSecondary, fontSize: "0.9rem" }}>Spring 2025 semester overview</Typography>
                 </Box>
-
-                <Button
-                    variant="outlined"
-                    startIcon={<DownloadOutlinedIcon />}
-                    sx={{
-                        borderColor: t.borderLight,
-                        color: t.textSecondary,
-                        "&:hover": {
-                            borderColor: t.accentPrimary,
-                            color: t.accentPrimary
-                        }
-                    }}
-                >
+                <Button variant="outlined" startIcon={<DownloadOutlinedIcon />}
+                    sx={{ borderColor: t.borderLight, color: t.textSecondary, "&:hover": { borderColor: t.accentPrimary, color: t.accentPrimary } }}>
                     Export PDF
                 </Button>
             </Stack>
 
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 3 }}>
+                {/* Chart 1 — Submissions */}
+                <ChartCard title="File Submissions & Meetings" subtitle="Monthly activity — Spring 2025">
+                    <ResponsiveContainer width="100%" height={240}>
+                        <BarChart data={submissionsData} barSize={14} barCategoryGap="30%">
+                            <CartesianGrid strokeDasharray="3 3" stroke={t.borderLight} vertical={false} />
+                            <XAxis dataKey="month" tick={{ fontSize: 12, fill: t.textTertiary }} axisLine={false} tickLine={false} />
+                            <YAxis tick={{ fontSize: 12, fill: t.textTertiary }} axisLine={false} tickLine={false} />
+                            <RTooltip contentStyle={tooltipStyle} cursor={{ fill: `${t.accentPrimary}08` }} />
+                            <Bar dataKey="files" name="Files" fill={t.accentPrimary} radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="meetings" name="Meetings" fill={t.accentSecondary} radius={[4, 4, 0, 0]} />
+                            <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, color: t.textSecondary }} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </ChartCard>
 
-            {/* charts */}
-            <Box
-                sx={{
-                    display: "flex",
-                    gap: 3,
-                    flexWrap: "wrap"
-                }}
-            >
-
-                {/* chart 1 */}
-                <Box sx={{ width: { xs: "100%", md: "48%" } }}>
-                    <ChartCard
-                        title="File Submissions & Meetings"
-                        subtitle="Monthly activity — Spring 2025"
-                    >
-                        <ResponsiveContainer width="100%" height={240}>
-                            <BarChart data={submissionsData} barSize={14} barCategoryGap="30%">
-                                <CartesianGrid strokeDasharray="3 3" stroke={t.borderLight} vertical={false} />
-                                <XAxis dataKey="month" tick={{ fontSize: 12, fill: t.textTertiary }} axisLine={false} tickLine={false} />
-                                <YAxis tick={{ fontSize: 12, fill: t.textTertiary }} axisLine={false} tickLine={false} />
-                                <RTooltip contentStyle={tooltipStyle} cursor={{ fill: `${t.accentPrimary}08` }} />
-                                <Bar dataKey="files" name="Files" fill={t.accentPrimary} radius={[4, 4, 0, 0]} />
-                                <Bar dataKey="meetings" name="Meetings" fill={t.accentSecondary} radius={[4, 4, 0, 0]} />
-                                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, color: t.textSecondary }} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </ChartCard>
-                </Box>
-
-
-                {/* chart 2 */}
-                <Box sx={{ width: { xs: "100%", md: "48%" } }}>
-                    <ChartCard title="Project Status" subtitle="48 total projects">
-                        <ResponsiveContainer width="100%" height={160}>
-                            <PieChart>
-                                <Pie
-                                    data={completionData}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={55}
-                                    outerRadius={80}
-                                    paddingAngle={3}
-                                    dataKey="value"
-                                >
-                                    {completionData.map((entry) => (
-                                        <Cell key={entry.name} fill={entry.color} />
-                                    ))}
-                                </Pie>
-                                <RTooltip contentStyle={tooltipStyle} />
-                            </PieChart>
-                        </ResponsiveContainer>
-
-                        <Stack spacing={0.8} mt={1}>
-                            {completionData.map((d) => (
-                                <Stack key={d.name} direction="row" alignItems="center" justifyContent="space-between">
-                                    <Stack direction="row" alignItems="center" gap={1}>
-                                        <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: d.color }} />
-                                        <Typography sx={{ fontSize: "0.8rem", color: t.textSecondary }}>
-                                            {d.name}
-                                        </Typography>
-                                    </Stack>
-
-                                    <Typography sx={{ fontSize: "0.8rem", fontWeight: 600, color: t.textPrimary }}>
-                                        {d.value}
-                                    </Typography>
+                {/* Chart 2 — Pie */}
+                <ChartCard title="Project Status" subtitle="48 total projects">
+                    <ResponsiveContainer width="100%" height={180}>
+                        <PieChart>
+                            <Pie data={completionData} cx="50%" cy="50%" innerRadius={55} outerRadius={80} paddingAngle={3} dataKey="value">
+                                {completionData.map((entry) => (
+                                    <Cell key={entry.name} fill={entry.color} />
+                                ))}
+                            </Pie>
+                            <RTooltip contentStyle={tooltipStyle} />
+                        </PieChart>
+                    </ResponsiveContainer>
+                    <Stack spacing={0.8} mt={1}>
+                        {completionData.map((d) => (
+                            <Stack key={d.name} direction="row" alignItems="center" justifyContent="space-between">
+                                <Stack direction="row" alignItems="center" gap={1}>
+                                    <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: d.color }} />
+                                    <Typography sx={{ fontSize: "0.8rem", color: t.textSecondary }}>{d.name}</Typography>
                                 </Stack>
-                            ))}
-                        </Stack>
-                    </ChartCard>
-                </Box>
+                                <Typography sx={{ fontSize: "0.8rem", fontWeight: 600, color: t.textPrimary }}>{d.value}</Typography>
+                            </Stack>
+                        ))}
+                    </Stack>
+                </ChartCard>
 
-
-                {/* chart 3 */}
-                <Box sx={{ width: { xs: "100%", md: "50%" } }}>
+                {/* Chart 3 — Line */}
+                <Box sx={{ gridColumn: { xs: "1", md: "1 / 3" } }}>
                     <ChartCard title="User Activity" subtitle="Weekly logins and interactions">
                         <ResponsiveContainer width="100%" height={220}>
                             <LineChart data={activityData}>
@@ -256,31 +122,12 @@ export default function Reports() {
                                 <YAxis tick={{ fontSize: 12, fill: t.textTertiary }} axisLine={false} tickLine={false} />
                                 <RTooltip contentStyle={tooltipStyle} />
                                 <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, color: t.textSecondary }} />
-
-                                <Line
-                                    type="monotone"
-                                    dataKey="students"
-                                    name="Students"
-                                    stroke={t.accentPrimary}
-                                    strokeWidth={2}
-                                    dot={{ r: 4, fill: t.accentPrimary }}
-                                    activeDot={{ r: 6 }}
-                                />
-
-                                <Line
-                                    type="monotone"
-                                    dataKey="supervisors"
-                                    name="Supervisors"
-                                    stroke={t.accentSecondary}
-                                    strokeWidth={2}
-                                    dot={{ r: 4, fill: t.accentSecondary }}
-                                    activeDot={{ r: 6 }}
-                                />
+                                <Line type="monotone" dataKey="students" name="Students" stroke={t.accentPrimary} strokeWidth={2} dot={{ r: 4, fill: t.accentPrimary }} activeDot={{ r: 6 }} />
+                                <Line type="monotone" dataKey="supervisors" name="Supervisors" stroke={t.accentSecondary} strokeWidth={2} dot={{ r: 4, fill: t.accentSecondary }} activeDot={{ r: 6 }} />
                             </LineChart>
                         </ResponsiveContainer>
                     </ChartCard>
                 </Box>
-
             </Box>
         </Box>
     );

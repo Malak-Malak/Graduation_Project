@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Box, useMediaQuery } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import Sidebar from "./Sidebar";
-import TopBar from "./TopBar";
+import Sidebar from "./Sidebar.jsx";
+import TopBar from "./TopBar.jsx";
 
 const SIDEBAR_WIDTH = 260;
 const SIDEBAR_COLLAPSED_WIDTH = 68;
@@ -64,7 +64,7 @@ export default function MainLayout({ children }) {
         <Box
           sx={{
             flexGrow: 1,
-            mt: `${TOPBAR_HEIGHT}px`,
+            // mt: `${TOPBAR_HEIGHT}px`,
             p: { xs: 2, sm: 3 },
             overflow: "auto",
           }}

@@ -34,3 +34,17 @@ export const getAllUsers = () =>
 // ══════════════════════════════════════════════════════════════════════════════
 export const getAllRequests = () =>
     axiosInstance.get("/Admin/all-requests");
+
+// ══════════════════════════════════════════════════════════════════════════════
+// GET /api/Admin/university-records
+// كل السجلات الجامعية
+// ══════════════════════════════════════════════════════════════════════════════
+export const getUniversityRecords = () =>
+    axiosInstance.get("/Admin/university-records");
+
+// ══════════════════════════════════════════════════════════════════════════════
+// GET /api/Admin/university-records/{email}
+// سجل شخص معين بالإيميل
+// ══════════════════════════════════════════════════════════════════════════════
+export const getUniversityRecordByEmail = (email) =>
+    axiosInstance.get(`/Admin/university-records/${encodeURIComponent(email)}`);

@@ -1,12 +1,12 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import MainLayout from "../../components/common/Layout/MainLayout";
+import MainLayout from "../../layout/MainLayout";
 
-import StudentDashboard from "../../components/student/Dashboard/StudentDashboard";
-import TeamFinder from "../../components/student/TeamFinder/TeamFinder";
-import KanbanBoard from "../../components/student/KanbanBoard/KanbanBoard";
-import FileRepository from "../../components/student/FileRepository/FileRepository";
-import StudentMeetings from "../../components/student/Meetings/StudentMeetings";
-import StudentAnalytics from "../../components/student/Analytics/StudentAnalytics";
+import StudentDashboard from "../../components/common/student/StudentDashboard/StudentDashboard";
+import TeamFinder from "../../components/common/student/TeamFinder/TeamFinder";
+import KanbanBoard from "../../components/common/student/KanbanBoard/KanbanBoard";
+import FileRepository from "../../components/common/student/FileRepository/FileRepository";
+import StudentMeetings from "../../components/common/student/Meetings/StudentMeetings";
+import StudentAnalytics from "../../components/common/student/Analytics/StudentAnalytics";
 
 export default function StudentPage() {
     return (

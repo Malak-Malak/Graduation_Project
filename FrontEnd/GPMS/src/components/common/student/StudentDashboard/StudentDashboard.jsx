@@ -9,7 +9,7 @@ import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined
 import QueryStatsOutlinedIcon from "@mui/icons-material/QueryStatsOutlined";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import NotificationsOutlinedIcon from "@mui/icons-material/NotificationsOutlined";
-import { useAuth } from "../../../contexts/AuthContext";
+import { useAuth } from "../../../../contexts/AuthContext";
 
 const STATS = [
     { label: "Tasks Done", value: "8/15", icon: <ViewKanbanOutlinedIcon />, color: "#B46F4C", path: "/student/kanban" },
@@ -61,11 +61,11 @@ export default function StudentDashboard() {
             {/* Stats */}
             <Grid container spacing={2} sx={{ mb: 3 }}>
                 {STATS.map((s) => (
-                    <Grid item xs={6} lg={3} key={s.label}>
+                    <Grid size={{ xs: 6, lg: 3 }} key={s.label}>
                         <Paper elevation={1} onClick={() => navigate(s.path)}
                             sx={{
                                 p: 2, borderRadius: 3, cursor: "pointer", bgcolor: theme.palette.background.paper,
-                                "&:hover": { transform: "translateY(-2px)", boxShadow: t.shadowMd }, transition: "all 0.2s"
+                                "&:hover": { transform: "translateY(-2px)", boxShadow: t.shadowMd }, transition: "all 0.2s",
                             }}>
                             <Stack direction="row" alignItems="center" gap={1.5}>
                                 <Box sx={{ p: 1, borderRadius: 2, bgcolor: `${s.color}15`, color: s.color, "& svg": { fontSize: 20 } }}>{s.icon}</Box>
@@ -94,7 +94,7 @@ export default function StudentDashboard() {
 
             <Grid container spacing={2}>
                 {/* Recent tasks */}
-                <Grid item xs={12} lg={7}>
+                <Grid size={{ xs: 12, lg: 7 }}>
                     <Paper elevation={1} sx={{ p: 2.5, borderRadius: 3, bgcolor: theme.palette.background.paper }}>
                         <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
                             <Typography variant="h4" sx={{ color: t.textPrimary }}>Recent Tasks</Typography>
@@ -108,13 +108,14 @@ export default function StudentDashboard() {
                                 <Stack key={i} direction="row" alignItems="center" justifyContent="space-between"
                                     sx={{
                                         p: 1.2, borderRadius: 2, border: `1px solid ${t.borderLight}`,
-                                        "&:hover": { bgcolor: t.surfaceHover }, transition: "background 0.15s", cursor: "pointer"
+                                        "&:hover": { bgcolor: t.surfaceHover }, transition: "background 0.15s", cursor: "pointer",
                                     }}
                                     onClick={() => navigate("/student/kanban")}>
                                     <Box>
                                         <Typography sx={{
-                                            fontSize: "0.875rem", fontWeight: 600, color: task.status === "done" ? t.textTertiary : t.textPrimary,
-                                            textDecoration: task.status === "done" ? "line-through" : "none"
+                                            fontSize: "0.875rem", fontWeight: 600,
+                                            color: task.status === "done" ? t.textTertiary : t.textPrimary,
+                                            textDecoration: task.status === "done" ? "line-through" : "none",
                                         }}>
                                             {task.title}
                                         </Typography>
@@ -134,7 +135,7 @@ export default function StudentDashboard() {
                 </Grid>
 
                 {/* Notifications */}
-                <Grid item xs={12} lg={5}>
+                <Grid size={{ xs: 12, lg: 5 }}>
                     <Paper elevation={1} sx={{ p: 2.5, borderRadius: 3, bgcolor: theme.palette.background.paper }}>
                         <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
                             <Stack direction="row" alignItems="center" gap={1}>

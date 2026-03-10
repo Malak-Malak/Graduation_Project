@@ -49,7 +49,6 @@ export default function TeamFinder() {
                 </Typography>
             </Box>
 
-            {/* Current team box */}
             {invited.length > 0 && (
                 <Paper elevation={1} sx={{ p: 2, borderRadius: 3, bgcolor: `${t.accentPrimary}08`, border: `1px solid ${t.accentPrimary}30`, mb: 2.5 }}>
                     <Stack direction="row" alignItems="center" justifyContent="space-between">
@@ -72,18 +71,16 @@ export default function TeamFinder() {
                 </Paper>
             )}
 
-            {/* Search */}
             <TextField fullWidth placeholder="Search by name, skill, or department…" value={search}
                 onChange={(e) => setSearch(e.target.value)} size="small" sx={{ mb: 2.5 }}
                 InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 17, color: t.textTertiary }} /></InputAdornment> }} />
 
-            {/* Cards */}
             <Grid container spacing={2}>
                 {filtered.map((s) => {
                     const isInvited = invited.includes(s.id);
                     const isInTeam = s.status === "in-team";
                     return (
-                        <Grid item xs={12} sm={6} md={4} key={s.id}>
+                        <Grid size={{ xs: 12, sm: 6, md: 4 }} key={s.id}>
                             <Paper elevation={1}
                                 sx={{
                                     p: 2, borderRadius: 3, bgcolor: theme.palette.background.paper,
@@ -114,7 +111,6 @@ export default function TeamFinder() {
                                         </Stack>
                                     </Box>
 
-                                    {/* Match */}
                                     <Box sx={{ width: "100%" }}>
                                         <Stack direction="row" justifyContent="space-between" mb={0.4}>
                                             <Typography sx={{ fontSize: "0.7rem", color: t.textTertiary }}>Match</Typography>
@@ -124,7 +120,6 @@ export default function TeamFinder() {
                                             sx={{ bgcolor: t.borderLight, "& .MuiLinearProgress-bar": { bgcolor: s.match >= 85 ? t.success : t.accentTertiary } }} />
                                     </Box>
 
-                                    {/* Skills */}
                                     <Stack direction="row" flexWrap="wrap" gap={0.5} justifyContent="center">
                                         {s.skills.slice(0, 3).map((sk, j) => (
                                             <Chip key={sk} label={sk} size="small"
@@ -156,7 +151,6 @@ export default function TeamFinder() {
                 })}
             </Grid>
 
-            {/* Profile dialog */}
             {selected && (
                 <Dialog open={profileOpen} onClose={() => setProfileOpen(false)} maxWidth="xs" fullWidth>
                     <DialogTitle sx={{ textAlign: "center", pb: 1 }}>

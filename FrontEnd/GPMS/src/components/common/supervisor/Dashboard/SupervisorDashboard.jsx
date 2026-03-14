@@ -9,7 +9,7 @@ import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
 import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import WarningAmberOutlinedIcon from "@mui/icons-material/WarningAmberOutlined";
-import { useAuth } from "../../../contexts/AuthContext";
+import { useAuth } from "../../../../contexts/AuthContext";
 
 const STATS = [
     { label: "My Groups", value: "4", icon: <GroupsOutlinedIcon />, color: "#B46F4C", path: "/supervisor/groups" },
@@ -38,7 +38,7 @@ export default function SupervisorDashboard() {
         <Box sx={{ maxWidth: 1200 }}>
             <Box sx={{ mb: 3 }}>
                 <Typography variant="h2" sx={{ color: t.textPrimary, mb: 0.5 }}>
-                    Welcome, {user?.name ?? "Supervisor"}
+                    Welcome, {user?.name ?? user?.fullName ?? user?.username ?? "Supervisor"}
                 </Typography>
                 <Typography sx={{ color: t.textSecondary, fontSize: "0.9rem" }}>
                     {user?.department ?? "Computer Systems Engineering"} · Spring 2025
@@ -47,10 +47,11 @@ export default function SupervisorDashboard() {
 
             <Grid container spacing={2} sx={{ mb: 3 }}>
                 {STATS.map((s) => (
-                    <Grid item xs={6} lg={3} key={s.label}>
+                    <Grid size={{ xs: 6, lg: 3 }} key={s.label}>
                         <Paper elevation={1} onClick={() => navigate(s.path)} sx={{
                             p: 2, borderRadius: 3, cursor: "pointer",
-                            bgcolor: theme.palette.background.paper, "&:hover": { transform: "translateY(-2px)" }, transition: "all 0.2s"
+                            bgcolor: theme.palette.background.paper,
+                            "&:hover": { transform: "translateY(-2px)" }, transition: "all 0.2s",
                         }}>
                             <Stack direction="row" alignItems="center" gap={1.5}>
                                 <Box sx={{ p: 1, borderRadius: 2, bgcolor: `${s.color}15`, color: s.color, "& svg": { fontSize: 20 } }}>{s.icon}</Box>
@@ -65,17 +66,18 @@ export default function SupervisorDashboard() {
             </Grid>
 
             <Grid container spacing={2}>
-                <Grid item xs={12} lg={8}>
+                <Grid size={{ xs: 12, lg: 8 }}>
                     <Paper elevation={1} sx={{ p: 2.5, borderRadius: 3, bgcolor: theme.palette.background.paper }}>
                         <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
                             <Typography variant="h4" sx={{ color: t.textPrimary }}>My Groups</Typography>
                             <Button endIcon={<ArrowForwardIcon sx={{ fontSize: 15 }} />} size="small"
-                                onClick={() => navigate("/supervisor/groups")} sx={{ color: t.accentPrimary, fontSize: "0.8rem", textTransform: "none" }}>
+                                onClick={() => navigate("/supervisor/groups")}
+                                sx={{ color: t.accentPrimary, fontSize: "0.8rem", textTransform: "none" }}>
                                 View all
                             </Button>
                         </Stack>
                         <Stack spacing={1.5}>
-                            {GROUPS.map((g, i) => (
+                            {GROUPS.map((g) => (
                                 <Box key={g.name} onClick={() => navigate("/supervisor/groups")}
                                     sx={{
                                         p: 1.8, borderRadius: 2.5, border: `1px solid ${t.borderLight}`,
@@ -111,7 +113,7 @@ export default function SupervisorDashboard() {
                     </Paper>
                 </Grid>
 
-                <Grid item xs={12} lg={4}>
+                <Grid size={{ xs: 12, lg: 4 }}>
                     <Stack spacing={2}>
                         <Paper elevation={1} sx={{ p: 2.5, borderRadius: 3, bgcolor: theme.palette.background.paper }}>
                             <Typography variant="h4" sx={{ color: t.textPrimary, mb: 1.5 }}>Alerts</Typography>

@@ -53,9 +53,7 @@ export default function SupervisorAnalytics() {
     const tooltipStyle = {
         backgroundColor: theme.palette.background.paper,
         border: `1px solid ${t.borderLight}`,
-        borderRadius: 8,
-        fontSize: 12,
-        color: t.textPrimary,
+        borderRadius: 8, fontSize: 12, color: t.textPrimary,
     };
 
     return (
@@ -72,8 +70,7 @@ export default function SupervisorAnalytics() {
             </Stack>
 
             <Grid container spacing={2.5}>
-                {/* Task distribution */}
-                <Grid item xs={12} lg={7}>
+                <Grid size={{ xs: 12, lg: 7 }}>
                     <ChartCard title="Task Distribution" subtitle="By group and status">
                         <ResponsiveContainer width="100%" height={240}>
                             <BarChart data={taskData} barSize={14}>
@@ -90,8 +87,7 @@ export default function SupervisorAnalytics() {
                     </ChartCard>
                 </Grid>
 
-                {/* Radar */}
-                <Grid item xs={12} sm={6} lg={5}>
+                <Grid size={{ xs: 12, sm: 6, lg: 5 }}>
                     <ChartCard title="Group Comparison" subtitle="EcoTrackers vs CodeCraft">
                         <ResponsiveContainer width="100%" height={240}>
                             <RadarChart data={radarData}>
@@ -106,8 +102,7 @@ export default function SupervisorAnalytics() {
                     </ChartCard>
                 </Grid>
 
-                {/* Progress over time */}
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                     <ChartCard title="Progress Over Time" subtitle="Weekly completion rate by group">
                         <ResponsiveContainer width="100%" height={220}>
                             <LineChart data={progressOverTime}>

@@ -1,12 +1,10 @@
 import { useState } from "react";
 import {
     Box, Paper, Typography, Stack, Chip, Button, Switch, Grid, Divider,
-    Dialog, DialogTitle, DialogContent, DialogActions,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
-import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
 import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 
 const AVAILABILITY = [
@@ -23,8 +21,6 @@ const REQUESTS = [
     { id: 3, student: "Yara Hassan", team: "InnovateX", topic: "Final Review Meeting", slot: "Thursday, 11:00-12:00", status: "confirmed" },
     { id: 4, student: "Daoud Issa", team: "SmartCampus", topic: "Proposal Discussion", slot: "Sunday, 2:00-3:00", status: "confirmed" },
 ];
-
-const STATUS_CLR = { pending: "#C49A6C", confirmed: "#6D8A7D", cancelled: "#C47E7E" };
 
 export default function SupervisorMeetings() {
     const theme = useTheme();
@@ -52,15 +48,12 @@ export default function SupervisorMeetings() {
 
             <Grid container spacing={2}>
                 {/* Requests */}
-                <Grid item xs={12} lg={7}>
+                <Grid size={{ xs: 12, lg: 7 }}>
                     <Paper elevation={1} sx={{ p: 2.5, borderRadius: 3, bgcolor: theme.palette.background.paper, mb: 2 }}>
                         <Typography variant="h4" sx={{ color: t.textPrimary, mb: 2 }}>Meeting Requests</Typography>
                         <Stack spacing={1.5}>
                             {pending.map((r) => (
-                                <Box key={r.id} sx={{
-                                    p: 1.8, borderRadius: 2.5, border: `1px solid ${t.borderLight}`,
-                                    borderLeft: `3px solid ${t.accentTertiary}`
-                                }}>
+                                <Box key={r.id} sx={{ p: 1.8, borderRadius: 2.5, border: `1px solid ${t.borderLight}`, borderLeft: `3px solid ${t.accentTertiary}` }}>
                                     <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
                                         <Box>
                                             <Typography sx={{ fontWeight: 600, color: t.textPrimary }}>{r.topic}</Typography>
@@ -75,11 +68,11 @@ export default function SupervisorMeetings() {
                                         <Stack direction="row" gap={0.8}>
                                             <Button size="small" variant="contained" onClick={() => handle(r.id, "confirmed")}
                                                 startIcon={<CheckCircleOutlineIcon sx={{ fontSize: 14 }} />}
-                                                sx={{ bgcolor: t.success, fontSize: "0.75rem", py: 0.5, px: 1.2 }}>
+                                                sx={{ bgcolor: t.success, fontSize: "0.75rem", py: 0.5, px: 1.2, textTransform: "none" }}>
                                                 Confirm
                                             </Button>
                                             <Button size="small" variant="outlined" onClick={() => handle(r.id, "cancelled")}
-                                                sx={{ borderColor: t.error, color: t.error, fontSize: "0.75rem", py: 0.5, px: 1.2 }}>
+                                                sx={{ borderColor: t.error, color: t.error, fontSize: "0.75rem", py: 0.5, px: 1.2, textTransform: "none" }}>
                                                 Decline
                                             </Button>
                                         </Stack>
@@ -92,7 +85,6 @@ export default function SupervisorMeetings() {
                         </Stack>
                     </Paper>
 
-                    {/* Confirmed */}
                     <Paper elevation={1} sx={{ p: 2.5, borderRadius: 3, bgcolor: theme.palette.background.paper }}>
                         <Typography variant="h4" sx={{ color: t.textPrimary, mb: 2 }}>Confirmed Meetings</Typography>
                         <Stack spacing={1}>
@@ -111,7 +103,7 @@ export default function SupervisorMeetings() {
                 </Grid>
 
                 {/* Availability */}
-                <Grid item xs={12} lg={5}>
+                <Grid size={{ xs: 12, lg: 5 }}>
                     <Paper elevation={1} sx={{ p: 2.5, borderRadius: 3, bgcolor: theme.palette.background.paper }}>
                         <Typography variant="h4" sx={{ color: t.textPrimary, mb: 0.5 }}>My Availability</Typography>
                         <Typography sx={{ fontSize: "0.78rem", color: t.textTertiary, mb: 2 }}>

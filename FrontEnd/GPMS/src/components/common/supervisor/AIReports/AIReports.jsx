@@ -52,7 +52,7 @@ const REPORTS = [
 ];
 
 const RISK_CLR = { low: "#6D8A7D", medium: "#C49A6C", high: "#C47E7E" };
-const SCORE_CLR = (score) => score >= 75 ? "#6D8A7D" : score >= 50 ? "#C49A6C" : "#C47E7E";
+const SCORE_CLR = (s) => s >= 75 ? "#6D8A7D" : s >= 50 ? "#C49A6C" : "#C47E7E";
 
 function MetricBar({ label, value }) {
     const theme = useTheme();
@@ -125,10 +125,10 @@ export default function AIReports() {
                             </Stack>
                         </Box>
 
+                        {/* Body */}
                         <Grid container>
-                            {/* Left: summary, issues, recommendations */}
-                            <Grid item xs={12} md={7} sx={{ p: 2.5, borderRight: { md: `1px solid ${t.borderLight}` } }}>
-                                {/* Summary */}
+                            {/* Left */}
+                            <Grid size={{ xs: 12, md: 7 }} sx={{ p: 2.5, borderRight: { md: `1px solid ${t.borderLight}` } }}>
                                 <Box sx={{ mb: 2 }}>
                                     <Stack direction="row" alignItems="center" gap={0.8} mb={0.8}>
                                         <TrendingUpIcon sx={{ fontSize: 16, color: t.accentSecondary }} />
@@ -139,8 +139,7 @@ export default function AIReports() {
 
                                 <Divider sx={{ mb: 2 }} />
 
-                                {/* Issues */}
-                                {r.issues.length > 0 && (
+                                {r.issues.length > 0 ? (
                                     <Box sx={{ mb: 2 }}>
                                         <Stack direction="row" alignItems="center" gap={0.8} mb={1}>
                                             <WarningAmberOutlinedIcon sx={{ fontSize: 16, color: t.warning }} />
@@ -155,14 +154,12 @@ export default function AIReports() {
                                             ))}
                                         </Stack>
                                     </Box>
-                                )}
-                                {r.issues.length === 0 && (
+                                ) : (
                                     <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: `${t.success}10`, border: `1px solid ${t.success}30`, mb: 2 }}>
                                         <Typography sx={{ fontSize: "0.82rem", color: t.success, fontWeight: 500 }}>✓ No critical issues detected</Typography>
                                     </Box>
                                 )}
 
-                                {/* Recommendations */}
                                 <Box>
                                     <Stack direction="row" alignItems="center" gap={0.8} mb={1}>
                                         <LightbulbOutlinedIcon sx={{ fontSize: 16, color: t.accentTertiary }} />
@@ -179,8 +176,8 @@ export default function AIReports() {
                                 </Box>
                             </Grid>
 
-                            {/* Right: metrics */}
-                            <Grid item xs={12} md={5} sx={{ p: 2.5 }}>
+                            {/* Right */}
+                            <Grid size={{ xs: 12, md: 5 }} sx={{ p: 2.5 }}>
                                 <Typography sx={{ fontSize: "0.72rem", fontWeight: 700, color: t.textTertiary, textTransform: "uppercase", letterSpacing: "0.07em", mb: 2 }}>
                                     Performance Metrics
                                 </Typography>

@@ -3,8 +3,8 @@ import axios from "axios";
 const axiosInstance = axios.create({
     // ✅ في dev: الـ Vite proxy بيحول /api → https://gpms.up.railway.app/api
     // ✅ في production: غيري هذا لـ https://gpms.up.railway.app/api
-    baseURL: "/api",
-
+    // baseURL: "/api",
+    baseURL: import.meta.env.VITE_API_URL ?? "/api",
     headers: {
         "Content-Type": "application/json",
     },

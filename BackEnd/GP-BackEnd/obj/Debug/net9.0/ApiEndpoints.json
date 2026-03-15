@@ -157,6 +157,22 @@
   },
   {
     "ContainingType": "GP_BackEnd.Controllers.TeamController",
+    "Method": "RequestToJoinTeam",
+    "RelativePath": "api/Team/invite-a-student-to-join",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "GP_BackEnd.DTOs.Team.JoinTeamRequestDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.TeamController",
     "Method": "GetMyTeam",
     "RelativePath": "api/Team/my-team",
     "HttpMethod": "GET",
@@ -173,22 +189,6 @@
     "IsController": true,
     "Order": 0,
     "Parameters": [],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "GP_BackEnd.Controllers.TeamController",
-    "Method": "RequestToJoinTeam",
-    "RelativePath": "api/Team/request-to-join",
-    "HttpMethod": "POST",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "dto",
-        "Type": "GP_BackEnd.DTOs.Team.JoinTeamRequestDto",
-        "IsRequired": true
-      }
-    ],
     "ReturnTypes": []
   },
   {
@@ -242,7 +242,7 @@
   {
     "ContainingType": "GP_BackEnd.Controllers.TeamController",
     "Method": "SendJoinRequest",
-    "RelativePath": "api/Team/send-join-request",
+    "RelativePath": "api/Team/send-join-request-to-a-team",
     "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,

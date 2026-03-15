@@ -278,7 +278,7 @@
         }
       }
     },
-    "/api/Team/send-join-request": {
+    "/api/Team/send-join-request-to-a-team": {
       "post": {
         "tags": [
           "Team"
@@ -309,7 +309,7 @@
         }
       }
     },
-    "/api/Team/request-to-join": {
+    "/api/Team/invite-a-student-to-join": {
       "post": {
         "tags": [
           "Team"

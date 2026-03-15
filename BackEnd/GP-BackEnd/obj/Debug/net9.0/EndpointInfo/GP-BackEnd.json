@@ -199,10 +199,10 @@
         }
       }
     },
-    "/api/Team/available-students": {
+    "/api/Student/available-students": {
       "get": {
         "tags": [
-          "Team"
+          "Student"
         ],
         "responses": {
           "200": {
@@ -211,10 +211,10 @@
         }
       }
     },
-    "/api/Team/available-teams": {
+    "/api/Student/supervisors": {
       "get": {
         "tags": [
-          "Team"
+          "Student"
         ],
         "responses": {
           "200": {
@@ -223,10 +223,10 @@
         }
       }
     },
-    "/api/Team/supervisors": {
+    "/api/Student/available-teams": {
       "get": {
         "tags": [
-          "Team"
+          "Student"
         ],
         "responses": {
           "200": {
@@ -235,10 +235,10 @@
         }
       }
     },
-    "/api/Team/my-team": {
+    "/api/Student/my-team": {
       "get": {
         "tags": [
-          "Team"
+          "Student"
         ],
         "responses": {
           "200": {
@@ -247,10 +247,22 @@
         }
       }
     },
-    "/api/Team/create": {
+    "/api/Student/my-invitations": {
+      "get": {
+        "tags": [
+          "Student"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Student/create-team": {
       "post": {
         "tags": [
-          "Team"
+          "Student"
         ],
         "requestBody": {
           "content": {
@@ -278,26 +290,26 @@
         }
       }
     },
-    "/api/Team/send-join-request-to-a-team": {
+    "/api/Student/send-invitation": {
       "post": {
         "tags": [
-          "Team"
+          "Student"
         ],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SendJoinRequestDto"
+                "$ref": "#/components/schemas/SendInvitationDto"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/SendJoinRequestDto"
+                "$ref": "#/components/schemas/SendInvitationDto"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/SendJoinRequestDto"
+                "$ref": "#/components/schemas/SendInvitationDto"
               }
             }
           }
@@ -309,26 +321,26 @@
         }
       }
     },
-    "/api/Team/invite-a-student-to-join": {
+    "/api/Student/request-to-join": {
       "post": {
         "tags": [
-          "Team"
+          "Student"
         ],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/JoinTeamRequestDto"
+                "$ref": "#/components/schemas/RequestToJoinDto"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/JoinTeamRequestDto"
+                "$ref": "#/components/schemas/RequestToJoinDto"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/JoinTeamRequestDto"
+                "$ref": "#/components/schemas/RequestToJoinDto"
               }
             }
           }
@@ -340,26 +352,26 @@
         }
       }
     },
-    "/api/Team/respond-to-join-request": {
+    "/api/Student/respond-to-invitation": {
       "post": {
         "tags": [
-          "Team"
+          "Student"
         ],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RespondToJoinRequestDto"
+                "$ref": "#/components/schemas/RespondToInvitationDto"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/RespondToJoinRequestDto"
+                "$ref": "#/components/schemas/RespondToInvitationDto"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/RespondToJoinRequestDto"
+                "$ref": "#/components/schemas/RespondToInvitationDto"
               }
             }
           }
@@ -371,26 +383,26 @@
         }
       }
     },
-    "/api/Team/respond-to-student-request": {
+    "/api/Student/respond-to-join-request": {
       "post": {
         "tags": [
-          "Team"
+          "Student"
         ],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RespondToJoinRequestDto"
+                "$ref": "#/components/schemas/RespondToInvitationDto"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/RespondToJoinRequestDto"
+                "$ref": "#/components/schemas/RespondToInvitationDto"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/RespondToJoinRequestDto"
+                "$ref": "#/components/schemas/RespondToInvitationDto"
               }
             }
           }
@@ -402,10 +414,10 @@
         }
       }
     },
-    "/api/Team/request-leave": {
+    "/api/Student/request-leave": {
       "post": {
         "tags": [
-          "Team"
+          "Student"
         ],
         "responses": {
           "200": {
@@ -414,10 +426,53 @@
         }
       }
     },
-    "/api/Team/respond-to-leave-request": {
+    "/api/Supervisor/pending-team-requests": {
+      "get": {
+        "tags": [
+          "Supervisor"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Supervisor/respond-to-team-request": {
       "post": {
         "tags": [
-          "Team"
+          "Supervisor"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RespondToTeamRequestDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RespondToTeamRequestDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RespondToTeamRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Supervisor/respond-to-leave-request": {
+      "post": {
+        "tags": [
+          "Supervisor"
         ],
         "requestBody": {
           "content": {
@@ -434,6 +489,37 @@
             "application/*+json": {
               "schema": {
                 "$ref": "#/components/schemas/RespondToLeaveRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Supervisor/set-max-teams": {
+      "put": {
+        "tags": [
+          "Supervisor"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetMaxTeamsDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetMaxTeamsDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetMaxTeamsDto"
               }
             }
           }
@@ -504,16 +590,14 @@
           "supervisorId": {
             "type": "integer",
             "format": "int32"
-          }
-        },
-        "additionalProperties": false
-      },
-      "JoinTeamRequestDto": {
-        "type": "object",
-        "properties": {
-          "teamId": {
-            "type": "integer",
-            "format": "int32"
+          },
+          "studentIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -532,7 +616,17 @@
         },
         "additionalProperties": false
       },
-      "RespondToJoinRequestDto": {
+      "RequestToJoinDto": {
+        "type": "object",
+        "properties": {
+          "teamId": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "RespondToInvitationDto": {
         "type": "object",
         "properties": {
           "joinRequestId": {
@@ -558,10 +652,33 @@
         },
         "additionalProperties": false
       },
-      "SendJoinRequestDto": {
+      "RespondToTeamRequestDto": {
+        "type": "object",
+        "properties": {
+          "teamId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isApproved": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SendInvitationDto": {
         "type": "object",
         "properties": {
           "studentId": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SetMaxTeamsDto": {
+        "type": "object",
+        "properties": {
+          "maxTeams": {
             "type": "integer",
             "format": "int32"
           }

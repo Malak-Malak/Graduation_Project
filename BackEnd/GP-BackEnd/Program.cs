@@ -95,10 +95,17 @@ builder.Services.AddCors(options =>
         .AllowAnyMethod();
     });
 });
+
+
+
 builder.Services.AddAuthorization();
+//regeister the services 
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<AdminService>();
-builder.Services.AddScoped<TeamService>();
+builder.Services.AddScoped<StudentService>();
+builder.Services.AddScoped<SupervisorService>();
+
+
 
 var app = builder.Build();
 // Auto migrate on Railway

@@ -1,4 +1,4 @@
-﻿namespace GP_BackEnd.DTOs.Team
+﻿namespace GP_BackEnd.DTOs.Student
 {
     public class AvailableTeamDto
     {

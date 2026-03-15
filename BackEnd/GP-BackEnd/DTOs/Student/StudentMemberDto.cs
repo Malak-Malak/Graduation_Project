@@ -1,6 +1,6 @@
-﻿namespace GP_BackEnd.DTOs.Team
+﻿namespace GP_BackEnd.DTOs.Student
 {
-    public class TeamMemberDto
+    public class StudentMemberDto
     {
         public int UserId { get; set; }
         public string Username { get; set; }

@@ -18,6 +18,7 @@ namespace GP_BackEnd.Models
         public int TotalNumOfCreditCards { get; set; }
 
         public bool IsGraduate { get; set; }
+        public int? MaxTeams { get; set; }  // only for supervisors
 
         public User User { get; set; }
     }

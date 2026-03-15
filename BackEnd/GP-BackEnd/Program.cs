@@ -133,4 +133,5 @@ app.UseSwaggerUI();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.UseCors("AllowFrontEnd");
 app.Run();

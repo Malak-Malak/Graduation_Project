@@ -14,7 +14,7 @@ namespace GP_BackEnd.Models
         public string FullName { get; set; }
 
         public string Department { get; set; }
-
+        public string? field { get; set; }
         public int TotalNumOfCreditCards { get; set; }
 
         public bool IsGraduate { get; set; }

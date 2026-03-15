@@ -159,6 +159,18 @@
         }
       }
     },
+    "/api/Admin/clear-all-data": {
+      "delete": {
+        "tags": [
+          "Admin"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Auth/request-access": {
       "post": {
         "tags": [

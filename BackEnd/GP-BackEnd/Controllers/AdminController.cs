@@ -92,5 +92,12 @@ namespace GP_BackEnd.Controllers
 
             return Ok("University record deleted successfully.");
         }
+        // DELETE api/admin/clear-all-data
+        [HttpDelete("clear-all-data")]
+        public async Task<IActionResult> ClearAllData()
+        {
+            await _adminService.ClearAllDataAsync();
+            return Ok("All data cleared successfully. Admin account preserved.");
+        }
     }
 }

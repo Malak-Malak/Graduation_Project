@@ -27,6 +27,16 @@
   },
   {
     "ContainingType": "GP_BackEnd.Controllers.AdminController",
+    "Method": "ClearAllData",
+    "RelativePath": "api/Admin/clear-all-data",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.AdminController",
     "Method": "DeleteUniversityRecord",
     "RelativePath": "api/Admin/delete-university-record/{email}",
     "HttpMethod": "DELETE",

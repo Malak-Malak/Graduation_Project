@@ -174,5 +174,29 @@ namespace GP_BackEnd.Services
             await _context.SaveChangesAsync();
             return true;
         }
+        public async Task ClearAllDataAsync()
+        {
+            _context.TeamJoinRequests.RemoveRange(_context.TeamJoinRequests);
+            _context.TeamMembers.RemoveRange(_context.TeamMembers);
+            _context.Notifications.RemoveRange(_context.Notifications);
+            _context.Feedbacks.RemoveRange(_context.Feedbacks);
+            _context.TaskAttachments.RemoveRange(_context.TaskAttachments);
+            _context.TaskItems.RemoveRange(_context.TaskItems);
+            _context.Appointments.RemoveRange(_context.Appointments);
+            _context.TeamProgressReports.RemoveRange(_context.TeamProgressReports);
+            _context.Teams.RemoveRange(_context.Teams);
+            _context.Projects.RemoveRange(_context.Projects);
+            _context.UserProfiles.RemoveRange(_context.UserProfiles);
+            _context.RegistrationRequests.RemoveRange(_context.RegistrationRequests);
+            _context.UniversityRecords.RemoveRange(_context.UniversityRecords);
+
+            // Delete all users except admin
+            var nonAdminUsers = await _context.Users
+                .Where(u => u.Role != "Admin")
+                .ToListAsync();
+            _context.Users.RemoveRange(nonAdminUsers);
+
+            await _context.SaveChangesAsync();
+        }
     }
 }

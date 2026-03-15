@@ -27,6 +27,22 @@
   },
   {
     "ContainingType": "GP_BackEnd.Controllers.AdminController",
+    "Method": "DeleteUniversityRecord",
+    "RelativePath": "api/Admin/delete-university-record/{email}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "email",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.AdminController",
     "Method": "GetPendingRequests",
     "RelativePath": "api/Admin/pending-requests",
     "HttpMethod": "GET",

@@ -81,5 +81,16 @@ namespace GP_BackEnd.Controllers
                 return NotFound("University record not found.");
             return Ok(record);
         }
+        // DELETE api/admin/delete-university-record/{email}
+        [HttpDelete("delete-university-record/{email}")]
+        public async Task<IActionResult> DeleteUniversityRecord(string email)
+        {
+            var result = await _adminService.DeleteUniversityRecordAsync(email);
+
+            if (!result)
+                return NotFound("University record not found.");
+
+            return Ok("University record deleted successfully.");
+        }
     }
 }

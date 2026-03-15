@@ -154,5 +154,17 @@ namespace GP_BackEnd.Services
                 IsGraduate = record.IsGraduate
             };
         }
+        public async Task<bool> DeleteUniversityRecordAsync(string universityEmail)
+        {
+            var record = await _context.UniversityRecords
+                .FirstOrDefaultAsync(u => u.UniversityEmail == universityEmail);
+
+            if (record == null) return false;
+
+            _context.UniversityRecords.Remove(record);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
     }
 }

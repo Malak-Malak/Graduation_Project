@@ -13,8 +13,7 @@ namespace GP_BackEnd.Services
         {
             _context = context;
         }
-
-        // Get all available students (not in any team)
+        //Get all available students
         public async Task<List<AvailableStudentDto>> GetAvailableStudentsAsync()
         {
             var studentsInTeams = await _context.TeamMembers
@@ -27,7 +26,8 @@ namespace GP_BackEnd.Services
                 {
                     UserId = u.Id,
                     Username = u.Username,
-                    FullName = u.UserProfile != null ? u.UserProfile.FullName : u.Username
+                    FullName = u.UserProfile != null ? u.UserProfile.FullName : u.Username,
+                    Field = u.UserProfile != null ? u.UserProfile.field : null  // Add this
                 })
                 .ToListAsync();
         }

@@ -8,7 +8,7 @@ namespace GP_BackEnd.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Student")]
+    [Authorize(Roles = "student")]
     public class StudentController : ControllerBase
     {
         private readonly StudentService _studentService;

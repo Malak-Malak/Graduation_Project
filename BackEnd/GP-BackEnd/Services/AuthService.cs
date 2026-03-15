@@ -105,5 +105,30 @@ namespace GP_BackEnd.Services
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
+        public async Task<bool> DeleteUniversityRecordAsync(string universityEmail)
+        {
+            var record = await _context.UniversityRecords
+                .FirstOrDefaultAsync(u => u.UniversityEmail == universityEmail);
+
+            if (record == null) return false;
+
+            // Delete registration request if exists
+            var request = await _context.RegistrationRequests
+                .FirstOrDefaultAsync(r => r.UniversityEmail == universityEmail);
+
+            if (request != null)
+                _context.RegistrationRequests.Remove(request);
+
+            // Delete user account if exists
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Email == universityEmail);
+
+            if (user != null)
+                _context.Users.Remove(user);
+
+            _context.UniversityRecords.Remove(record);
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 }

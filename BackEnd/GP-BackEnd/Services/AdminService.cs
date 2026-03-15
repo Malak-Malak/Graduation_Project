@@ -161,10 +161,18 @@ namespace GP_BackEnd.Services
 
             if (record == null) return false;
 
+            // Delete the user account if exists
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Email == universityEmail);
+
+            if (user != null)
+            {
+                _context.Users.Remove(user);
+            }
+
             _context.UniversityRecords.Remove(record);
             await _context.SaveChangesAsync();
             return true;
         }
-
     }
 }

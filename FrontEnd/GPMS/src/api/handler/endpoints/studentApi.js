@@ -35,6 +35,13 @@ const studentApi = {
     requestLeave: () =>
         axiosInstance.post("/Student/request-leave").then((r) => r.data),
 
+    // ── User Profile ──────────────────────────────────────────────────────────
+    getProfile: () =>
+        axiosInstance.get("/UserProfile").then((r) => r.data),
+
+    updateProfile: (data) =>
+        axiosInstance.put("/UserProfile", data).then((r) => r.data),
+
 };
 
 export default studentApi;

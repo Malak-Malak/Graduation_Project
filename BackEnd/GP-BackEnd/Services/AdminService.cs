@@ -198,5 +198,16 @@ namespace GP_BackEnd.Services
 
             await _context.SaveChangesAsync();
         }
+        public async Task<bool> DeleteRegistrationRequestAsync(int requestId)
+        {
+            var request = await _context.RegistrationRequests
+                .FirstOrDefaultAsync(r => r.Id == requestId);
+
+            if (request == null) return false;
+
+            _context.RegistrationRequests.Remove(request);
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 }

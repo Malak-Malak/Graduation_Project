@@ -27,12 +27,18 @@
   },
   {
     "ContainingType": "GP_BackEnd.Controllers.AdminController",
-    "Method": "ClearAllData",
-    "RelativePath": "api/Admin/clear-all-data",
+    "Method": "DeleteRegistrationRequest",
+    "RelativePath": "api/Admin/delete-request/{id}",
     "HttpMethod": "DELETE",
     "IsController": true,
     "Order": 0,
-    "Parameters": [],
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
     "ReturnTypes": []
   },
   {

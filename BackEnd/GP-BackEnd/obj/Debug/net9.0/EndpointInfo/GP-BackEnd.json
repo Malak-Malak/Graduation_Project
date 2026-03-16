@@ -159,10 +159,21 @@
         }
       }
     },
-    "/api/Admin/clear-all-data": {
+    "/api/Admin/delete-request/{id}": {
       "delete": {
         "tags": [
           "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
         ],
         "responses": {
           "200": {

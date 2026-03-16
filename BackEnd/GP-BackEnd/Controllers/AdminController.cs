@@ -99,5 +99,16 @@ namespace GP_BackEnd.Controllers
         //    await _adminService.ClearAllDataAsync();
         //    return Ok("All data cleared successfully. Admin account preserved.");
         //}
+        // DELETE api/admin/delete-request/{id}
+        [HttpDelete("delete-request/{id}")]
+        public async Task<IActionResult> DeleteRegistrationRequest(int id)
+        {
+            var result = await _adminService.DeleteRegistrationRequestAsync(id);
+
+            if (!result)
+                return NotFound("Request not found.");
+
+            return Ok("Request deleted successfully.");
+        }
     }
 }

@@ -163,11 +163,21 @@ export default function ProfileSetupModal({ open, onDone }) {
 
                     {/* Step 3 — Bio */}
                     {step === 3 && (
-                        <TextField multiline rows={4} fullWidth label="Bio"
-                            placeholder="Tell your teammates a bit about yourself..."
+                        <TextField multiline rows={5} fullWidth label="Bio"
+                            placeholder={[
+                                "💡 Tips for a great bio:",
+                                "• Programming languages: Python, JavaScript, C++...",
+                                "• Frameworks & tools: React, Django, Flutter...",
+                                "• Previous projects or experience",
+                                "• Competitions or contributions (e.g. hackathons)",
+                            ].join("\n")}
                             value={bio} onChange={(e) => setBio(e.target.value)}
-                            inputProps={{ maxLength: 300 }}
-                            helperText={`${bio.length}/300`} />
+                            inputProps={{ maxLength: 400 }}
+                            helperText={
+                                bio.length === 0
+                                    ? "Mention your languages, frameworks, projects, and any relevant experience"
+                                    : `${bio.length}/400`
+                            } />
                     )}
 
                 </Stack>

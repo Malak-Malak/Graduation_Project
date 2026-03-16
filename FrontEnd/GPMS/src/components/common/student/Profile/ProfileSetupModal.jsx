@@ -7,6 +7,8 @@ import {
 import LinkedInIcon from "@mui/icons-material/LinkedIn";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
+import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
+import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
 import studentApi from "../../../../api/handler/endpoints/studentApi";
 
 const ALL_SKILLS = [
@@ -27,6 +29,8 @@ export default function ProfileSetupModal({ open, onDone }) {
     const [step, setStep] = useState(0);
     const [field, setField] = useState("");
     const [skills, setSkills] = useState([]);
+    const [fullName, setFullName] = useState("");
+    const [phoneNumber, setPhoneNumber] = useState("");
     const [linkedin, setLinkedin] = useState("");
     const [github, setGithub] = useState("");
     const [bio, setBio] = useState("");
@@ -39,7 +43,7 @@ export default function ProfileSetupModal({ open, onDone }) {
         if (step < STEPS.length - 1) {
             setStep((s) => s + 1);
         } else {
-            const data = { field, skills, linkedin, github, bio };
+            const data = { field, skills, fullName, phoneNumber, linkedin, github, bio };
             setSaving(true);
             try {
                 await studentApi.updateProfile(data);
@@ -57,7 +61,8 @@ export default function ProfileSetupModal({ open, onDone }) {
     const canNext =
         step === 0 ? Boolean(field) :
             step === 1 ? skills.length > 0 :
-                true;
+                step === 2 ? Boolean(fullName.trim()) && Boolean(phoneNumber.trim()) :
+                    true;
 
     return (
         <Dialog open={open} maxWidth="xs" fullWidth
@@ -89,7 +94,7 @@ export default function ProfileSetupModal({ open, onDone }) {
                         <Typography variant="body2" color="text.secondary" textAlign="center">
                             {step === 0 && "Select your academic field"}
                             {step === 1 && "Select your skills so teammates can find you"}
-                            {step === 2 && "Add your social links so others can connect with you"}
+                            {step === 2 && "Add your contact info and social links"}
                             {step === 3 && "Write a short bio about yourself"}
                         </Typography>
                     </Stack>
@@ -137,6 +142,14 @@ export default function ProfileSetupModal({ open, onDone }) {
                     {/* Step 2 — Contact */}
                     {step === 2 && (
                         <Stack spacing={2}>
+                            <TextField size="small" fullWidth label="Full Name *"
+                                placeholder="e.g. Hanan Awad"
+                                value={fullName} onChange={(e) => setFullName(e.target.value)}
+                                InputProps={{ startAdornment: <BadgeOutlinedIcon sx={{ mr: 1, color: "#C47E7E", fontSize: 20 }} /> }} />
+                            <TextField size="small" fullWidth label="Phone Number *"
+                                placeholder="e.g. +970591234567"
+                                value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)}
+                                InputProps={{ startAdornment: <PhoneOutlinedIcon sx={{ mr: 1, color: "#C47E7E", fontSize: 20 }} /> }} />
                             <TextField size="small" fullWidth label="LinkedIn URL"
                                 placeholder="https://linkedin.com/in/username"
                                 value={linkedin} onChange={(e) => setLinkedin(e.target.value)}

@@ -8,6 +8,8 @@ import LinkedInIcon from "@mui/icons-material/LinkedIn";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import CloseIcon from "@mui/icons-material/Close";
 import IconButton from "@mui/material/IconButton";
+import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
+import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
 
 const ALL_SKILLS = [
     "Frontend", "Backend", "AI / ML", "Data Analysis",
@@ -24,15 +26,18 @@ const ALL_FIELDS = [
 export default function EditProfileModal({ open, profile, onSave, onClose }) {
     const [field, setField] = useState("");
     const [skills, setSkills] = useState([]);
+    const [fullName, setFullName] = useState("");
+    const [phoneNumber, setPhoneNumber] = useState("");
     const [linkedin, setLinkedin] = useState("");
     const [github, setGithub] = useState("");
     const [bio, setBio] = useState("");
 
-    // ← sync مع البروفايل الحالي كل ما يفتح المودال
     useEffect(() => {
         if (open) {
             setField(profile?.field || "");
             setSkills(profile?.skills || []);
+            setFullName(profile?.fullName || "");
+            setPhoneNumber(profile?.phoneNumber || "");
             setLinkedin(profile?.linkedin || "");
             setGithub(profile?.github || "");
             setBio(profile?.bio || "");
@@ -43,8 +48,10 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
         setSkills((p) => p.includes(skill) ? p.filter((s) => s !== skill) : [...p, skill]);
 
     const handleSave = () => {
-        onSave({ field, skills, linkedin, github, bio });
+        onSave({ field, skills, fullName, phoneNumber, linkedin, github, bio });
     };
+
+    const canSave = Boolean(fullName.trim()) && Boolean(phoneNumber.trim());
 
     return (
         <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth
@@ -62,10 +69,7 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
 
                     {/* Field */}
                     <Box>
-                        <Typography sx={{
-                            fontSize: "0.78rem", fontWeight: 700, color: "text.secondary",
-                            textTransform: "uppercase", letterSpacing: "0.06em", mb: 1.2
-                        }}>
+                        <Typography sx={{ fontSize: "0.78rem", fontWeight: 700, color: "text.secondary", textTransform: "uppercase", letterSpacing: "0.06em", mb: 1.2 }}>
                             Academic Field
                         </Typography>
                         <Stack direction="row" flexWrap="wrap" gap={1}>
@@ -90,10 +94,7 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
 
                     {/* Skills */}
                     <Box>
-                        <Typography sx={{
-                            fontSize: "0.78rem", fontWeight: 700, color: "text.secondary",
-                            textTransform: "uppercase", letterSpacing: "0.06em", mb: 1.2
-                        }}>
+                        <Typography sx={{ fontSize: "0.78rem", fontWeight: 700, color: "text.secondary", textTransform: "uppercase", letterSpacing: "0.06em", mb: 1.2 }}>
                             Skills
                         </Typography>
                         <Stack direction="row" flexWrap="wrap" gap={1}>
@@ -118,13 +119,18 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
 
                     {/* Contact */}
                     <Box>
-                        <Typography sx={{
-                            fontSize: "0.78rem", fontWeight: 700, color: "text.secondary",
-                            textTransform: "uppercase", letterSpacing: "0.06em", mb: 1.5
-                        }}>
-                            Contact Links
+                        <Typography sx={{ fontSize: "0.78rem", fontWeight: 700, color: "text.secondary", textTransform: "uppercase", letterSpacing: "0.06em", mb: 1.5 }}>
+                            Contact Info
                         </Typography>
                         <Stack spacing={2}>
+                            <TextField size="small" fullWidth label="Full Name *"
+                                placeholder="e.g. Hanan Awad"
+                                value={fullName} onChange={(e) => setFullName(e.target.value)}
+                                InputProps={{ startAdornment: <BadgeOutlinedIcon sx={{ mr: 1, color: "#C47E7E", fontSize: 20 }} /> }} />
+                            <TextField size="small" fullWidth label="Phone Number *"
+                                placeholder="e.g. +970591234567"
+                                value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)}
+                                InputProps={{ startAdornment: <PhoneOutlinedIcon sx={{ mr: 1, color: "#C47E7E", fontSize: 20 }} /> }} />
                             <TextField size="small" fullWidth label="LinkedIn URL"
                                 placeholder="https://linkedin.com/in/username"
                                 value={linkedin} onChange={(e) => setLinkedin(e.target.value)}
@@ -140,10 +146,7 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
 
                     {/* Bio */}
                     <Box>
-                        <Typography sx={{
-                            fontSize: "0.78rem", fontWeight: 700, color: "text.secondary",
-                            textTransform: "uppercase", letterSpacing: "0.06em", mb: 1.5
-                        }}>
+                        <Typography sx={{ fontSize: "0.78rem", fontWeight: 700, color: "text.secondary", textTransform: "uppercase", letterSpacing: "0.06em", mb: 1.5 }}>
                             Bio
                         </Typography>
                         <TextField multiline rows={4} fullWidth
@@ -158,7 +161,7 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
 
             <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
                 <Button onClick={onClose} sx={{ color: "text.secondary" }}>Cancel</Button>
-                <Button variant="contained" onClick={handleSave}
+                <Button variant="contained" onClick={handleSave} disabled={!canSave}
                     sx={{ bgcolor: "#C47E7E", "&:hover": { bgcolor: "#b06b6b" }, borderRadius: 2, px: 3 }}>
                     Save Changes
                 </Button>

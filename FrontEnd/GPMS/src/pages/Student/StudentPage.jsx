@@ -67,14 +67,11 @@ export default function StudentPage() {
     }, []);
 
     const handleProfileDone = (data) => {
-        if (data) {
-            sessionStorage.setItem("student_profile", JSON.stringify(data));
-        }
+        sessionStorage.setItem("student_profile", JSON.stringify(data));
         sessionStorage.setItem("profile_done", "1");
         setShowProfile(false);
         setShowGate(true);
     };
-
     const handleSkip = () => setShowGate(false);
     const handleCreateOrJoin = () => { setShowGate(false); setShowJoinOrCreate(true); };
     const handleCreate = () => { setShowJoinOrCreate(false); setShowCreate(true); };

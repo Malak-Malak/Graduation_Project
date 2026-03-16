@@ -58,8 +58,6 @@ export default function ProfileSetupModal({ open, onDone }) {
         }
     };
 
-    const handleSkip = () => onDone(null);
-
     const canNext =
         step === 0 ? Boolean(field) :
             step === 1 ? true :
@@ -68,7 +66,8 @@ export default function ProfileSetupModal({ open, onDone }) {
 
     return (
         <Dialog open={open} maxWidth="xs" fullWidth
-            PaperProps={{ sx: { borderRadius: 4, p: 1 } }}>
+            PaperProps={{ sx: { borderRadius: 4, p: 1 } }}
+            disableEscapeKeyDown>
 
             <DialogContent>
                 <Stack spacing={3}>
@@ -125,7 +124,7 @@ export default function ProfileSetupModal({ open, onDone }) {
                     {step === 1 && (
                         <Stack spacing={1.5}>
                             <Typography sx={{ fontSize: "0.75rem", color: "text.secondary", textAlign: "center" }}>
-                                Optional — you can skip this and add later
+                                Optional — you can add more later
                             </Typography>
                             <Stack direction="row" flexWrap="wrap" gap={1} justifyContent="center">
                                 {ALL_SKILLS.map((skill) => {
@@ -153,7 +152,7 @@ export default function ProfileSetupModal({ open, onDone }) {
                                 placeholder="e.g. Hanan Awad"
                                 value={fullName} onChange={(e) => setFullName(e.target.value)}
                                 InputProps={{ startAdornment: <BadgeOutlinedIcon sx={{ mr: 1, color: "#C47E7E", fontSize: 20 }} /> }} />
-                            <TextField size="small" fullWidth label="Contact Email"
+                            <TextField size="small" fullWidth label="Contact Email *"
                                 placeholder="e.g. personal@gmail.com"
                                 value={email} onChange={(e) => setEmail(e.target.value)}
                                 InputProps={{ startAdornment: <EmailOutlinedIcon sx={{ mr: 1, color: "#C47E7E", fontSize: 20 }} /> }} />
@@ -193,9 +192,6 @@ export default function ProfileSetupModal({ open, onDone }) {
             </DialogContent>
 
             <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
-                <Button onClick={handleSkip} sx={{ color: "text.secondary", fontSize: "0.8rem" }}>
-                    Skip for now
-                </Button>
                 <Box sx={{ flexGrow: 1 }} />
                 {step > 0 && (
                     <Button onClick={() => setStep((s) => s - 1)} sx={{ color: "text.secondary" }}>

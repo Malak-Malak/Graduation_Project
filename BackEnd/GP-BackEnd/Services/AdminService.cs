@@ -52,7 +52,7 @@ namespace GP_BackEnd.Services
                     Username = universityRecord.Username,
                     Email = universityRecord.UniversityEmail,
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword(universityRecord.Password),
-                    Role = universityRecord.Role,
+                    Role = char.ToUpper(universityRecord.Role[0]) + universityRecord.Role.Substring(1).ToLower(),
                     CreatedAt = DateTime.UtcNow
                 };
 

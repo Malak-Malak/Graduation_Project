@@ -10,6 +10,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import IconButton from "@mui/material/IconButton";
 import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
 import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
+import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
 
 const ALL_SKILLS = [
     "Frontend", "Backend", "AI / ML", "Data Analysis",
@@ -27,6 +28,7 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
     const [field, setField] = useState("");
     const [skills, setSkills] = useState([]);
     const [fullName, setFullName] = useState("");
+    const [email, setEmail] = useState("");
     const [phoneNumber, setPhoneNumber] = useState("");
     const [linkedin, setLinkedin] = useState("");
     const [github, setGithub] = useState("");
@@ -37,6 +39,7 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
             setField(profile?.field || "");
             setSkills(profile?.skills || []);
             setFullName(profile?.fullName || "");
+            setEmail(profile?.email || "");
             setPhoneNumber(profile?.phoneNumber || "");
             setLinkedin(profile?.linkedin || "");
             setGithub(profile?.github || "");
@@ -48,10 +51,10 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
         setSkills((p) => p.includes(skill) ? p.filter((s) => s !== skill) : [...p, skill]);
 
     const handleSave = () => {
-        onSave({ field, skills, fullName, phoneNumber, linkedin, github, bio });
+        onSave({ field, skills, fullName, email, phoneNumber, linkedin, github, bio });
     };
 
-    const canSave = Boolean(fullName.trim()) && Boolean(phoneNumber.trim());
+    const canSave = Boolean(fullName.trim()) && Boolean(email.trim()) && Boolean(field);
 
     return (
         <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth
@@ -67,10 +70,10 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
             <DialogContent sx={{ pt: 1 }}>
                 <Stack spacing={3}>
 
-                    {/* Field */}
+                    {/* Department */}
                     <Box>
                         <Typography sx={{ fontSize: "0.78rem", fontWeight: 700, color: "text.secondary", textTransform: "uppercase", letterSpacing: "0.06em", mb: 1.2 }}>
-                            Academic Field
+                            Department *
                         </Typography>
                         <Stack direction="row" flexWrap="wrap" gap={1}>
                             {ALL_FIELDS.map((f) => {
@@ -127,10 +130,14 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
                                 placeholder="e.g. Hanan Awad"
                                 value={fullName} onChange={(e) => setFullName(e.target.value)}
                                 InputProps={{ startAdornment: <BadgeOutlinedIcon sx={{ mr: 1, color: "#C47E7E", fontSize: 20 }} /> }} />
-                            <TextField size="small" fullWidth label="Phone Number *"
+                            <TextField size="small" fullWidth label="Contact Email"
+                                placeholder="e.g. personal@gmail.com"
+                                value={email} onChange={(e) => setEmail(e.target.value)}
+                                InputProps={{ startAdornment: <EmailOutlinedIcon sx={{ mr: 1, color: "#C47E7E", fontSize: 20 }} /> }} />
+                            <TextField size="small" fullWidth label="Phone Number"
                                 placeholder="e.g. +970591234567"
                                 value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)}
-                                InputProps={{ startAdornment: <PhoneOutlinedIcon sx={{ mr: 1, color: "#C47E7E", fontSize: 20 }} /> }} />
+                                InputProps={{ startAdornment: <PhoneOutlinedIcon sx={{ mr: 1, color: "text.secondary", fontSize: 20 }} /> }} />
                             <TextField size="small" fullWidth label="LinkedIn URL"
                                 placeholder="https://linkedin.com/in/username"
                                 value={linkedin} onChange={(e) => setLinkedin(e.target.value)}
@@ -149,7 +156,7 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
                         <Typography sx={{ fontSize: "0.78rem", fontWeight: 700, color: "text.secondary", textTransform: "uppercase", letterSpacing: "0.06em", mb: 1.5 }}>
                             Bio
                         </Typography>
-                        <TextField multiline rows={5} fullWidth label="Bio"
+                        <TextField multiline rows={5} fullWidth
                             placeholder={[
                                 "💡 Tips for a great bio:",
                                 "• Programming languages: Python, JavaScript, C++...",
@@ -159,11 +166,9 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
                             ].join("\n")}
                             value={bio} onChange={(e) => setBio(e.target.value)}
                             inputProps={{ maxLength: 400 }}
-                            helperText={
-                                bio.length === 0
-                                    ? "Mention your languages, frameworks, projects, and any relevant experience"
-                                    : `${bio.length}/400`
-                            } />
+                            helperText={bio.length === 0
+                                ? "Mention your languages, frameworks, projects, and experience"
+                                : `${bio.length}/400`} />
                     </Box>
 
                 </Stack>

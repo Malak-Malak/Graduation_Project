@@ -348,5 +348,31 @@
       }
     ],
     "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.UserProfileController",
+    "Method": "GetProfile",
+    "RelativePath": "api/UserProfile",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.UserProfileController",
+    "Method": "UpdateProfile",
+    "RelativePath": "api/UserProfile",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "GP_BackEnd.DTOs.UserProfile.UpdateProfileDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
   }
 ]

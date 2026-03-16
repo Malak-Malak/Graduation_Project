@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     Box, Typography, Stack, Paper, Avatar, Chip, Button,
-    Divider, IconButton, Tooltip,
+    Divider, IconButton, Tooltip, CircularProgress,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
@@ -12,6 +12,7 @@ import CodeOutlinedIcon from "@mui/icons-material/CodeOutlined";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import EditProfileModal from "./EditProfileModal";
 import { useAuth } from "../../../../contexts/AuthContext";
+import studentApi from "../../../../api/handler/endpoints/studentApi";
 
 const SKILL_COLORS = ["#B46F4C", "#6D8A7D", "#C49A6C", "#7E9FC4", "#9B7EC8", "#C47E7E"];
 
@@ -20,30 +21,36 @@ export default function ProfilePage() {
     const t = theme.palette.custom;
     const { user } = useAuth();
 
-    // ← بنقرأ من sessionStorage مؤقتاً لحد ما API تجهز
-    const stored = (() => {
-        try { return JSON.parse(sessionStorage.getItem("student_profile") || "{}"); }
-        catch { return {}; }
-    })();
-
-    const [profile, setProfile] = useState({
-        field: stored.field || "",
-        skills: stored.skills || [],
-        linkedin: stored.linkedin || "",
-        github: stored.github || "",
-        bio: stored.bio || "",
-    });
-
+    const [profile, setProfile] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [editOpen, setEditOpen] = useState(false);
 
-    const handleSave = (updated) => {
-        setProfile(updated);
-        sessionStorage.setItem("student_profile", JSON.stringify(updated));
+    useEffect(() => {
+        studentApi.getProfile()
+            .then((data) => setProfile(data))
+            .catch(() => setProfile({}))
+            .finally(() => setLoading(false));
+    }, []);
+
+    const handleSave = async (updated) => {
+        try {
+            await studentApi.updateProfile(updated);
+            setProfile(updated);
+        } catch {
+            // لو فشل الـ API نحفظ محلياً مؤقتاً
+            setProfile(updated);
+        }
         setEditOpen(false);
     };
 
     const displayName = user?.name ?? user?.username ?? "Student";
     const avatarLetter = displayName.charAt(0).toUpperCase();
+
+    if (loading) return (
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight={300}>
+            <CircularProgress sx={{ color: "#C47E7E" }} />
+        </Box>
+    );
 
     return (
         <Box sx={{ maxWidth: 700, mx: "auto" }}>
@@ -62,7 +69,7 @@ export default function ProfilePage() {
                             <Typography sx={{ fontSize: "0.85rem", color: t.textSecondary, mt: 0.3 }}>
                                 {user?.email ?? ""}
                             </Typography>
-                            {profile.field && (
+                            {profile?.field && (
                                 <Stack direction="row" alignItems="center" gap={0.6} mt={0.8}>
                                     <SchoolOutlinedIcon sx={{ fontSize: 15, color: t.accentPrimary }} />
                                     <Typography sx={{ fontSize: "0.82rem", color: t.accentPrimary, fontWeight: 600 }}>
@@ -77,7 +84,7 @@ export default function ProfilePage() {
                         <IconButton onClick={() => setEditOpen(true)}
                             sx={{
                                 border: `1px solid ${t.borderLight}`, borderRadius: 2, color: t.textSecondary,
-                                "&:hover": { color: t.accentPrimary, borderColor: t.accentPrimary }
+                                "&:hover": { color: t.accentPrimary, borderColor: t.accentPrimary },
                             }}>
                             <EditOutlinedIcon sx={{ fontSize: 18 }} />
                         </IconButton>
@@ -85,7 +92,7 @@ export default function ProfilePage() {
                 </Stack>
 
                 {/* Social links */}
-                {(profile.linkedin || profile.github) && (
+                {(profile?.linkedin || profile?.github) && (
                     <Stack direction="row" gap={1.5} mt={2.5}>
                         {profile.linkedin && (
                             <Button size="small" startIcon={<LinkedInIcon sx={{ fontSize: 16 }} />}
@@ -93,7 +100,7 @@ export default function ProfilePage() {
                                 sx={{
                                     color: "#0077B5", bgcolor: "#0077B510", borderRadius: 2,
                                     fontSize: "0.78rem", textTransform: "none",
-                                    "&:hover": { bgcolor: "#0077B520" }
+                                    "&:hover": { bgcolor: "#0077B520" },
                                 }}>
                                 LinkedIn
                             </Button>
@@ -104,7 +111,7 @@ export default function ProfilePage() {
                                 sx={{
                                     color: t.textPrimary, bgcolor: t.surfaceHover, borderRadius: 2,
                                     fontSize: "0.78rem", textTransform: "none",
-                                    "&:hover": { bgcolor: t.borderLight }
+                                    "&:hover": { bgcolor: t.borderLight },
                                 }}>
                                 GitHub
                             </Button>
@@ -114,7 +121,7 @@ export default function ProfilePage() {
             </Paper>
 
             {/* Bio */}
-            {profile.bio && (
+            {profile?.bio && (
                 <Paper elevation={1} sx={{ p: 2.5, borderRadius: 3, bgcolor: theme.palette.background.paper, mb: 2.5 }}>
                     <Stack direction="row" alignItems="center" gap={1} mb={1.5}>
                         <PersonOutlineIcon sx={{ fontSize: 18, color: t.accentPrimary }} />
@@ -134,7 +141,7 @@ export default function ProfilePage() {
                     <Typography variant="h5" sx={{ color: t.textPrimary }}>Skills</Typography>
                 </Stack>
                 <Divider sx={{ mb: 1.5 }} />
-                {profile.skills.length > 0 ? (
+                {profile?.skills?.length > 0 ? (
                     <Stack direction="row" flexWrap="wrap" gap={1}>
                         {profile.skills.map((skill, i) => (
                             <Chip key={skill} label={skill}
@@ -158,7 +165,7 @@ export default function ProfilePage() {
             </Paper>
 
             {/* Empty state */}
-            {!profile.bio && !profile.linkedin && !profile.github && profile.skills.length === 0 && (
+            {!profile?.bio && !profile?.linkedin && !profile?.github && !profile?.skills?.length && (
                 <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: `1px dashed ${t.borderLight}`, textAlign: "center" }}>
                     <Typography sx={{ color: t.textTertiary, fontSize: "0.875rem", mb: 1.5 }}>
                         Your profile looks empty. Complete it so teammates can find you!

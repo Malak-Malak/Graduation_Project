@@ -7,6 +7,7 @@ import {
 import LinkedInIcon from "@mui/icons-material/LinkedIn";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
+import studentApi from "../../../../api/handler/endpoints/studentApi";
 
 const ALL_SKILLS = [
     "Frontend", "Backend", "AI / ML", "Data Analysis",
@@ -29,13 +30,26 @@ export default function ProfileSetupModal({ open, onDone }) {
     const [linkedin, setLinkedin] = useState("");
     const [github, setGithub] = useState("");
     const [bio, setBio] = useState("");
+    const [saving, setSaving] = useState(false);
 
     const toggleSkill = (skill) =>
         setSkills((p) => p.includes(skill) ? p.filter((s) => s !== skill) : [...p, skill]);
 
-    const handleNext = () => {
-        if (step < STEPS.length - 1) setStep((s) => s + 1);
-        else onDone({ field, skills, linkedin, github, bio });
+    const handleNext = async () => {
+        if (step < STEPS.length - 1) {
+            setStep((s) => s + 1);
+        } else {
+            const data = { field, skills, linkedin, github, bio };
+            setSaving(true);
+            try {
+                await studentApi.updateProfile(data);
+            } catch {
+                // لو فشل الـ API نكمل بدونه
+            } finally {
+                setSaving(false);
+            }
+            onDone(data);
+        }
     };
 
     const handleSkip = () => onDone(null);
@@ -156,9 +170,9 @@ export default function ProfileSetupModal({ open, onDone }) {
                         Back
                     </Button>
                 )}
-                <Button variant="contained" onClick={handleNext} disabled={!canNext}
+                <Button variant="contained" onClick={handleNext} disabled={!canNext || saving}
                     sx={{ bgcolor: "#C47E7E", "&:hover": { bgcolor: "#b06b6b" }, borderRadius: 2, px: 3 }}>
-                    {step === STEPS.length - 1 ? "Finish" : "Next"}
+                    {saving ? "Saving..." : step === STEPS.length - 1 ? "Finish" : "Next"}
                 </Button>
             </DialogActions>
         </Dialog>

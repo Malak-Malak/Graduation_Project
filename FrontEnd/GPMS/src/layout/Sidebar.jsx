@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import {
     Box, Drawer, List, ListItemButton, ListItemIcon, ListItemText,
-    Typography, Avatar, Divider, IconButton, Tooltip, Stack,
+    Typography, Avatar, IconButton, Tooltip, Stack,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
@@ -23,20 +23,20 @@ import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
 import LightModeOutlinedIcon from "@mui/icons-material/LightModeOutlined";
-import HowToRegOutlinedIcon from "@mui/icons-material/HowToRegOutlined";   // ✅ أيقونة Pending Requests
+import HowToRegOutlinedIcon from "@mui/icons-material/HowToRegOutlined";
+import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined";
 
 import { useAuth } from "../contexts/AuthContext";
 import { useThemeContext } from "../contexts/ThemeContext";
 
-// ─── Nav config per role ──────────────────────────────────────────────────────
 const NAV_ITEMS = {
     admin: [
         { label: "Dashboard", icon: <DashboardOutlinedIcon />, path: "/admin" },
-        { label: "Pending Requests", icon: <HowToRegOutlinedIcon />, path: "/admin/pending-requests" }, // ✅
+        { label: "Pending Requests", icon: <HowToRegOutlinedIcon />, path: "/admin/pending-requests" },
         { label: "User Management", icon: <PeopleOutlineIcon />, path: "/admin/users" },
         { label: "Reports", icon: <AssessmentOutlinedIcon />, path: "/admin/reports" },
         { label: "Activity Logs", icon: <HistoryOutlinedIcon />, path: "/admin/logs" },
-        { label: "All Requests", icon: <AssessmentOutlinedIcon />, path: "/admin/all-requests" }, // ✅
+        { label: "All Requests", icon: <AssessmentOutlinedIcon />, path: "/admin/all-requests" },
         { label: "Configuration", icon: <SettingsOutlinedIcon />, path: "/admin/settings" },
     ],
     supervisor: [
@@ -50,6 +50,7 @@ const NAV_ITEMS = {
     ],
     student: [
         { label: "Dashboard", icon: <DashboardOutlinedIcon />, path: "/student" },
+        { label: "Profile", icon: <AccountCircleOutlinedIcon />, path: "/student/profile" },
         { label: "Team Finder", icon: <SearchOutlinedIcon />, path: "/student/team-finder" },
         { label: "Kanban Board", icon: <ViewKanbanOutlinedIcon />, path: "/student/kanban" },
         { label: "Files", icon: <FolderOutlinedIcon />, path: "/student/files" },
@@ -61,7 +62,6 @@ const NAV_ITEMS = {
 const ROLE_LABEL = { admin: "Administrator", supervisor: "Supervisor", student: "Student" };
 const ROLE_COLOR = { admin: "#C47E7E", supervisor: "#6D8A7D", student: "#B46F4C" };
 
-// ─── Component ────────────────────────────────────────────────────────────────
 export default function Sidebar({
     width, collapsedWidth, collapsed, mobileOpen,
     onMobileClose, onCollapse, isMobile,
@@ -88,21 +88,23 @@ export default function Sidebar({
 
     const handleLogout = () => {
         sessionStorage.removeItem("team_checked");
+        sessionStorage.removeItem("profile_done");
+        sessionStorage.removeItem("student_profile");
         logout();
         navigate("/login");
     };
 
-    // ── Drawer content ──────────────────────────────────────────────────────────
     const drawerContent = (
         <Box sx={{
             display: "flex", flexDirection: "column", height: "100%", width: currentWidth, overflow: "hidden",
-            transition: theme.transitions.create("width", { easing: theme.transitions.easing.sharp, duration: 220 })
+            transition: theme.transitions.create("width", { easing: theme.transitions.easing.sharp, duration: 220 }),
         }}>
 
             {/* Logo + collapse */}
             <Box sx={{
                 height: 64, display: "flex", alignItems: "center", px: collapsed ? 1.5 : 2.5,
-                justifyContent: collapsed ? "center" : "space-between", borderBottom: `1px solid ${t.borderLight}`, flexShrink: 0
+                justifyContent: collapsed ? "center" : "space-between",
+                borderBottom: `1px solid ${t.borderLight}`, flexShrink: 0,
             }}>
                 {!collapsed && (
                     <Box>
@@ -146,12 +148,22 @@ export default function Sidebar({
 
                     {role === "student" && (
                         <Box sx={{ mt: 1.5 }}>
-                            {user?.teamName && <Typography sx={{ fontSize: "0.75rem", color: t.textSecondary }}>Team: <span style={{ color: t.accentPrimary, fontWeight: 600 }}>{user.teamName}</span></Typography>}
-                            {user?.studentId && <Typography sx={{ fontSize: "0.72rem", color: t.textTertiary, mt: 0.3 }}>ID: {user.studentId}</Typography>}
+                            {user?.teamName && (
+                                <Typography sx={{ fontSize: "0.75rem", color: t.textSecondary }}>
+                                    Team: <span style={{ color: t.accentPrimary, fontWeight: 600 }}>{user.teamName}</span>
+                                </Typography>
+                            )}
+                            {user?.studentId && (
+                                <Typography sx={{ fontSize: "0.72rem", color: t.textTertiary, mt: 0.3 }}>
+                                    ID: {user.studentId}
+                                </Typography>
+                            )}
                         </Box>
                     )}
                     {role === "supervisor" && user?.department && (
-                        <Typography sx={{ fontSize: "0.75rem", color: t.textSecondary, mt: 1 }}>{user.department}</Typography>
+                        <Typography sx={{ fontSize: "0.75rem", color: t.textSecondary, mt: 1 }}>
+                            {user.department}
+                        </Typography>
                     )}
                 </Box>
             )}
@@ -175,11 +187,8 @@ export default function Sidebar({
                         const active = isActive(item.path);
                         return (
                             <Tooltip key={item.path} title={collapsed ? item.label : ""} placement="right">
-                                <ListItemButton
-                                    selected={active}
-                                    onClick={() => handleNav(item.path)}
-                                    sx={{ mx: 1, mb: 0.25, px: 1.5, justifyContent: collapsed ? "center" : "flex-start", borderRadius: "8px", minHeight: 40 }}
-                                >
+                                <ListItemButton selected={active} onClick={() => handleNav(item.path)}
+                                    sx={{ mx: 1, mb: 0.25, px: 1.5, justifyContent: collapsed ? "center" : "flex-start", borderRadius: "8px", minHeight: 40 }}>
                                     <ListItemIcon sx={{ minWidth: collapsed ? "auto" : 36, color: active ? t.accentPrimary : t.textSecondary, "& svg": { fontSize: 20 } }}>
                                         {item.icon}
                                     </ListItemIcon>
@@ -228,7 +237,7 @@ export default function Sidebar({
                     <ListItemButton onClick={handleLogout}
                         sx={{
                             mx: 1, borderRadius: "8px", justifyContent: collapsed ? "center" : "flex-start", minHeight: 40, px: 1.5,
-                            "&:hover": { bgcolor: `${t.error}14`, "& .MuiListItemIcon-root, & .MuiListItemText-primary": { color: t.error } }
+                            "&:hover": { bgcolor: `${t.error}14`, "& .MuiListItemIcon-root, & .MuiListItemText-primary": { color: t.error } },
                         }}>
                         <ListItemIcon sx={{ minWidth: collapsed ? "auto" : 36, color: t.textSecondary, "& svg": { fontSize: 20 } }}>
                             <LogoutOutlinedIcon />
@@ -258,8 +267,8 @@ export default function Sidebar({
                 width: currentWidth, flexShrink: 0,
                 "& .MuiDrawer-paper": {
                     width: currentWidth, boxSizing: "border-box", bgcolor: theme.palette.background.paper,
-                    overflowX: "hidden", transition: theme.transitions.create("width", { easing: theme.transitions.easing.sharp, duration: 220 })
-                }
+                    overflowX: "hidden", transition: theme.transitions.create("width", { easing: theme.transitions.easing.sharp, duration: 220 }),
+                },
             }}>
             {drawerContent}
         </Drawer>

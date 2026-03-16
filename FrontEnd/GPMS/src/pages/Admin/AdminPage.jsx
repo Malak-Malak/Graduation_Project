@@ -7,7 +7,7 @@ import Reports from "../../components/common/admin/Reports/Reports";
 import ActivityLogs from "../../components/common/admin/ActivityLogs/ActivityLogs";
 import SystemConfiguration from "../../components/common/admin/SystemConfiguration/SystemConfiguration";
 import PendingRequests from "../../components/common/admin/PendingRequests/PendingRequests";
-import AllRequests from "../../components/common/admin/AllRequests/AllRequests"; // ✅
+import AllRequests from "../../components/common/admin/AllRequests/AllRequests";
 
 export default function AdminPage() {
   return (

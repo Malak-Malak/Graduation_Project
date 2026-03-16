@@ -14,8 +14,6 @@ export default function MainLayout({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
-  const sidebarWidth = collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;
-
   const handleMobileToggle = () => setMobileOpen((prev) => !prev);
   const handleCollapse = () => setCollapsed((prev) => !prev);
 
@@ -45,8 +43,7 @@ export default function MainLayout({ children }) {
           flexGrow: 1,
           display: "flex",
           flexDirection: "column",
-          minWidth: 9,
-          // ml: isMobile ? 0 : `${sidebarWidth}px`,
+          minWidth: 0,
           transition: theme.transitions.create("margin-left", {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.enteringScreen,
@@ -64,7 +61,6 @@ export default function MainLayout({ children }) {
         <Box
           sx={{
             flexGrow: 1,
-            // mt: `${TOPBAR_HEIGHT}px`,
             p: { xs: 2, sm: 3 },
             overflow: "auto",
           }}

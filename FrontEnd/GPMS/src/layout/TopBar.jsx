@@ -9,6 +9,7 @@ import {
     WbSunny as LightModeIcon,
     NightsStay as DarkModeIcon,
     Logout as LogoutIcon,
+    Menu as MenuIcon,
 } from '@mui/icons-material';
 import { styled, alpha } from '@mui/material/styles';
 import { useAuth } from '../contexts/AuthContext';
@@ -42,12 +43,12 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
     },
 }));
 
-const PRIMARY = "#d0895b";
+const PRIMARY = "#C47E7E";
 
-const TopBar = () => {
+const TopBar = ({ onMenuClick, isMobile }) => {
     const theme = useTheme();
     const { user, logout } = useAuth();
-    const { mode, toggleMode } = useThemeContext();   // ✅ toggleMode
+    const { mode, toggleMode } = useThemeContext();
 
     const [anchorEl, setAnchorEl] = useState(null);
     const [notificationAnchor, setNotificationAnchor] = useState(null);
@@ -64,51 +65,96 @@ const TopBar = () => {
     ];
     const unreadCount = notifications.filter((n) => !n.read).length;
 
-    // ✅ اسم المستخدم — يشتغل مع أي شكل للداتا
+    // ✅ توحيد الاسم - نفس لوجيك السايدبار
     const displayName = user?.name ?? user?.fullName ?? user?.username ?? "User";
     const avatarLetter = displayName.charAt(0).toUpperCase();
 
     return (
-        <AppBar position="static" color="transparent" elevation={0}
-            sx={{ borderBottom: `1px solid ${theme.palette.divider}`, bgcolor: theme.palette.background.paper }}>
-            <Toolbar>
-                <Typography variant="h6" noWrap
-                    sx={{ fontWeight: 600, display: { xs: 'none', sm: 'block' }, color: theme.palette.text.primary }}>
+        <AppBar
+            position="static"
+            color="transparent"
+            elevation={0}
+            sx={{
+                borderBottom: `1px solid ${theme.palette.divider}`,
+                bgcolor: theme.palette.background.paper,
+                height: 64,
+                justifyContent: 'center',
+            }}
+        >
+            <Toolbar sx={{ minHeight: '64px !important' }}>
+
+                {/* ✅ زر الهامبرغر - موبايل فقط */}
+                {isMobile && (
+                    <IconButton
+                        onClick={onMenuClick}
+                        sx={{ mr: 1, color: theme.palette.text.secondary }}
+                    >
+                        <MenuIcon />
+                    </IconButton>
+                )}
+
+                {/* اسم الترحيب */}
+                <Typography
+                    variant="h6"
+                    noWrap
+                    sx={{
+                        fontWeight: 600,
+                        display: { xs: 'none', sm: 'block' },
+                        color: theme.palette.text.primary,
+                    }}
+                >
                     Welcome back, {displayName.split(' ')[0]}
                 </Typography>
 
                 <Box sx={{ flexGrow: 1 }} />
 
-                <Search>
-                    <SearchIconWrapper>
-                        <SearchIcon sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                    </SearchIconWrapper>
-                    <StyledInputBase placeholder="Search…" inputProps={{ 'aria-label': 'search' }} />
-                </Search>
+                {/* سيرش - مخفي على موبايل صغير */}
+                <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+                    <Search>
+                        <SearchIconWrapper>
+                            <SearchIcon sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                        </SearchIconWrapper>
+                        <StyledInputBase placeholder="Search…" inputProps={{ 'aria-label': 'search' }} />
+                    </Search>
+                </Box>
 
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                    {/* ✅ toggleMode */}
+                    {/* تبديل الثيم */}
                     <IconButton onClick={toggleMode} sx={{ color: theme.palette.text.secondary }}>
                         {mode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
                     </IconButton>
 
+                    {/* الإشعارات */}
                     <IconButton onClick={handleNotificationMenuOpen} sx={{ color: theme.palette.text.secondary }}>
                         <Badge badgeContent={unreadCount} color="error">
                             <NotificationsIcon />
                         </Badge>
                     </IconButton>
 
-                    {/* ✅ Avatar بالحرف الأول */}
+                    {/* ✅ الأفاتار - نفس اللون والحرف الكابيتال */}
                     <IconButton edge="end" onClick={handleProfileMenuOpen}>
-                        <Avatar sx={{ width: 34, height: 34, bgcolor: PRIMARY, fontSize: "0.9rem", fontWeight: 700 }}>
+                        <Avatar
+                            src={user?.avatar}
+                            sx={{
+                                width: 34,
+                                height: 34,
+                                bgcolor: PRIMARY,
+                                fontSize: "0.9rem",
+                                fontWeight: 700,
+                            }}
+                        >
                             {avatarLetter}
                         </Avatar>
                     </IconButton>
                 </Box>
 
                 {/* Profile Menu */}
-                <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}
-                    PaperProps={{ sx: { mt: 1.5, borderRadius: 2, minWidth: 180 } }}>
+                <Menu
+                    anchorEl={anchorEl}
+                    open={Boolean(anchorEl)}
+                    onClose={handleMenuClose}
+                    PaperProps={{ sx: { mt: 1.5, borderRadius: 2, minWidth: 180 } }}
+                >
                     <MenuItem onClick={handleLogout}>
                         <LogoutIcon sx={{ mr: 1, fontSize: 18 }} />
                         Logout
@@ -116,14 +162,25 @@ const TopBar = () => {
                 </Menu>
 
                 {/* Notifications Menu */}
-                <Menu anchorEl={notificationAnchor} open={Boolean(notificationAnchor)} onClose={handleMenuClose}
-                    PaperProps={{ sx: { mt: 1.5, borderRadius: 2, minWidth: 300, maxHeight: 400 } }}>
+                <Menu
+                    anchorEl={notificationAnchor}
+                    open={Boolean(notificationAnchor)}
+                    onClose={handleMenuClose}
+                    PaperProps={{ sx: { mt: 1.5, borderRadius: 2, minWidth: 300, maxHeight: 400 } }}
+                >
                     {notifications.map((n) => (
-                        <MenuItem key={n.id} onClick={handleMenuClose}
-                            sx={{ bgcolor: !n.read ? alpha(PRIMARY, 0.08) : 'transparent' }}>
+                        <MenuItem
+                            key={n.id}
+                            onClick={handleMenuClose}
+                            sx={{ bgcolor: !n.read ? alpha(PRIMARY, 0.08) : 'transparent' }}
+                        >
                             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                                <Typography variant="body2" fontWeight={n.read ? 400 : 600}>{n.message}</Typography>
-                                <Typography variant="caption" color="text.secondary">{n.time}</Typography>
+                                <Typography variant="body2" fontWeight={n.read ? 400 : 600}>
+                                    {n.message}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                    {n.time}
+                                </Typography>
                             </Box>
                         </MenuItem>
                     ))}

@@ -129,7 +129,7 @@ export default function Sidebar({
                     <Stack direction="row" spacing={1.5} alignItems="center">
                         <Avatar src={user?.avatar}
                             sx={{ width: 38, height: 38, bgcolor: ROLE_COLOR[role], fontSize: "0.9rem", fontWeight: 600, flexShrink: 0 }}>
-                            {user?.name?.charAt(0) ?? user?.username?.charAt(0) ?? "?"}
+                            {user?.name?.charAt(0).toUpperCase() ?? user?.username?.charAt(0).toUpperCase() ?? "?"}
                         </Avatar>
                         <Box sx={{ minWidth: 0 }}>
                             <Typography variant="body2" fontWeight={600} noWrap sx={{ color: t.textPrimary }}>

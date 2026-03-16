@@ -56,8 +56,11 @@ const TopBar = ({ onMenuClick, isMobile }) => {
     const handleProfileMenuOpen = (e) => setAnchorEl(e.currentTarget);
     const handleNotificationMenuOpen = (e) => setNotificationAnchor(e.currentTarget);
     const handleMenuClose = () => { setAnchorEl(null); setNotificationAnchor(null); };
-    const handleLogout = () => { logout(); handleMenuClose(); };
-
+    const handleLogout = () => {
+        sessionStorage.removeItem("team_checked");
+        logout();
+        handleMenuClose();
+    };
     const notifications = [
         { id: 1, message: 'New comment on your task', time: '5 min ago', read: false },
         { id: 2, message: 'Meeting scheduled for tomorrow', time: '1 hour ago', read: false },
@@ -83,7 +86,6 @@ const TopBar = ({ onMenuClick, isMobile }) => {
         >
             <Toolbar sx={{ minHeight: '64px !important' }}>
 
-                {/* ✅ زر الهامبرغر - موبايل فقط */}
                 {isMobile && (
                     <IconButton
                         onClick={onMenuClick}

@@ -87,6 +87,7 @@ export default function Sidebar({
     };
 
     const handleLogout = () => {
+        sessionStorage.removeItem("team_checked");
         logout();
         navigate("/login");
     };

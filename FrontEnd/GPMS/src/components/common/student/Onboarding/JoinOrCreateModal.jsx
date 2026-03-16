@@ -12,7 +12,7 @@ export default function JoinOrCreateModal({ open, onClose, onCreate, onJoin }) {
             PaperProps={{ sx: { borderRadius: 4, p: 1 } }}>
 
             <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <Typography fontWeight={700}>What would you like to do?</Typography>
+                <Typography fontWeight={702}>What would you like to do?</Typography>
                 <IconButton size="small" onClick={onClose}>
                     <CloseIcon fontSize="small" />
                 </IconButton>

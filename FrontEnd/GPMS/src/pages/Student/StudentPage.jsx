@@ -20,6 +20,11 @@ import ProfileSetupModal from "../../components/common/student/Profile/ProfileSe
 import { useAuth } from "../../contexts/AuthContext";
 import studentApi from "../../api/handler/endpoints/studentApi";
 
+/* ── TODO: لما تخلصي التيستينج غيري sessionStorage → localStorage ── */
+const profileDoneKey = (uid) => `gpms_profile_done_${uid}`;
+const teamCheckedKey = (uid) => `gpms_team_checked_${uid}`;
+const STORE = sessionStorage; // ← غيريها لـ localStorage للـ production
+
 export default function StudentPage() {
     const { user, updateUser } = useAuth();
 
@@ -32,54 +37,47 @@ export default function StudentPage() {
     const [snack, setSnack] = useState({ open: false, msg: "" });
 
     useEffect(() => {
-        if (sessionStorage.getItem("team_checked")) {
-            setCheckingTeam(false);
-            return;
-        }
-        sessionStorage.setItem("team_checked", "1");
+        const uid = user?.id ?? user?.userId ?? user?.username;
 
-        if (user?.teamId) {
-            setCheckingTeam(false);
-            return;
-        }
+        const profileDone = Boolean(uid && STORE.getItem(profileDoneKey(uid)));
+        const alreadyChecked = Boolean(uid && STORE.getItem(teamCheckedKey(uid)));
+
+        if (alreadyChecked) { setCheckingTeam(false); return; }
+        if (uid) STORE.setItem(teamCheckedKey(uid), "1");
+
+        if (user?.teamId) { setCheckingTeam(false); return; }
 
         studentApi.getMyTeam()
             .then((data) => {
                 if (data?.id || data?.teamId) {
                     updateUser({ teamId: data.id ?? data.teamId });
                 } else {
-                    // ✅ أول ما يظهر ProfileSetup قبل OnboardingGate
-                    if (!sessionStorage.getItem("profile_done")) {
-                        setShowProfile(true);
-                    } else {
-                        setShowGate(true);
-                    }
+                    !profileDone ? setShowProfile(true) : setShowGate(true);
                 }
             })
             .catch(() => {
-                if (!sessionStorage.getItem("profile_done")) {
-                    setShowProfile(true);
-                } else {
-                    setShowGate(true);
-                }
+                !profileDone ? setShowProfile(true) : setShowGate(true);
             })
             .finally(() => setCheckingTeam(false));
     }, []);
 
-    const handleProfileDone = (data) => {
-        sessionStorage.setItem("student_profile", JSON.stringify(data));
-        sessionStorage.setItem("profile_done", "1");
+    const handleProfileDone = () => {
+        const uid = user?.id ?? user?.userId ?? user?.username;
+        if (uid) STORE.setItem(profileDoneKey(uid), "1");
         setShowProfile(false);
         setShowGate(true);
     };
+
     const handleSkip = () => setShowGate(false);
     const handleCreateOrJoin = () => { setShowGate(false); setShowJoinOrCreate(true); };
     const handleCreate = () => { setShowJoinOrCreate(false); setShowCreate(true); };
     const handleJoin = () => { setShowJoinOrCreate(false); setShowJoin(true); };
+
     const handleSuccess = (msg) => {
         setShowCreate(false);
         setShowJoin(false);
-        sessionStorage.removeItem("team_checked");
+        const uid = user?.id ?? user?.userId ?? user?.username;
+        if (uid) STORE.removeItem(teamCheckedKey(uid));
         setSnack({ open: true, msg });
     };
 
@@ -92,12 +90,14 @@ export default function StudentPage() {
                     display: "flex", alignItems: "center", justifyContent: "center",
                     bgcolor: "background.default",
                 }}>
-                    <CircularProgress sx={{ color: "#C47E7E" }} />
+                    <CircularProgress sx={{ color: "#d0895b" }} />
                 </Box>
             )}
 
-            <ProfileSetupModal open={!checkingTeam && showProfile} onDone={handleProfileDone} />
-
+            <ProfileSetupModal
+                open={!checkingTeam && showProfile}
+                onDone={handleProfileDone}
+            />
             <OnboardingGate
                 open={!checkingTeam && !showProfile && showGate}
                 onCreateOrJoin={handleCreateOrJoin}
@@ -137,9 +137,7 @@ export default function StudentPage() {
                 onClose={() => setSnack({ open: false, msg: "" })}
                 anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
             >
-                <Alert severity="success" sx={{ borderRadius: 2 }}>
-                    {snack.msg}
-                </Alert>
+                <Alert severity="success" sx={{ borderRadius: 2 }}>{snack.msg}</Alert>
             </Snackbar>
 
         </MainLayout>

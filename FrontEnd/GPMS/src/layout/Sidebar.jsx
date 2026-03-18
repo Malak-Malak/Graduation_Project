@@ -18,6 +18,7 @@ import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import ViewKanbanOutlinedIcon from "@mui/icons-material/ViewKanbanOutlined";
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import QueryStatsOutlinedIcon from "@mui/icons-material/QueryStatsOutlined";
+import TimelineOutlinedIcon from "@mui/icons-material/TimelineOutlined";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
@@ -53,6 +54,7 @@ const NAV_ITEMS = {
         { label: "Profile", icon: <AccountCircleOutlinedIcon />, path: "/student/profile" },
         { label: "Team Finder", icon: <SearchOutlinedIcon />, path: "/student/team-finder" },
         { label: "Kanban Board", icon: <ViewKanbanOutlinedIcon />, path: "/student/kanban" },
+        { label: "Timeline", icon: <TimelineOutlinedIcon />, path: "/student/timeline" },
         { label: "Files", icon: <FolderOutlinedIcon />, path: "/student/files" },
         { label: "Meetings", icon: <CalendarMonthOutlinedIcon />, path: "/student/meetings" },
         { label: "Analytics", icon: <QueryStatsOutlinedIcon />, path: "/student/analytics" },
@@ -96,50 +98,81 @@ export default function Sidebar({
 
     const drawerContent = (
         <Box sx={{
-            display: "flex", flexDirection: "column", height: "100%", width: currentWidth, overflow: "hidden",
-            transition: theme.transitions.create("width", { easing: theme.transitions.easing.sharp, duration: 220 }),
+            display: "flex", flexDirection: "column", height: "100%",
+            width: currentWidth, overflow: "hidden",
+            transition: theme.transitions.create("width", {
+                easing: theme.transitions.easing.sharp, duration: 220,
+            }),
         }}>
 
-            {/* Logo + collapse */}
+            {/* ── Logo + collapse ── */}
             <Box sx={{
-                height: 64, display: "flex", alignItems: "center", px: collapsed ? 1.5 : 2.5,
+                height: 64, display: "flex", alignItems: "center",
+                px: collapsed ? 1.5 : 2.5,
                 justifyContent: collapsed ? "center" : "space-between",
                 borderBottom: `1px solid ${t.borderLight}`, flexShrink: 0,
             }}>
                 {!collapsed && (
                     <Box>
-                        <Typography sx={{ fontFamily: '"Playfair Display", serif', fontWeight: 700, fontSize: "1.05rem", color: t.accentPrimary, lineHeight: 1.2 }}>
+                        <Typography sx={{
+                            fontFamily: '"Playfair Display", serif',
+                            fontWeight: 700, fontSize: "1.05rem",
+                            color: t.accentPrimary, lineHeight: 1.2,
+                        }}>
                             GPMS
                         </Typography>
-                        <Typography sx={{ fontSize: "0.65rem", color: t.textTertiary, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                        <Typography sx={{
+                            fontSize: "0.65rem", color: t.textTertiary,
+                            letterSpacing: "0.06em", textTransform: "uppercase",
+                        }}>
                             Palestine Tech Uni
                         </Typography>
                     </Box>
                 )}
                 {!isMobile && (
                     <Tooltip title={collapsed ? "Expand" : "Collapse"} placement="right">
-                        <IconButton size="small" onClick={onCollapse}
-                            sx={{ width: 28, height: 28, border: `1px solid ${t.borderLight}`, color: t.textSecondary, bgcolor: t.surfaceCard, "&:hover": { bgcolor: t.surfaceHover } }}>
-                            {collapsed ? <ChevronRightIcon sx={{ fontSize: 16 }} /> : <ChevronLeftIcon sx={{ fontSize: 16 }} />}
+                        <IconButton size="small" onClick={onCollapse} sx={{
+                            width: 28, height: 28,
+                            border: `1px solid ${t.borderLight}`,
+                            color: t.textSecondary, bgcolor: t.surfaceCard,
+                            "&:hover": { bgcolor: t.surfaceHover },
+                        }}>
+                            {collapsed
+                                ? <ChevronRightIcon sx={{ fontSize: 16 }} />
+                                : <ChevronLeftIcon sx={{ fontSize: 16 }} />}
                         </IconButton>
                     </Tooltip>
                 )}
             </Box>
 
-            {/* User profile */}
+            {/* ── User profile (expanded) ── */}
             {!collapsed && (
                 <Box sx={{ px: 2.5, py: 2, borderBottom: `1px solid ${t.borderLight}` }}>
                     <Stack direction="row" spacing={1.5} alignItems="center">
-                        <Avatar src={user?.avatar}
-                            sx={{ width: 38, height: 38, bgcolor: ROLE_COLOR[role], fontSize: "0.9rem", fontWeight: 600, flexShrink: 0 }}>
-                            {user?.name?.charAt(0).toUpperCase() ?? user?.username?.charAt(0).toUpperCase() ?? "?"}
+                        <Avatar src={user?.avatar} sx={{
+                            width: 38, height: 38,
+                            bgcolor: ROLE_COLOR[role],
+                            fontSize: "0.9rem", fontWeight: 600, flexShrink: 0,
+                        }}>
+                            {user?.name?.charAt(0).toUpperCase()
+                                ?? user?.username?.charAt(0).toUpperCase()
+                                ?? "?"}
                         </Avatar>
                         <Box sx={{ minWidth: 0 }}>
-                            <Typography variant="body2" fontWeight={600} noWrap sx={{ color: t.textPrimary }}>
+                            <Typography variant="body2" fontWeight={600} noWrap
+                                sx={{ color: t.textPrimary }}>
                                 {user?.name ?? user?.username ?? "User"}
                             </Typography>
-                            <Box sx={{ display: "inline-flex", alignItems: "center", px: 0.8, py: 0.15, borderRadius: 1, bgcolor: `${ROLE_COLOR[role]}18`, mt: 0.3 }}>
-                                <Typography sx={{ fontSize: "0.65rem", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", color: ROLE_COLOR[role] }}>
+                            <Box sx={{
+                                display: "inline-flex", alignItems: "center",
+                                px: 0.8, py: 0.15, borderRadius: 1,
+                                bgcolor: `${ROLE_COLOR[role]}18`, mt: 0.3,
+                            }}>
+                                <Typography sx={{
+                                    fontSize: "0.65rem", fontWeight: 600,
+                                    letterSpacing: "0.05em", textTransform: "uppercase",
+                                    color: ROLE_COLOR[role],
+                                }}>
                                     {ROLE_LABEL[role] ?? role}
                                 </Typography>
                             </Box>
@@ -150,7 +183,10 @@ export default function Sidebar({
                         <Box sx={{ mt: 1.5 }}>
                             {user?.teamName && (
                                 <Typography sx={{ fontSize: "0.75rem", color: t.textSecondary }}>
-                                    Team: <span style={{ color: t.accentPrimary, fontWeight: 600 }}>{user.teamName}</span>
+                                    Team:{" "}
+                                    <span style={{ color: t.accentPrimary, fontWeight: 600 }}>
+                                        {user.teamName}
+                                    </span>
                                 </Typography>
                             )}
                             {user?.studentId && (
@@ -160,6 +196,7 @@ export default function Sidebar({
                             )}
                         </Box>
                     )}
+
                     {role === "supervisor" && user?.department && (
                         <Typography sx={{ fontSize: "0.75rem", color: t.textSecondary, mt: 1 }}>
                             {user.department}
@@ -168,33 +205,57 @@ export default function Sidebar({
                 </Box>
             )}
 
-            {/* Collapsed: avatar only */}
+            {/* ── User avatar (collapsed) ── */}
             {collapsed && (
-                <Box sx={{ display: "flex", justifyContent: "center", py: 2, borderBottom: `1px solid ${t.borderLight}` }}>
+                <Box sx={{
+                    display: "flex", justifyContent: "center",
+                    py: 2, borderBottom: `1px solid ${t.borderLight}`,
+                }}>
                     <Tooltip title={user?.name ?? user?.username ?? "User"} placement="right">
-                        <Avatar src={user?.avatar}
-                            sx={{ width: 36, height: 36, bgcolor: ROLE_COLOR[role], fontSize: "0.85rem", fontWeight: 600 }}>
+                        <Avatar src={user?.avatar} sx={{
+                            width: 36, height: 36,
+                            bgcolor: ROLE_COLOR[role],
+                            fontSize: "0.85rem", fontWeight: 600,
+                        }}>
                             {user?.name?.charAt(0) ?? user?.username?.charAt(0) ?? "?"}
                         </Avatar>
                     </Tooltip>
                 </Box>
             )}
 
-            {/* Nav items */}
+            {/* ── Nav items ── */}
             <Box sx={{ flexGrow: 1, overflowY: "auto", overflowX: "hidden", py: 1 }}>
                 <List dense disablePadding>
                     {navItems.map((item) => {
                         const active = isActive(item.path);
                         return (
                             <Tooltip key={item.path} title={collapsed ? item.label : ""} placement="right">
-                                <ListItemButton selected={active} onClick={() => handleNav(item.path)}
-                                    sx={{ mx: 1, mb: 0.25, px: 1.5, justifyContent: collapsed ? "center" : "flex-start", borderRadius: "8px", minHeight: 40 }}>
-                                    <ListItemIcon sx={{ minWidth: collapsed ? "auto" : 36, color: active ? t.accentPrimary : t.textSecondary, "& svg": { fontSize: 20 } }}>
+                                <ListItemButton
+                                    selected={active}
+                                    onClick={() => handleNav(item.path)}
+                                    sx={{
+                                        mx: 1, mb: 0.25, px: 1.5,
+                                        justifyContent: collapsed ? "center" : "flex-start",
+                                        borderRadius: "8px", minHeight: 40,
+                                    }}
+                                >
+                                    <ListItemIcon sx={{
+                                        minWidth: collapsed ? "auto" : 36,
+                                        color: active ? t.accentPrimary : t.textSecondary,
+                                        "& svg": { fontSize: 20 },
+                                    }}>
                                         {item.icon}
                                     </ListItemIcon>
                                     {!collapsed && (
-                                        <ListItemText primary={item.label}
-                                            primaryTypographyProps={{ fontSize: "0.875rem", fontWeight: active ? 600 : 500, color: active ? t.accentPrimary : t.textPrimary, noWrap: true }} />
+                                        <ListItemText
+                                            primary={item.label}
+                                            primaryTypographyProps={{
+                                                fontSize: "0.875rem",
+                                                fontWeight: active ? 600 : 500,
+                                                color: active ? t.accentPrimary : t.textPrimary,
+                                                noWrap: true,
+                                            }}
+                                        />
                                     )}
                                 </ListItemButton>
                             </Tooltip>
@@ -203,48 +264,83 @@ export default function Sidebar({
                 </List>
             </Box>
 
-            {/* Bottom actions */}
+            {/* ── Bottom actions ── */}
             <Box sx={{ borderTop: `1px solid ${t.borderLight}`, py: 1 }}>
+
+                {/* theme toggle */}
                 <Tooltip title={`Switch to ${mode === "light" ? "Dark" : "Light"} mode`} placement="right">
-                    <ListItemButton onClick={toggleMode}
-                        sx={{ mx: 1, borderRadius: "8px", justifyContent: collapsed ? "center" : "flex-start", minHeight: 40, px: 1.5 }}>
-                        <ListItemIcon sx={{ minWidth: collapsed ? "auto" : 36, color: t.textSecondary, "& svg": { fontSize: 20 } }}>
-                            {mode === "light" ? <DarkModeOutlinedIcon /> : <LightModeOutlinedIcon />}
+                    <ListItemButton onClick={toggleMode} sx={{
+                        mx: 1, borderRadius: "8px",
+                        justifyContent: collapsed ? "center" : "flex-start",
+                        minHeight: 40, px: 1.5,
+                    }}>
+                        <ListItemIcon sx={{
+                            minWidth: collapsed ? "auto" : 36,
+                            color: t.textSecondary, "& svg": { fontSize: 20 },
+                        }}>
+                            {mode === "light"
+                                ? <DarkModeOutlinedIcon />
+                                : <LightModeOutlinedIcon />}
                         </ListItemIcon>
                         {!collapsed && (
-                            <ListItemText primary={mode === "light" ? "Dark Mode" : "Light Mode"}
-                                primaryTypographyProps={{ fontSize: "0.875rem", fontWeight: 500, color: t.textPrimary }} />
+                            <ListItemText
+                                primary={mode === "light" ? "Dark Mode" : "Light Mode"}
+                                primaryTypographyProps={{ fontSize: "0.875rem", fontWeight: 500, color: t.textPrimary }}
+                            />
                         )}
                     </ListItemButton>
                 </Tooltip>
 
+                {/* settings */}
                 {role !== "admin" && (
                     <Tooltip title={collapsed ? "Settings" : ""} placement="right">
-                        <ListItemButton onClick={() => handleNav(`/${role}/settings`)} selected={isActive(`/${role}/settings`)}
-                            sx={{ mx: 1, borderRadius: "8px", justifyContent: collapsed ? "center" : "flex-start", minHeight: 40, px: 1.5 }}>
-                            <ListItemIcon sx={{ minWidth: collapsed ? "auto" : 36, color: t.textSecondary, "& svg": { fontSize: 20 } }}>
+                        <ListItemButton
+                            onClick={() => handleNav(`/${role}/settings`)}
+                            selected={isActive(`/${role}/settings`)}
+                            sx={{
+                                mx: 1, borderRadius: "8px",
+                                justifyContent: collapsed ? "center" : "flex-start",
+                                minHeight: 40, px: 1.5,
+                            }}
+                        >
+                            <ListItemIcon sx={{
+                                minWidth: collapsed ? "auto" : 36,
+                                color: t.textSecondary, "& svg": { fontSize: 20 },
+                            }}>
                                 <SettingsOutlinedIcon />
                             </ListItemIcon>
                             {!collapsed && (
-                                <ListItemText primary="Settings"
-                                    primaryTypographyProps={{ fontSize: "0.875rem", fontWeight: 500, color: t.textPrimary }} />
+                                <ListItemText
+                                    primary="Settings"
+                                    primaryTypographyProps={{ fontSize: "0.875rem", fontWeight: 500, color: t.textPrimary }}
+                                />
                             )}
                         </ListItemButton>
                     </Tooltip>
                 )}
 
+                {/* logout */}
                 <Tooltip title={collapsed ? "Logout" : ""} placement="right">
-                    <ListItemButton onClick={handleLogout}
-                        sx={{
-                            mx: 1, borderRadius: "8px", justifyContent: collapsed ? "center" : "flex-start", minHeight: 40, px: 1.5,
-                            "&:hover": { bgcolor: `${t.error}14`, "& .MuiListItemIcon-root, & .MuiListItemText-primary": { color: t.error } },
+                    <ListItemButton onClick={handleLogout} sx={{
+                        mx: 1, borderRadius: "8px",
+                        justifyContent: collapsed ? "center" : "flex-start",
+                        minHeight: 40, px: 1.5,
+                        "&:hover": {
+                            bgcolor: `${t.error}14`,
+                            "& .MuiListItemIcon-root, & .MuiListItemText-primary": { color: t.error },
+                        },
+                    }}>
+                        <ListItemIcon sx={{
+                            minWidth: collapsed ? "auto" : 36,
+                            color: t.textSecondary, "& svg": { fontSize: 20 },
                         }}>
-                        <ListItemIcon sx={{ minWidth: collapsed ? "auto" : 36, color: t.textSecondary, "& svg": { fontSize: 20 } }}>
                             <LogoutOutlinedIcon />
                         </ListItemIcon>
                         {!collapsed && (
-                            <ListItemText primary="Logout"
-                                primaryTypographyProps={{ fontSize: "0.875rem", fontWeight: 500, color: t.textPrimary }} />
+                            <ListItemText
+                                primary="Logout"
+                                primaryTypographyProps={{ fontSize: "0.875rem", fontWeight: 500, color: t.textPrimary }}
+                            />
                         )}
                     </ListItemButton>
                 </Tooltip>
@@ -254,22 +350,31 @@ export default function Sidebar({
 
     if (isMobile) {
         return (
-            <Drawer variant="temporary" open={mobileOpen} onClose={onMobileClose} ModalProps={{ keepMounted: true }}
-                sx={{ "& .MuiDrawer-paper": { width, boxSizing: "border-box", bgcolor: theme.palette.background.paper } }}>
+            <Drawer variant="temporary" open={mobileOpen} onClose={onMobileClose}
+                ModalProps={{ keepMounted: true }}
+                sx={{
+                    "& .MuiDrawer-paper": {
+                        width, boxSizing: "border-box",
+                        bgcolor: theme.palette.background.paper
+                    }
+                }}>
                 {drawerContent}
             </Drawer>
         );
     }
 
     return (
-        <Drawer variant="permanent"
-            sx={{
-                width: currentWidth, flexShrink: 0,
-                "& .MuiDrawer-paper": {
-                    width: currentWidth, boxSizing: "border-box", bgcolor: theme.palette.background.paper,
-                    overflowX: "hidden", transition: theme.transitions.create("width", { easing: theme.transitions.easing.sharp, duration: 220 }),
-                },
-            }}>
+        <Drawer variant="permanent" sx={{
+            width: currentWidth, flexShrink: 0,
+            "& .MuiDrawer-paper": {
+                width: currentWidth, boxSizing: "border-box",
+                bgcolor: theme.palette.background.paper,
+                overflowX: "hidden",
+                transition: theme.transitions.create("width", {
+                    easing: theme.transitions.easing.sharp, duration: 220,
+                }),
+            },
+        }}>
             {drawerContent}
         </Drawer>
     );

@@ -10,6 +10,7 @@ import FileRepository from "../../components/common/student/FileRepository/FileR
 import StudentMeetings from "../../components/common/student/Meetings/StudentMeetings";
 import StudentAnalytics from "../../components/common/student/Analytics/StudentAnalytics";
 import ProfilePage from "../../components/common/student/Profile/ProfilePage";
+import ProjectTimeline from "../../components/common/student/Timeline/ProjectTimeline";
 
 import OnboardingGate from "../../components/common/student/Onboarding/OnboardingGate";
 import JoinOrCreateModal from "../../components/common/student/Onboarding/JoinOrCreateModal";
@@ -20,10 +21,9 @@ import ProfileSetupModal from "../../components/common/student/Profile/ProfileSe
 import { useAuth } from "../../contexts/AuthContext";
 import studentApi from "../../api/handler/endpoints/studentApi";
 
-/* ── TODO: لما تخلصي التيستينج غيري sessionStorage → localStorage ── */
 const profileDoneKey = (uid) => `gpms_profile_done_${uid}`;
 const teamCheckedKey = (uid) => `gpms_team_checked_${uid}`;
-const STORE = sessionStorage; // ← غيريها لـ localStorage للـ production
+const STORE = sessionStorage;
 
 export default function StudentPage() {
     const { user, updateUser } = useAuth();
@@ -38,15 +38,11 @@ export default function StudentPage() {
 
     useEffect(() => {
         const uid = user?.id ?? user?.userId ?? user?.username;
-
         const profileDone = Boolean(uid && STORE.getItem(profileDoneKey(uid)));
         const alreadyChecked = Boolean(uid && STORE.getItem(teamCheckedKey(uid)));
-
         if (alreadyChecked) { setCheckingTeam(false); return; }
         if (uid) STORE.setItem(teamCheckedKey(uid), "1");
-
         if (user?.teamId) { setCheckingTeam(false); return; }
-
         studentApi.getMyTeam()
             .then((data) => {
                 if (data?.id || data?.teamId) {
@@ -55,9 +51,7 @@ export default function StudentPage() {
                     !profileDone ? setShowProfile(true) : setShowGate(true);
                 }
             })
-            .catch(() => {
-                !profileDone ? setShowProfile(true) : setShowGate(true);
-            })
+            .catch(() => { !profileDone ? setShowProfile(true) : setShowGate(true); })
             .finally(() => setCheckingTeam(false));
     }, []);
 
@@ -72,10 +66,8 @@ export default function StudentPage() {
     const handleCreateOrJoin = () => { setShowGate(false); setShowJoinOrCreate(true); };
     const handleCreate = () => { setShowJoinOrCreate(false); setShowCreate(true); };
     const handleJoin = () => { setShowJoinOrCreate(false); setShowJoin(true); };
-
     const handleSuccess = (msg) => {
-        setShowCreate(false);
-        setShowJoin(false);
+        setShowCreate(false); setShowJoin(false);
         const uid = user?.id ?? user?.userId ?? user?.username;
         if (uid) STORE.removeItem(teamCheckedKey(uid));
         setSnack({ open: true, msg });
@@ -83,42 +75,26 @@ export default function StudentPage() {
 
     return (
         <MainLayout>
-
             {checkingTeam && (
                 <Box sx={{
                     position: "fixed", inset: 0, zIndex: 9999,
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    bgcolor: "background.default",
+                    bgcolor: "background.default"
                 }}>
                     <CircularProgress sx={{ color: "#d0895b" }} />
                 </Box>
             )}
 
-            <ProfileSetupModal
-                open={!checkingTeam && showProfile}
-                onDone={handleProfileDone}
-            />
-            <OnboardingGate
-                open={!checkingTeam && !showProfile && showGate}
-                onCreateOrJoin={handleCreateOrJoin}
-                onSkip={handleSkip}
-            />
-            <JoinOrCreateModal
-                open={showJoinOrCreate}
+            <ProfileSetupModal open={!checkingTeam && showProfile} onDone={handleProfileDone} />
+            <OnboardingGate open={!checkingTeam && !showProfile && showGate}
+                onCreateOrJoin={handleCreateOrJoin} onSkip={handleSkip} />
+            <JoinOrCreateModal open={showJoinOrCreate}
                 onClose={() => setShowJoinOrCreate(false)}
-                onCreate={handleCreate}
-                onJoin={handleJoin}
-            />
-            <CreateTeamFlow
-                open={showCreate}
-                onClose={() => setShowCreate(false)}
-                onSuccess={handleSuccess}
-            />
-            <JoinTeamFlow
-                open={showJoin}
-                onClose={() => setShowJoin(false)}
-                onSuccess={handleSuccess}
-            />
+                onCreate={handleCreate} onJoin={handleJoin} />
+            <CreateTeamFlow open={showCreate}
+                onClose={() => setShowCreate(false)} onSuccess={handleSuccess} />
+            <JoinTeamFlow open={showJoin}
+                onClose={() => setShowJoin(false)} onSuccess={handleSuccess} />
 
             <Routes>
                 <Route index element={<StudentDashboard />} />
@@ -128,18 +104,15 @@ export default function StudentPage() {
                 <Route path="files" element={<FileRepository />} />
                 <Route path="meetings" element={<StudentMeetings />} />
                 <Route path="analytics" element={<StudentAnalytics />} />
+                <Route path="timeline" element={<ProjectTimeline />} />
                 <Route path="*" element={<Navigate to="/student" replace />} />
             </Routes>
 
-            <Snackbar
-                open={snack.open}
-                autoHideDuration={5000}
+            <Snackbar open={snack.open} autoHideDuration={5000}
                 onClose={() => setSnack({ open: false, msg: "" })}
-                anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-            >
+                anchorOrigin={{ vertical: "bottom", horizontal: "center" }}>
                 <Alert severity="success" sx={{ borderRadius: 2 }}>{snack.msg}</Alert>
             </Snackbar>
-
         </MainLayout>
     );
 }

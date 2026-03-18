@@ -23,8 +23,7 @@ import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useThemeContext } from "../../contexts/ThemeContext";
 import { useAuth } from "../../contexts/AuthContext";
-import { loginUser } from "../../api/handler/endpoints/authApi";   // ✅ المسار الصح
-
+import { loginUser } from "../../api/handler/endpoints/authApi";
 
 const PRIMARY = "#d0895b";
 const ROLE_HOME = { admin: "/admin", supervisor: "/supervisor", student: "/student" };

@@ -48,3 +48,14 @@ export const getUniversityRecords = () =>
 // ══════════════════════════════════════════════════════════════════════════════
 export const getUniversityRecordByEmail = (email) =>
     axiosInstance.get(`/Admin/university-records/${encodeURIComponent(email)}`);
+// ══════════════════════════════════════════════════════════════════════════════
+// DELETE /api/Admin/delete-university-record/{email}
+// ══════════════════════════════════════════════════════════════════════════════
+export const deleteUniversityRecord = (email) =>
+    axiosInstance.delete(`/Admin/delete-university-record/${encodeURIComponent(email)}`);
+
+// ══════════════════════════════════════════════════════════════════════════════
+// DELETE /api/Admin/delete-request/{id}
+// ══════════════════════════════════════════════════════════════════════════════
+export const deleteRequest = (id) =>
+    axiosInstance.delete(`/Admin/delete-request/${id}`);

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useAuth } from "../../../../contexts/AuthContext";
 import {
     Box, Paper, Typography, Stack, Button, TextField, InputAdornment,
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
@@ -9,7 +10,6 @@ import {
 import { useTheme } from "@mui/material/styles";
 import SearchIcon from "@mui/icons-material/Search";
 import AddIcon from "@mui/icons-material/Add";
-import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import PersonAddOutlinedIcon from "@mui/icons-material/PersonAddOutlined";
@@ -19,7 +19,11 @@ import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import SchoolOutlinedIcon from "@mui/icons-material/SchoolOutlined";
 import BusinessOutlinedIcon from "@mui/icons-material/BusinessOutlined";
 
-import { getAllUsers, addUniversityRecord } from "../../../../api/handler/endpoints/adminApi";
+import {
+    getAllUsers,
+    addUniversityRecord,
+    deleteUniversityRecord,
+} from "../../../../api/handler/endpoints/adminApi";
 
 const PRIMARY = "#d0895b";
 const ROLE_CLR = { student: "#B46F4C", supervisor: "#6D8A7D", admin: "#7E9FC4" };
@@ -41,23 +45,18 @@ const EMPTY_FORM = {
 function AddUserForm({ form, setForm, error }) {
     const theme = useTheme();
     const t = theme.palette.custom;
-
     const fieldSx = { "& .MuiOutlinedInput-root": { borderRadius: 2 } };
 
     return (
         <Box sx={{ mt: 1 }}>
             {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>}
-
             <Stack spacing={2.5}>
-                {/* Full Name */}
                 <TextField
                     label="Full Name" size="small" fullWidth sx={fieldSx}
                     value={form.fullName}
                     onChange={(e) => setForm((p) => ({ ...p, fullName: e.target.value }))}
                     InputProps={{ startAdornment: <InputAdornment position="start"><BadgeOutlinedIcon sx={{ fontSize: 18, color: t.textTertiary }} /></InputAdornment> }}
                 />
-
-                {/* University Email */}
                 <TextField
                     label="University Email" size="small" fullWidth sx={fieldSx}
                     placeholder="e.g. h.n.awad@students.ptuk.edu.ps"
@@ -65,8 +64,6 @@ function AddUserForm({ form, setForm, error }) {
                     onChange={(e) => setForm((p) => ({ ...p, universityEmail: e.target.value }))}
                     InputProps={{ startAdornment: <InputAdornment position="start"><EmailOutlinedIcon sx={{ fontSize: 18, color: t.textTertiary }} /></InputAdornment> }}
                 />
-
-                {/* Username + Password */}
                 <Stack direction="row" spacing={2}>
                     <TextField
                         label="Username" size="small" fullWidth sx={fieldSx}
@@ -82,8 +79,6 @@ function AddUserForm({ form, setForm, error }) {
                         InputProps={{ startAdornment: <InputAdornment position="start"><LockOutlinedIcon sx={{ fontSize: 18, color: t.textTertiary }} /></InputAdornment> }}
                     />
                 </Stack>
-
-                {/* Role + Department */}
                 <Stack direction="row" spacing={2}>
                     <FormControl size="small" fullWidth sx={fieldSx}>
                         <InputLabel>Role</InputLabel>
@@ -102,8 +97,6 @@ function AddUserForm({ form, setForm, error }) {
                         InputProps={{ startAdornment: <InputAdornment position="start"><BusinessOutlinedIcon sx={{ fontSize: 18, color: t.textTertiary }} /></InputAdornment> }}
                     />
                 </Stack>
-
-                {/* Is Graduate */}
                 <Box sx={{ px: 1.5, py: 1.2, borderRadius: 2, border: `1px solid ${alpha(PRIMARY, 0.2)}`, bgcolor: alpha(PRIMARY, 0.04) }}>
                     <FormControlLabel
                         control={
@@ -112,7 +105,7 @@ function AddUserForm({ form, setForm, error }) {
                                 onChange={(e) => setForm((p) => ({ ...p, isGraduate: e.target.checked }))}
                                 sx={{
                                     "& .MuiSwitch-switchBase.Mui-checked": { color: PRIMARY },
-                                    "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { bgcolor: PRIMARY }
+                                    "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { bgcolor: PRIMARY },
                                 }}
                             />
                         }
@@ -136,6 +129,8 @@ export default function UserManagement() {
     const theme = useTheme();
     const t = theme.palette.custom;
 
+    const { user: currentUser } = useAuth();
+
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [fetchError, setFetchError] = useState(null);
@@ -144,13 +139,29 @@ export default function UserManagement() {
     const [roleFilter, setRoleFilter] = useState("all");
     const [page, setPage] = useState(1);
 
+    // Add dialog
     const [addOpen, setAddOpen] = useState(false);
     const [addLoading, setAddLoading] = useState(false);
     const [addError, setAddError] = useState(null);
     const [form, setForm] = useState(EMPTY_FORM);
 
+    // Delete dialog
     const [delOpen, setDelOpen] = useState(false);
+    const [delLoading, setDelLoading] = useState(false);
+    const [delError, setDelError] = useState(null);
     const [selected, setSelected] = useState(null);
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+    // الـ API بيرجع: id, username, email, role, createdAt — مافي fullName
+    const getName = (u) => u.fullName ?? u.name ?? u.username ?? "—";
+    const getEmail = (u) => u.universityEmail ?? u.email ?? "—";
+    const getRole = (u) => (u.role ?? "").toLowerCase();
+    const getDept = (u) => u.department ?? u.dept ?? "—";
+    const getStatus = (u) => (u.status ?? "active").toLowerCase();
+    const getId = (u) => u.id ?? u.userId;
+
+    // هل هاد اليوزر هو الأدمن الحالي؟
+    const isSelf = (u) => (u.email ?? "") === (currentUser?.email ?? "");
 
     // ── Fetch users ──────────────────────────────────────────────────────────
     const fetchUsers = async () => {
@@ -158,7 +169,6 @@ export default function UserManagement() {
         setFetchError(null);
         try {
             const res = await getAllUsers();
-            // flexible — يتكيف مع أي شكل
             setUsers(Array.isArray(res.data) ? res.data : res.data?.data ?? []);
         } catch (err) {
             console.log("Users error:", err.response?.data);
@@ -172,12 +182,12 @@ export default function UserManagement() {
 
     // ── Filter + paginate ────────────────────────────────────────────────────
     const filtered = users.filter((u) => {
-        const name = u.fullName ?? u.name ?? "";
-        const email = u.universityEmail ?? u.email ?? "";
+        const name = (u.fullName ?? u.name ?? u.username ?? "").toLowerCase();
+        const email = (u.email ?? u.universityEmail ?? "").toLowerCase();
         const role = (u.role ?? "").toLowerCase();
         const q = search.toLowerCase();
         return (
-            (name.toLowerCase().includes(q) || email.toLowerCase().includes(q)) &&
+            (name.includes(q) || email.includes(q)) &&
             (roleFilter === "all" || role === roleFilter)
         );
     });
@@ -196,7 +206,7 @@ export default function UserManagement() {
             await addUniversityRecord(form);
             setAddOpen(false);
             setForm(EMPTY_FORM);
-            fetchUsers(); // تحديث القائمة
+            fetchUsers();
         } catch (err) {
             console.log("Add user error:", err.response?.data);
             const msg = err.response?.data?.message ?? err.response?.data;
@@ -206,13 +216,24 @@ export default function UserManagement() {
         }
     };
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
-    const getName = (u) => u.fullName ?? u.name ?? "—";
-    const getEmail = (u) => u.universityEmail ?? u.email ?? "—";
-    const getRole = (u) => (u.role ?? "").toLowerCase();
-    const getDept = (u) => u.department ?? u.dept ?? "—";
-    const getStatus = (u) => (u.status ?? "active").toLowerCase();
-    const getId = (u) => u.id ?? u.userId;
+    // ── Delete user ──────────────────────────────────────────────────────────
+    const handleDelete = async () => {
+        if (!selected) return;
+        setDelLoading(true);
+        setDelError(null);
+        try {
+            await deleteUniversityRecord(getEmail(selected));
+            setDelOpen(false);
+            setSelected(null);
+            fetchUsers();
+        } catch (err) {
+            console.log("Delete error:", err.response?.data);
+            const msg = err.response?.data?.message ?? err.response?.data;
+            setDelError(typeof msg === "string" ? msg : "Failed to delete user. Please try again.");
+        } finally {
+            setDelLoading(false);
+        }
+    };
 
     return (
         <Box sx={{ maxWidth: 1100 }}>
@@ -252,7 +273,8 @@ export default function UserManagement() {
                             </Select>
                         </FormControl>
                     </Stack>
-                    <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setForm(EMPTY_FORM); setAddError(null); setAddOpen(true); }}
+                    <Button variant="contained" startIcon={<AddIcon />}
+                        onClick={() => { setForm(EMPTY_FORM); setAddError(null); setAddOpen(true); }}
                         sx={{ bgcolor: PRIMARY, "&:hover": { bgcolor: "#b06f47" }, borderRadius: 2, textTransform: "none", fontWeight: 600, whiteSpace: "nowrap" }}>
                         Add User
                     </Button>
@@ -268,8 +290,10 @@ export default function UserManagement() {
                         <Table>
                             <TableHead>
                                 <TableRow>
-                                    {["User", "Role", "Department", "Status", "Actions"].map((h) => (
-                                        <TableCell key={h} sx={{ fontWeight: 700, fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.05em", color: t.textTertiary }}>{h}</TableCell>
+                                    {["User", "Username", "Role", "Department", "Status", "Actions"].map((h) => (
+                                        <TableCell key={h} sx={{ fontWeight: 700, fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.05em", color: t.textTertiary }}>
+                                            {h}
+                                        </TableCell>
                                     ))}
                                 </TableRow>
                             </TableHead>
@@ -277,33 +301,75 @@ export default function UserManagement() {
                                 {paginated.map((u) => {
                                     const role = getRole(u);
                                     const status = getStatus(u);
+                                    const self = isSelf(u);
                                     return (
                                         <TableRow key={getId(u)} sx={{ "&:hover": { bgcolor: alpha(PRIMARY, 0.03) } }}>
+
+                                            {/* User — email تحت */}
                                             <TableCell>
                                                 <Stack direction="row" alignItems="center" gap={1.5}>
                                                     <Avatar sx={{ width: 34, height: 34, bgcolor: ROLE_CLR[role] ?? "#9AA9B9", fontSize: "0.8rem", fontWeight: 600 }}>
-                                                        {getName(u).charAt(0)}
+                                                        {getName(u).charAt(0).toUpperCase()}
                                                     </Avatar>
                                                     <Box>
-                                                        <Typography sx={{ fontSize: "0.875rem", fontWeight: 600, color: t.textPrimary }}>{getName(u)}</Typography>
-                                                        <Typography sx={{ fontSize: "0.72rem", color: t.textTertiary }}>{getEmail(u)}</Typography>
+                                                        <Stack direction="row" alignItems="center" gap={0.8}>
+                                                            <Typography sx={{ fontSize: "0.875rem", fontWeight: 600, color: t.textPrimary }}>
+                                                                {getName(u)}
+                                                            </Typography>
+                                                            {self && (
+                                                                <Chip label="You" size="small"
+                                                                    sx={{ height: 18, fontSize: "0.62rem", fontWeight: 700, bgcolor: alpha(PRIMARY, 0.12), color: PRIMARY }} />
+                                                            )}
+                                                        </Stack>
+                                                        <Typography sx={{ fontSize: "0.72rem", color: t.textTertiary }}>
+                                                            {getEmail(u)}
+                                                        </Typography>
                                                     </Box>
                                                 </Stack>
                                             </TableCell>
+
+                                            {/* Username */}
                                             <TableCell>
-                                                <Chip label={role} size="small" sx={{ bgcolor: `${ROLE_CLR[role] ?? "#9AA9B9"}15`, color: ROLE_CLR[role] ?? "#9AA9B9", fontWeight: 600, fontSize: "0.7rem", textTransform: "capitalize", height: 22 }} />
+                                                <Typography sx={{ fontSize: "0.85rem", color: t.textSecondary, fontFamily: "monospace" }}>
+                                                    {u.username ?? "—"}
+                                                </Typography>
                                             </TableCell>
-                                            <TableCell><Typography sx={{ fontSize: "0.875rem", color: t.textSecondary }}>{getDept(u)}</Typography></TableCell>
+
+                                            {/* Role */}
+                                            <TableCell>
+                                                <Chip label={role} size="small"
+                                                    sx={{ bgcolor: `${ROLE_CLR[role] ?? "#9AA9B9"}15`, color: ROLE_CLR[role] ?? "#9AA9B9", fontWeight: 600, fontSize: "0.7rem", textTransform: "capitalize", height: 22 }} />
+                                            </TableCell>
+
+                                            {/* Department */}
+                                            <TableCell>
+                                                <Typography sx={{ fontSize: "0.875rem", color: t.textSecondary }}>
+                                                    {getDept(u)}
+                                                </Typography>
+                                            </TableCell>
+
+                                            {/* Status */}
                                             <TableCell>
                                                 <Chip label={STATUS_LBL[status] ?? status} size="small"
                                                     sx={{ bgcolor: `${STATUS_CLR[status] ?? "#9AA9B9"}18`, color: STATUS_CLR[status] ?? "#9AA9B9", fontWeight: 600, fontSize: "0.7rem", height: 22 }} />
                                             </TableCell>
+
+                                            {/* Actions */}
                                             <TableCell>
-                                                <Tooltip title="Delete">
-                                                    <IconButton size="small" onClick={() => { setSelected(u); setDelOpen(true); }}
-                                                        sx={{ color: t.textSecondary, "&:hover": { color: t.error } }}>
-                                                        <DeleteOutlineIcon sx={{ fontSize: 17 }} />
-                                                    </IconButton>
+                                                <Tooltip title={self ? "You cannot delete your own account" : "Delete user"}>
+                                                    <span>
+                                                        <IconButton
+                                                            size="small"
+                                                            disabled={self}
+                                                            onClick={() => { setSelected(u); setDelError(null); setDelOpen(true); }}
+                                                            sx={{
+                                                                color: t.textSecondary,
+                                                                "&:hover": { color: t.error },
+                                                                "&.Mui-disabled": { opacity: 0.3 },
+                                                            }}>
+                                                            <DeleteOutlineIcon sx={{ fontSize: 17 }} />
+                                                        </IconButton>
+                                                    </span>
                                                 </Tooltip>
                                             </TableCell>
                                         </TableRow>
@@ -311,7 +377,7 @@ export default function UserManagement() {
                                 })}
                                 {paginated.length === 0 && (
                                     <TableRow>
-                                        <TableCell colSpan={5} sx={{ textAlign: "center", py: 6, color: t.textTertiary }}>
+                                        <TableCell colSpan={6} sx={{ textAlign: "center", py: 6, color: t.textTertiary }}>
                                             No users found.
                                         </TableCell>
                                     </TableRow>
@@ -361,19 +427,28 @@ export default function UserManagement() {
             </Dialog>
 
             {/* ── Delete Confirm Dialog ── */}
-            <Dialog open={delOpen} onClose={() => setDelOpen(false)} maxWidth="xs" fullWidth
+            <Dialog open={delOpen} onClose={() => !delLoading && setDelOpen(false)} maxWidth="xs" fullWidth
                 PaperProps={{ sx: { borderRadius: 3, p: 1 } }}>
                 <DialogTitle sx={{ fontWeight: 700 }}>Remove User?</DialogTitle>
                 <DialogContent>
+                    {delError && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{delError}</Alert>}
                     <Typography sx={{ color: t.textSecondary }}>
-                        Are you sure you want to remove <strong style={{ color: t.textPrimary }}>{getName(selected ?? {})}</strong>?
+                        Are you sure you want to remove{" "}
+                        <strong style={{ color: t.textPrimary }}>
+                            {selected ? getName(selected) : ""}
+                        </strong>?
+                        This action cannot be undone.
                     </Typography>
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
-                    <Button onClick={() => setDelOpen(false)} sx={{ borderRadius: 2, textTransform: "none" }}>Cancel</Button>
-                    <Button variant="contained" onClick={() => setDelOpen(false)}
+                    <Button onClick={() => setDelOpen(false)} disabled={delLoading}
+                        sx={{ borderRadius: 2, textTransform: "none" }}>
+                        Cancel
+                    </Button>
+                    <Button variant="contained" onClick={handleDelete} disabled={delLoading}
+                        startIcon={delLoading ? <CircularProgress size={16} color="inherit" /> : <DeleteOutlineIcon />}
                         sx={{ bgcolor: "#d32f2f", "&:hover": { bgcolor: "#b71c1c" }, borderRadius: 2, textTransform: "none", fontWeight: 600 }}>
-                        Remove
+                        {delLoading ? "Removing..." : "Remove"}
                     </Button>
                 </DialogActions>
             </Dialog>

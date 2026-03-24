@@ -19,8 +19,13 @@ import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
 import SchoolOutlinedIcon from "@mui/icons-material/SchoolOutlined";
 import BusinessOutlinedIcon from "@mui/icons-material/BusinessOutlined";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 
-import { getAllRequests, getUniversityRecordByEmail } from "../../../../api/handler/endpoints/adminApi";
+import {
+    getAllRequests,
+    getUniversityRecordByEmail,
+    deleteRequest,
+} from "../../../../api/handler/endpoints/adminApi";
 
 const PRIMARY = "#d0895b";
 const PER_PAGE = 10;
@@ -89,14 +94,9 @@ function ProfileDialog({ open, email, onClose }) {
                         <CircularProgress sx={{ color: PRIMARY }} />
                     </Box>
                 )}
-
-                {error && (
-                    <Alert severity="error" sx={{ borderRadius: 2 }}>{error}</Alert>
-                )}
-
+                {error && <Alert severity="error" sx={{ borderRadius: 2 }}>{error}</Alert>}
                 {data && !loading && (
                     <Stack spacing={2.5} sx={{ mt: 1 }}>
-                        {/* Avatar + Name */}
                         <Stack direction="row" alignItems="center" spacing={2}>
                             <Avatar sx={{ width: 56, height: 56, bgcolor: ROLE_CLR[role] ?? PRIMARY, fontSize: "1.3rem", fontWeight: 700 }}>
                                 {(data.fullName ?? data.name ?? "?").charAt(0)}
@@ -105,9 +105,7 @@ function ProfileDialog({ open, email, onClose }) {
                                 <Typography variant="h6" fontWeight={700}>
                                     {data.fullName ?? data.name ?? "—"}
                                 </Typography>
-                                <Chip
-                                    label={data.role ?? "—"}
-                                    size="small"
+                                <Chip label={data.role ?? "—"} size="small"
                                     sx={{ bgcolor: alpha(ROLE_CLR[role] ?? PRIMARY, 0.15), color: ROLE_CLR[role] ?? PRIMARY, fontWeight: 600, fontSize: "0.7rem", textTransform: "capitalize", mt: 0.5 }}
                                 />
                             </Box>
@@ -115,7 +113,6 @@ function ProfileDialog({ open, email, onClose }) {
 
                         <Divider />
 
-                        {/* Info rows */}
                         {[
                             { icon: <EmailOutlinedIcon />, label: "Email", value: data.universityEmail ?? data.email },
                             { icon: <BadgeOutlinedIcon />, label: "Username", value: data.username },
@@ -125,12 +122,11 @@ function ProfileDialog({ open, email, onClose }) {
                             <Stack key={label} direction="row" alignItems="center" spacing={1.5}>
                                 <Box sx={{ color: PRIMARY, "& svg": { fontSize: 18 } }}>{icon}</Box>
                                 <Box>
-                                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", fontSize: "0.68rem", letterSpacing: "0.05em" }}>
+                                    <Typography variant="caption" color="text.secondary"
+                                        sx={{ textTransform: "uppercase", fontSize: "0.68rem", letterSpacing: "0.05em" }}>
                                         {label}
                                     </Typography>
-                                    <Typography variant="body2" fontWeight={500}>
-                                        {value}
-                                    </Typography>
+                                    <Typography variant="body2" fontWeight={500}>{value}</Typography>
                                 </Box>
                             </Stack>
                         ) : null)}
@@ -140,6 +136,62 @@ function ProfileDialog({ open, email, onClose }) {
 
             <DialogActions sx={{ px: 3, pb: 2 }}>
                 <Button onClick={onClose} sx={{ borderRadius: 2, textTransform: "none" }}>Close</Button>
+            </DialogActions>
+        </Dialog>
+    );
+}
+
+// ── Delete Dialog ─────────────────────────────────────────────────────────────
+function DeleteDialog({ open, request, onClose, onDeleted }) {
+    const theme = useTheme();
+    const t = theme.palette.custom;
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    const handleDelete = async () => {
+        if (!request) return;
+        setLoading(true);
+        setError(null);
+        try {
+            const id = request.id ?? request.requestId;
+            await deleteRequest(id);
+            onDeleted();
+            onClose();
+        } catch (err) {
+            console.log("Delete request error:", err.response?.data);
+            const msg = err.response?.data?.message ?? err.response?.data;
+            setError(typeof msg === "string" ? msg : "Failed to delete request. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const email = request?.universityEmail ?? request?.email ?? "—";
+    const name = request?.fullName ?? request?.name ?? "—";
+
+    return (
+        <Dialog open={open} onClose={() => !loading && onClose()} maxWidth="xs" fullWidth
+            PaperProps={{ sx: { borderRadius: 3, p: 1 } }}>
+            <DialogTitle sx={{ fontWeight: 700 }}>Delete Request?</DialogTitle>
+            <DialogContent>
+                {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>}
+                <Typography sx={{ color: t.textSecondary }}>
+                    Are you sure you want to delete the request from{" "}
+                    <strong style={{ color: t.textPrimary }}>{name}</strong>
+                    {" "}(<span style={{ fontFamily: "monospace", fontSize: "0.85em" }}>{email}</span>)?
+                    This action cannot be undone.
+                </Typography>
+            </DialogContent>
+            <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+                <Button onClick={onClose} disabled={loading}
+                    sx={{ borderRadius: 2, textTransform: "none" }}>
+                    Cancel
+                </Button>
+                <Button variant="contained" onClick={handleDelete} disabled={loading}
+                    startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <DeleteOutlineIcon />}
+                    sx={{ bgcolor: "#d32f2f", "&:hover": { bgcolor: "#b71c1c" }, borderRadius: 2, textTransform: "none", fontWeight: 600 }}>
+                    {loading ? "Deleting..." : "Delete"}
+                </Button>
             </DialogActions>
         </Dialog>
     );
@@ -160,6 +212,10 @@ export default function AllRequests() {
     // Profile dialog
     const [profileOpen, setProfileOpen] = useState(false);
     const [profileEmail, setProfileEmail] = useState(null);
+
+    // Delete dialog
+    const [delOpen, setDelOpen] = useState(false);
+    const [selectedReq, setSelectedReq] = useState(null);
 
     const fetchRequests = async () => {
         setLoading(true);
@@ -194,10 +250,8 @@ export default function AllRequests() {
     const counts = { all: requests.length, pending: 0, approved: 0, rejected: 0 };
     requests.forEach((r) => { counts[getStatus(r)]++; });
 
-    const openProfile = (email) => {
-        setProfileEmail(email);
-        setProfileOpen(true);
-    };
+    const openProfile = (email) => { setProfileEmail(email); setProfileOpen(true); };
+    const openDelete = (req) => { setSelectedReq(req); setDelOpen(true); };
 
     return (
         <Box sx={{ maxWidth: 1100 }}>
@@ -233,7 +287,11 @@ export default function AllRequests() {
                 ))}
             </Stack>
 
-            {error && <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+            {error && (
+                <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }} onClose={() => setError(null)}>
+                    {error}
+                </Alert>
+            )}
 
             <Paper elevation={1} sx={{ borderRadius: 3, overflow: "hidden", bgcolor: theme.palette.background.paper }}>
                 <Box sx={{ px: 2.5, py: 2, borderBottom: `1px solid ${t.borderLight}` }}>
@@ -252,7 +310,7 @@ export default function AllRequests() {
                         <Table>
                             <TableHead>
                                 <TableRow>
-                                    {["#", "Email", "Name", "Date", "Status", "Profile"].map((h) => (
+                                    {["#", "Email", "Name", "Date", "Status", "Actions"].map((h) => (
                                         <TableCell key={h} sx={{ fontWeight: 700, fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.05em", color: t.textTertiary }}>
                                             {h}
                                         </TableCell>
@@ -299,17 +357,22 @@ export default function AllRequests() {
                                                     sx={{ bgcolor: alpha(cfg.color, 0.12), color: cfg.color, fontWeight: 600, fontSize: "0.72rem", height: 24, "& .MuiChip-icon": { color: cfg.color } }}
                                                 />
                                             </TableCell>
-                                            {/* ✅ Profile button */}
+                                            {/* Actions: Profile + Delete */}
                                             <TableCell>
-                                                <Tooltip title="View university record">
-                                                    <IconButton size="small" onClick={() => openProfile(email)}
-                                                        sx={{
-                                                            color: PRIMARY, border: `1px solid ${alpha(PRIMARY, 0.3)}`, borderRadius: 1.5,
-                                                            "&:hover": { bgcolor: alpha(PRIMARY, 0.08) }
-                                                        }}>
-                                                        <OpenInNewIcon sx={{ fontSize: 15 }} />
-                                                    </IconButton>
-                                                </Tooltip>
+                                                <Stack direction="row" spacing={0.5}>
+                                                    <Tooltip title="View university record">
+                                                        <IconButton size="small" onClick={() => openProfile(email)}
+                                                            sx={{ color: PRIMARY, border: `1px solid ${alpha(PRIMARY, 0.3)}`, borderRadius: 1.5, "&:hover": { bgcolor: alpha(PRIMARY, 0.08) } }}>
+                                                            <OpenInNewIcon sx={{ fontSize: 15 }} />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                    <Tooltip title="Delete request">
+                                                        <IconButton size="small" onClick={() => openDelete(req)}
+                                                            sx={{ color: t.textSecondary, border: `1px solid ${alpha("#d32f2f", 0.2)}`, borderRadius: 1.5, "&:hover": { bgcolor: alpha("#d32f2f", 0.08), color: "#d32f2f", borderColor: alpha("#d32f2f", 0.4) } }}>
+                                                            <DeleteOutlineIcon sx={{ fontSize: 15 }} />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                </Stack>
                                             </TableCell>
                                         </TableRow>
                                     );
@@ -339,6 +402,14 @@ export default function AllRequests() {
                 open={profileOpen}
                 email={profileEmail}
                 onClose={() => setProfileOpen(false)}
+            />
+
+            {/* Delete Dialog */}
+            <DeleteDialog
+                open={delOpen}
+                request={selectedReq}
+                onClose={() => setDelOpen(false)}
+                onDeleted={fetchRequests}
             />
         </Box>
     );

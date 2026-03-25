@@ -1,5 +1,5 @@
 // src/api/handler/endpoints/supervisorApi.js
-import axiosInstance from "../axiosInstance";
+import axiosInstance from "./../../axiosInstance";
 
 // ─── Pending Requests ────────────────────────────────────────────────────────
 

@@ -1,5 +1,8 @@
+// src/components/common/supervisor/Dashboard/SupervisorDashboard.jsx
+import { useEffect, useState } from "react";
 import {
     Box, Grid, Typography, Paper, Stack, Avatar, Chip, Button, LinearProgress, AvatarGroup,
+    CircularProgress,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { useNavigate } from "react-router-dom";
@@ -10,14 +13,9 @@ import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import WarningAmberOutlinedIcon from "@mui/icons-material/WarningAmberOutlined";
 import { useAuth } from "../../../../contexts/AuthContext";
+import { getPendingTeamRequests } from "../../../../api/handler/endpoints/supervisorApi";
 
-const STATS = [
-    { label: "My Groups", value: "4", icon: <GroupsOutlinedIcon />, color: "#B46F4C", path: "/supervisor/groups" },
-    { label: "Pending Requests", value: "3", icon: <PendingActionsOutlinedIcon />, color: "#C49A6C", path: "/supervisor/requests" },
-    { label: "Files to Review", value: "7", icon: <FolderOutlinedIcon />, color: "#6D8A7D", path: "/supervisor/files" },
-    { label: "Meetings This Wk", value: "4", icon: <CalendarMonthOutlinedIcon />, color: "#7E9FC4", path: "/supervisor/meetings" },
-];
-
+// ─── static mock for groups (replace later with real API) ────────────────────
 const GROUPS = [
     { name: "EcoTrackers", project: "AI-Based Waste Management", members: ["A", "H", "M", "S"], progress: 65, risk: "low", last: "Today" },
     { name: "CodeCraft", project: "Smart Campus Navigation", members: ["O", "L", "N"], progress: 42, risk: "medium", last: "2 days ago" },
@@ -34,8 +32,42 @@ export default function SupervisorDashboard() {
     const { user } = useAuth();
     const t = theme.palette.custom;
 
+    // ── pending count from real API ──────────────────────────────────────────
+    const [pendingCount, setPendingCount] = useState(null);
+    const [pendingLoading, setPendingLoading] = useState(true);
+
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const raw = await getPendingTeamRequests();
+                const count = Array.isArray(raw)
+                    ? raw.length
+                    : ((raw.teamRequests?.length ?? 0) + (raw.leaveRequests?.length ?? 0));
+                setPendingCount(count);
+            } catch {
+                setPendingCount("—");
+            } finally {
+                setPendingLoading(false);
+            }
+        };
+        load();
+    }, []);
+
+    // ── stats — only Pending Requests value is live; rest still static ────────
+    const STATS = [
+        { label: "My Groups", value: "4", icon: <GroupsOutlinedIcon />, color: "#B46F4C", path: "/supervisor/groups" },
+        {
+            label: "Pending Requests",
+            value: pendingLoading ? null : String(pendingCount ?? "—"),
+            icon: <PendingActionsOutlinedIcon />, color: "#C49A6C", path: "/supervisor/requests",
+        },
+        { label: "Files to Review", value: "7", icon: <FolderOutlinedIcon />, color: "#6D8A7D", path: "/supervisor/files" },
+        { label: "Meetings This Wk", value: "4", icon: <CalendarMonthOutlinedIcon />, color: "#7E9FC4", path: "/supervisor/meetings" },
+    ];
+
     return (
         <Box sx={{ maxWidth: 1200 }}>
+            {/* Welcome */}
             <Box sx={{ mb: 3 }}>
                 <Typography variant="h2" sx={{ color: t.textPrimary, mb: 0.5 }}>
                     Welcome, {user?.name ?? user?.fullName ?? user?.username ?? "Supervisor"}
@@ -45,6 +77,7 @@ export default function SupervisorDashboard() {
                 </Typography>
             </Box>
 
+            {/* Stat cards */}
             <Grid container spacing={2} sx={{ mb: 3 }}>
                 {STATS.map((s) => (
                     <Grid size={{ xs: 6, lg: 3 }} key={s.label}>
@@ -54,9 +87,17 @@ export default function SupervisorDashboard() {
                             "&:hover": { transform: "translateY(-2px)" }, transition: "all 0.2s",
                         }}>
                             <Stack direction="row" alignItems="center" gap={1.5}>
-                                <Box sx={{ p: 1, borderRadius: 2, bgcolor: `${s.color}15`, color: s.color, "& svg": { fontSize: 20 } }}>{s.icon}</Box>
+                                <Box sx={{ p: 1, borderRadius: 2, bgcolor: `${s.color}15`, color: s.color, "& svg": { fontSize: 20 } }}>
+                                    {s.icon}
+                                </Box>
                                 <Box>
-                                    <Typography sx={{ fontSize: "1.6rem", fontWeight: 700, color: t.textPrimary, lineHeight: 1 }}>{s.value}</Typography>
+                                    {s.value === null ? (
+                                        <CircularProgress size={20} sx={{ color: s.color }} />
+                                    ) : (
+                                        <Typography sx={{ fontSize: "1.6rem", fontWeight: 700, color: t.textPrimary, lineHeight: 1 }}>
+                                            {s.value}
+                                        </Typography>
+                                    )}
                                     <Typography sx={{ fontSize: "0.7rem", color: t.textTertiary, mt: 0.3 }}>{s.label}</Typography>
                                 </Box>
                             </Stack>
@@ -65,6 +106,7 @@ export default function SupervisorDashboard() {
                 ))}
             </Grid>
 
+            {/* Groups + sidebar */}
             <Grid container spacing={2}>
                 <Grid size={{ xs: 12, lg: 8 }}>
                     <Paper elevation={1} sx={{ p: 2.5, borderRadius: 3, bgcolor: theme.palette.background.paper }}>
@@ -81,14 +123,16 @@ export default function SupervisorDashboard() {
                                 <Box key={g.name} onClick={() => navigate("/supervisor/groups")}
                                     sx={{
                                         p: 1.8, borderRadius: 2.5, border: `1px solid ${t.borderLight}`,
-                                        "&:hover": { bgcolor: t.surfaceHover }, transition: "background 0.15s", cursor: "pointer"
+                                        "&:hover": { bgcolor: t.surfaceHover }, transition: "background 0.15s", cursor: "pointer",
                                     }}>
                                     <Stack direction="row" alignItems="flex-start" justifyContent="space-between" mb={1}>
                                         <Box>
                                             <Stack direction="row" alignItems="center" gap={1}>
                                                 <Typography sx={{ fontSize: "0.9rem", fontWeight: 700, color: t.textPrimary }}>{g.name}</Typography>
-                                                <Chip label={g.risk} size="small"
-                                                    sx={{ bgcolor: `${RISK_CLR[g.risk]}18`, color: RISK_CLR[g.risk], fontWeight: 600, fontSize: "0.65rem", height: 20, textTransform: "capitalize" }} />
+                                                <Chip label={g.risk} size="small" sx={{
+                                                    bgcolor: `${RISK_CLR[g.risk]}18`, color: RISK_CLR[g.risk],
+                                                    fontWeight: 600, fontSize: "0.65rem", height: 20, textTransform: "capitalize",
+                                                }} />
                                             </Stack>
                                             <Typography sx={{ fontSize: "0.78rem", color: t.textSecondary, mt: 0.2 }}>{g.project}</Typography>
                                         </Box>
@@ -104,7 +148,9 @@ export default function SupervisorDashboard() {
                                                 sx={{ bgcolor: t.borderLight, "& .MuiLinearProgress-bar": { bgcolor: RISK_CLR[g.risk] } }} />
                                         </Box>
                                         <AvatarGroup max={4} sx={{ "& .MuiAvatar-root": { width: 26, height: 26, fontSize: "0.65rem", fontWeight: 700 } }}>
-                                            {g.members.map((m, j) => <Avatar key={j} sx={{ bgcolor: MBR_COLORS[j % MBR_COLORS.length] }}>{m}</Avatar>)}
+                                            {g.members.map((m, j) => (
+                                                <Avatar key={j} sx={{ bgcolor: MBR_COLORS[j % MBR_COLORS.length] }}>{m}</Avatar>
+                                            ))}
                                         </AvatarGroup>
                                     </Stack>
                                 </Box>
@@ -113,6 +159,7 @@ export default function SupervisorDashboard() {
                     </Paper>
                 </Grid>
 
+                {/* Alerts + Quick Actions */}
                 <Grid size={{ xs: 12, lg: 4 }}>
                     <Stack spacing={2}>
                         <Paper elevation={1} sx={{ p: 2.5, borderRadius: 3, bgcolor: theme.palette.background.paper }}>
@@ -123,21 +170,21 @@ export default function SupervisorDashboard() {
                                     { text: "SmartCampus: no activity 4d", sev: "warning" },
                                     { text: "7 files awaiting your review", sev: "info" },
                                 ].map((a, i) => (
-                                    <Stack key={i} direction="row" gap={1.5} alignItems="center"
-                                        sx={{
-                                            p: 1.2, borderRadius: 2,
-                                            bgcolor: a.sev === "error" ? `${t.error}10` : a.sev === "warning" ? `${t.warning}10` : `${t.accentSecondary}10`,
-                                            border: `1px solid ${a.sev === "error" ? `${t.error}30` : a.sev === "warning" ? `${t.warning}30` : `${t.accentSecondary}30`}`
-                                        }}>
+                                    <Stack key={i} direction="row" gap={1.5} alignItems="center" sx={{
+                                        p: 1.2, borderRadius: 2,
+                                        bgcolor: a.sev === "error" ? `${t.error}10` : a.sev === "warning" ? `${t.warning}10` : `${t.accentSecondary}10`,
+                                        border: `1px solid ${a.sev === "error" ? `${t.error}30` : a.sev === "warning" ? `${t.warning}30` : `${t.accentSecondary}30`}`,
+                                    }}>
                                         <WarningAmberOutlinedIcon sx={{
                                             fontSize: 16, flexShrink: 0,
-                                            color: a.sev === "error" ? t.error : a.sev === "warning" ? t.warning : t.accentSecondary
+                                            color: a.sev === "error" ? t.error : a.sev === "warning" ? t.warning : t.accentSecondary,
                                         }} />
                                         <Typography sx={{ fontSize: "0.82rem", color: t.textPrimary }}>{a.text}</Typography>
                                     </Stack>
                                 ))}
                             </Stack>
                         </Paper>
+
                         <Paper elevation={1} sx={{ p: 2.5, borderRadius: 3, bgcolor: theme.palette.background.paper }}>
                             <Typography variant="h4" sx={{ color: t.textPrimary, mb: 1.5 }}>Quick Actions</Typography>
                             <Stack spacing={1}>
@@ -150,7 +197,8 @@ export default function SupervisorDashboard() {
                                     <Button key={a.label} variant="outlined" fullWidth onClick={() => navigate(a.path)}
                                         sx={{
                                             borderColor: t.borderLight, color: a.color, fontSize: "0.8rem", fontWeight: 600,
-                                            justifyContent: "flex-start", "&:hover": { borderColor: a.color, bgcolor: `${a.color}08` }
+                                            justifyContent: "flex-start",
+                                            "&:hover": { borderColor: a.color, bgcolor: `${a.color}08` },
                                         }}>
                                         {a.label}
                                     </Button>

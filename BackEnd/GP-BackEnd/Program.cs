@@ -104,7 +104,7 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<AdminService>();
 builder.Services.AddScoped<StudentService>();
 builder.Services.AddScoped<SupervisorService>();
-
+builder.Services.AddScoped<UserProfileService>();
 
 
 var app = builder.Build();

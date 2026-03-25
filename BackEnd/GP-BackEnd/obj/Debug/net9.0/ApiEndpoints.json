@@ -361,6 +361,22 @@
   },
   {
     "ContainingType": "GP_BackEnd.Controllers.UserProfileController",
+    "Method": "CreateProfile",
+    "RelativePath": "api/UserProfile",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "GP_BackEnd.DTOs.UserProfile.CreateUserProfile",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.UserProfileController",
     "Method": "UpdateProfile",
     "RelativePath": "api/UserProfile",
     "HttpMethod": "PUT",

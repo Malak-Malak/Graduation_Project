@@ -152,7 +152,6 @@ C:\Users\X1 Zano\OneDrive\Desktop\Graduation_Project\BackEnd\GP-BackEnd\obj\Debu
 C:\Users\X1 Zano\OneDrive\Desktop\Graduation_Project\BackEnd\GP-BackEnd\obj\Debug\net9.0\staticwebassets.build.json.cache
 C:\Users\X1 Zano\OneDrive\Desktop\Graduation_Project\BackEnd\GP-BackEnd\obj\Debug\net9.0\staticwebassets.development.json
 C:\Users\X1 Zano\OneDrive\Desktop\Graduation_Project\BackEnd\GP-BackEnd\obj\Debug\net9.0\staticwebassets.build.endpoints.json
-C:\Users\X1 Zano\OneDrive\Desktop\Graduation_Project\BackEnd\GP-BackEnd\obj\Debug\net9.0\staticwebassets.upToDateCheck.txt
 C:\Users\X1 Zano\OneDrive\Desktop\Graduation_Project\BackEnd\GP-BackEnd\obj\Debug\net9.0\GP-BackEnd.csproj.Up2Date
 C:\Users\X1 Zano\OneDrive\Desktop\Graduation_Project\BackEnd\GP-BackEnd\obj\Debug\net9.0\GP-BackEnd.dll
 C:\Users\X1 Zano\OneDrive\Desktop\Graduation_Project\BackEnd\GP-BackEnd\obj\Debug\net9.0\refint\GP-BackEnd.dll
@@ -321,3 +320,4 @@ C:\Users\DELL\OneDrive\Desktop\Graduation_Project\BackEnd\GP-BackEnd\obj\Debug\n
 C:\Users\DELL\OneDrive\Desktop\Graduation_Project\BackEnd\GP-BackEnd\obj\Debug\net9.0\GP-BackEnd.pdb
 C:\Users\DELL\OneDrive\Desktop\Graduation_Project\BackEnd\GP-BackEnd\obj\Debug\net9.0\GP-BackEnd.genruntimeconfig.cache
 C:\Users\DELL\OneDrive\Desktop\Graduation_Project\BackEnd\GP-BackEnd\obj\Debug\net9.0\ref\GP-BackEnd.dll
+C:\Users\X1 Zano\OneDrive\Desktop\Graduation_Project\BackEnd\GP-BackEnd\obj\Debug\net9.0\staticwebassets.upToDateCheck.txt

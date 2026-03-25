@@ -2,8 +2,9 @@
 
 namespace GP_BackEnd.DTOs.UserProfile
 {
-    public class UpdateProfileDto
+    public class CreateUserProfile
     {
+        [MaxLength(20)]
         public string PhoneNumber { get; set; }
 
         [Required]
@@ -22,8 +23,6 @@ namespace GP_BackEnd.DTOs.UserProfile
 
         [MaxLength(100)]
         public string? Field { get; set; }
-
-        public int TotalNumOfCreditCards { get; set; }
 
         [Required]
         [EmailAddress]

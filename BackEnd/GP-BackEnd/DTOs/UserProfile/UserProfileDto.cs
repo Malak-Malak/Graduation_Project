@@ -1,6 +1,4 @@
-﻿
-
-namespace GP_BackEnd.DTOs
+﻿namespace GP_BackEnd.DTOs
 {
     public class UserProfileDto
     {
@@ -10,9 +8,10 @@ namespace GP_BackEnd.DTOs
         public string FullName { get; set; }
         public string Department { get; set; }
         public string? Field { get; set; }
-        public int TotalNumOfCreditCards { get; set; }
+        public string? GitHubLink { get; set; }
+        public string? LinkedinLink { get; set; }
+        public string PersonalEmail { get; set; }
         public bool IsGraduate { get; set; }
-        public int? MaxTeams { get; set; }
+        public int TotalNumOfCreditCards { get; set; }
     }
 }
-

@@ -587,6 +587,35 @@
           }
         }
       },
+      "post": {
+        "tags": [
+          "UserProfile"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserProfile"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserProfile"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserProfile"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
       "put": {
         "tags": [
           "UserProfile"
@@ -688,6 +717,53 @@
         },
         "additionalProperties": false
       },
+      "CreateUserProfile": {
+        "required": [
+          "department",
+          "fullName",
+          "personalEmail"
+        ],
+        "type": "object",
+        "properties": {
+          "phoneNumber": {
+            "maxLength": 20,
+            "type": "string",
+            "nullable": true
+          },
+          "fullName": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          },
+          "department": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          },
+          "gitHubLink": {
+            "maxLength": 200,
+            "type": "string",
+            "nullable": true
+          },
+          "linkedinLink": {
+            "maxLength": 200,
+            "type": "string",
+            "nullable": true
+          },
+          "field": {
+            "maxLength": 100,
+            "type": "string",
+            "nullable": true
+          },
+          "personalEmail": {
+            "maxLength": 150,
+            "minLength": 1,
+            "type": "string",
+            "format": "email"
+          }
+        },
+        "additionalProperties": false
+      },
       "LoginDto": {
         "type": "object",
         "properties": {
@@ -782,6 +858,11 @@
         "additionalProperties": false
       },
       "UpdateProfileDto": {
+        "required": [
+          "department",
+          "fullName",
+          "personalEmail"
+        ],
         "type": "object",
         "properties": {
           "phoneNumber": {
@@ -789,12 +870,39 @@
             "nullable": true
           },
           "fullName": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          },
+          "department": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          },
+          "gitHubLink": {
+            "maxLength": 200,
+            "type": "string",
+            "nullable": true
+          },
+          "linkedinLink": {
+            "maxLength": 200,
             "type": "string",
             "nullable": true
           },
           "field": {
+            "maxLength": 100,
             "type": "string",
             "nullable": true
+          },
+          "totalNumOfCreditCards": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "personalEmail": {
+            "maxLength": 150,
+            "minLength": 1,
+            "type": "string",
+            "format": "email"
           }
         },
         "additionalProperties": false

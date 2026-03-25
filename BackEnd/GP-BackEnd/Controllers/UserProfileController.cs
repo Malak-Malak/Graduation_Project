@@ -1,10 +1,7 @@
-﻿// Controllers/UserProfileController.cs
-using GP_BackEnd.Data;
-using GP_BackEnd.DTOs;
-using GP_BackEnd.DTOs.UserProfile;
+﻿using GP_BackEnd.DTOs.UserProfile;
+using GP_BackEnd.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace GP_BackEnd.Controllers
@@ -14,60 +11,50 @@ namespace GP_BackEnd.Controllers
     [Authorize]
     public class UserProfileController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly UserProfileService _service;
 
-        public UserProfileController(ApplicationDbContext context)
+        public UserProfileController(UserProfileService service)
         {
-            _context = context;
+            _service = service;
         }
 
-        // GET: api/userprofile
         [HttpGet]
         public async Task<IActionResult> GetProfile()
         {
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
 
-            var profile = await _context.UserProfiles
-                .FirstOrDefaultAsync(p => p.UserId == userId);
+            var profile = await _service.GetProfile(userId);
 
             if (profile == null)
                 return NotFound(new { message = "Profile not found" });
 
-            var dto = new UserProfileDto
-            {
-                Id = profile.Id,
-                UserId = profile.UserId,
-                PhoneNumber = profile.PhoneNumber,
-                FullName = profile.FullName,
-                Department = profile.Department,
-                Field = profile.field,
-                TotalNumOfCreditCards = profile.TotalNumOfCreditCards,
-                IsGraduate = profile.IsGraduate,
-                MaxTeams = profile.MaxTeams
-            };
-
-            return Ok(dto);
+            return Ok(profile);
         }
 
-        // PUT: api/userprofile
+        [HttpPost]
+        public async Task<IActionResult> CreateProfile([FromBody] CreateUserProfile dto)
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+
+            var (success, message) = await _service.CreateProfile(userId, dto);
+
+            if (!success)
+                return Conflict(new { message });
+
+            return StatusCode(201, new { message });
+        }
+
         [HttpPut]
         public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto dto)
         {
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
 
-            var profile = await _context.UserProfiles
-                .FirstOrDefaultAsync(p => p.UserId == userId);
+            var (found, message) = await _service.UpdateProfile(userId, dto);
 
-            if (profile == null)
-                return NotFound(new { message = "Profile not found" });
+            if (!found)
+                return NotFound(new { message });
 
-            profile.PhoneNumber = dto.PhoneNumber;
-            profile.FullName = dto.FullName;
-            profile.field = dto.Field;
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Profile updated successfully" });
+            return Ok(new { message });
         }
     }
 }

@@ -27,7 +27,7 @@ namespace GP_BackEnd.Services
                     UserId = u.Id,
                     Username = u.Username,
                     FullName = u.UserProfile != null ? u.UserProfile.FullName : u.Username,
-                    Field = u.UserProfile != null ? u.UserProfile.field : null  // Add this
+                    Field = u.UserProfile != null ? u.UserProfile.Field : null 
                 })
                 .ToListAsync();
         }

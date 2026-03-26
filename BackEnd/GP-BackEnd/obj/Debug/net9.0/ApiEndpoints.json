@@ -479,5 +479,21 @@
       }
     ],
     "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.UserProfileController",
+    "Method": "GetProfileByUserId",
+    "RelativePath": "api/UserProfile/{userId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "userId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
   }
 ]

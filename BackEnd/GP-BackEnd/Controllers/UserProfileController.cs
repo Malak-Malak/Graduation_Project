@@ -56,5 +56,16 @@ namespace GP_BackEnd.Controllers
 
             return Ok(new { message });
         }
+        // GET api/userprofile/{userId}
+        [HttpGet("{userId}")]
+        public async Task<IActionResult> GetProfileByUserId(int userId)
+        {
+            var profile = await _service.GetProfileByUserId(userId);
+
+            if (profile == null)
+                return NotFound(new { message = "Profile not found" });
+
+            return Ok(profile);
+        }
     }
 }

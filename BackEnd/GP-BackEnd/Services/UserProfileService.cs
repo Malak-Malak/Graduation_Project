@@ -90,5 +90,29 @@ namespace GP_BackEnd.Services
 
             return (true, "Profile updated successfully");
         }
+        public async Task<UserProfileDto> GetProfileByUserId(int userId)
+        {
+            var profile = await _context.UserProfiles
+                .FirstOrDefaultAsync(p => p.UserId == userId);
+
+            if (profile == null)
+                return null;
+
+            return new UserProfileDto
+            {
+                Id = profile.Id,
+                UserId = profile.UserId,
+                PhoneNumber = profile.PhoneNumber,
+                FullName = profile.FullName,
+                Department = profile.Department,
+                Field = profile.Field,
+                GitHubLink = profile.GitHubLink,
+                LinkedinLink = profile.LinkedinLink,
+                PersonalEmail = profile.PersonalEmail,
+                IsGraduate = profile.IsGraduate,
+                TotalNumOfCreditCards = profile.TotalNumOfCreditCards,
+                Bio = profile.Bio
+            };
+        }
     }
 }

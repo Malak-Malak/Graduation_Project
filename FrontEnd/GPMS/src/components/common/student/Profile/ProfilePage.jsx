@@ -63,24 +63,44 @@ export default function ProfilePage() {
     const [teamLoading, setTeamLoading] = useState(true);
 
     // ── جلب البروفايل ──────────────────────────────────────────────
+    // useEffect(() => {
+    //     studentApi.getProfile()
+    //         .then((d) => {
+    //             const normalized = normalizeProfile(d);
+    //             setProfile(normalized);
+    //             // ✅ FIX #2: لو البروفايل فاضي → افتح Setup Modal
+    //             if (isProfileEmpty(normalized)) {
+    //                 setSetupOpen(true);
+    //             }
+    //         })
+    //         .catch(() => {
+    //             setProfile(null);
+    //             // لو فشل الـ request (404 مثلاً) = ما في بروفايل → افتح Setup
+    //             setSetupOpen(true);
+    //         })
+    //         .finally(() => setLoading(false));
+    // }, []);
     useEffect(() => {
         studentApi.getProfile()
             .then((d) => {
                 const normalized = normalizeProfile(d);
                 setProfile(normalized);
-                // ✅ FIX #2: لو البروفايل فاضي → افتح Setup Modal
+
                 if (isProfileEmpty(normalized)) {
                     setSetupOpen(true);
                 }
             })
-            .catch(() => {
+            .catch((err) => {
+                if (err?.response?.status === 404) {
+                    // ✅ ما في بروفايل
+                    setSetupOpen(true);
+                } else {
+                    console.error(err);
+                }
                 setProfile(null);
-                // لو فشل الـ request (404 مثلاً) = ما في بروفايل → افتح Setup
-                setSetupOpen(true);
             })
             .finally(() => setLoading(false));
     }, []);
-
     // ✅ FIX #5: جلب my-team
     useEffect(() => {
         studentApi.getMyTeam()
@@ -123,52 +143,35 @@ export default function ProfilePage() {
     // };
     const handleSetupDone = async (data) => {
         try {
-            if (profile) {
-                // ✅ إذا موجود → update
-                await studentApi.updateProfile(data);
-            } else {
-                // ✅ إذا مش موجود → create
-                await studentApi.createProfile(data);
-            }
-
-            setProfile(normalizeProfile({
-                fullName: data.fullName,
-                phoneNumber: data.phoneNumber,
-                department: data.department,
-                field: (data.skills ?? []).join(","),
-                gitHubLink: data.github,
-                linkedinLink: data.linkedin,
-                personalEmail: data.email,
-                bio: data.bio,
-            }));
-
-            setSetupOpen(false);
+            // 🔥 حاول create أول
+            await studentApi.createProfile(data);
 
         } catch (err) {
-            console.log(err);
-
-            // 🔥 الحل الذكي: لو قال already exists → اعمل update مباشرة
-            if (err?.response?.data?.message === "Profile already exists") {
-                try {
-                    await studentApi.updateProfile(data);
-
-                    setProfile(normalizeProfile({
-                        fullName: data.fullName,
-                        phoneNumber: data.phoneNumber,
-                        department: data.department,
-                        field: (data.skills ?? []).join(","),
-                        gitHubLink: data.github,
-                        linkedinLink: data.linkedin,
-                        personalEmail: data.email,
-                        bio: data.bio,
-                    }));
-
-                    setSetupOpen(false);
-                } catch (e) {
-                    console.error("Update failed after create error", e);
-                }
+            // إذا موجود → اعمل update
+            if (
+                err?.response?.data?.message === "Profile already exists" ||
+                err?.response?.status === 409
+            ) {
+                await studentApi.updateProfile(data);
+            } else {
+                console.error(err);
+                return;
             }
         }
+
+        // ✅ دايمًا حدّث الواجهة بعد النجاح
+        setProfile(normalizeProfile({
+            fullName: data.fullName,
+            phoneNumber: data.phoneNumber,
+            department: data.department,
+            field: (data.skills ?? []).join(","),
+            gitHubLink: data.github,
+            linkedinLink: data.linkedin,
+            personalEmail: data.email,
+            bio: data.bio,
+        }));
+
+        setSetupOpen(false);
     };
     const displayName = profile?.fullName || user?.name || user?.username || "Student";
     const avatarLetter = displayName.charAt(0).toUpperCase();

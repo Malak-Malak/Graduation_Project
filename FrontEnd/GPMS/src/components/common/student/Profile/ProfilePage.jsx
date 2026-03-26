@@ -418,19 +418,43 @@ export default function ProfilePage() {
     const theme = useTheme();
     const isDark = theme.palette.mode === "dark";
     const { user } = useAuth();
-
+    const [setupOpen, setSetupOpen] = useState(false);
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [editOpen, setEditOpen] = useState(false);
 
     // ── جلب البروفايل عند أول تحميل ──────────────────────────────────────────
+    // useEffect(() => {
+    //     studentApi.getProfile()
+    //         .then((d) => setProfile(normalizeProfile(d)))
+    //         .catch(() => setProfile({}))
+    //         .finally(() => setLoading(false));
+    // }, []);
     useEffect(() => {
         studentApi.getProfile()
-            .then((d) => setProfile(normalizeProfile(d)))
-            .catch(() => setProfile({}))
+            .then((d) => {
+                const normalized = normalizeProfile(d);
+                setProfile(normalized);
+
+                // 🔥🔥 check if profile is empty or incomplete
+                const isEmpty =
+                    !normalized.fullName &&
+                    !normalized.email &&
+                    (!normalized.skills || normalized.skills.length === 0) &&
+                    !normalized.department;
+
+                if (isEmpty) {
+                    setSetupOpen(true);  // افتح المودال
+                } else {
+                    setSetupOpen(false); // البروفايل معبّي → لا تفتح المودال
+                }
+            })
+            .catch(() => {
+                setProfile({});
+                setSetupOpen(true); // في حالة فشل الـ API اعتبره فاضي
+            })
             .finally(() => setLoading(false));
     }, []);
-
     // ── حفظ التعديلات ─────────────────────────────────────────────────────────
     const handleSave = async (updated) => {
         try {
@@ -722,6 +746,8 @@ export default function ProfilePage() {
                 onSave={handleSave}
                 onClose={() => setEditOpen(false)}
             />
+            {/* <SetupModal open={setupOpen} onClose={() => setSetupOpen(false)} />
+            <EditProfileModal open={editOpen} onClose={() => setEditOpen(false)} /> */}
         </Box>
     );
 }

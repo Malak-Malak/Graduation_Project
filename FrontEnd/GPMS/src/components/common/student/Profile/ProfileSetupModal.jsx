@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import {
     Dialog, DialogContent,
@@ -148,7 +147,24 @@ export default function ProfileSetupModal({ open, onDone }) {
             await studentApi.createProfile(data);
             onDone(data);
         } catch (e) {
-            setError(e?.response?.data?.message ?? "Failed to save profile, please try again.");
+            const status = e?.response?.status;
+            const message = e?.response?.data?.message ?? e?.response?.data ?? "";
+            const isExists =
+                status === 409 ||
+                (status === 400 && typeof message === "string" &&
+                    message.toLowerCase().includes("exist"));
+
+            if (isExists) {
+                // ✅ البروفايل موجود → نعمل UPDATE بدل CREATE
+                try {
+                    await studentApi.updateProfile(data);
+                    onDone(data);
+                } catch (e2) {
+                    setError(e2?.response?.data?.message ?? "Failed to update profile.");
+                }
+            } else {
+                setError(message || "Failed to save profile, please try again.");
+            }
         } finally {
             setSaving(false);
         }

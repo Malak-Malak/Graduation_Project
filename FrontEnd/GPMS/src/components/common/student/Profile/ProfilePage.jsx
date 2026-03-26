@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
     Box, Typography, Stack, Paper, Avatar, Chip, Button,
@@ -19,6 +18,7 @@ import EditProfileModal from "./EditProfileModal";
 import ProfileSetupModal from "./ProfileSetupModal";
 import { useAuth } from "../../../../contexts/AuthContext";
 import studentApi from "../../../../api/handler/endpoints/studentApi";
+
 const SKILL_COLORS = ["#B46F4C", "#6D8A7D", "#C49A6C", "#7E9FC4", "#9B7EC8", "#C47E7E"];
 
 // ══════════════════════════════════════════════════════════════════════
@@ -44,9 +44,9 @@ const normalizeProfile = (raw) => {
     };
 };
 
-// ✅ isProfileEmpty: يحدد إذا البروفايل فاضي أو ناقص (لإظهار Setup Modal)
-const isProfileEmpty = (p) =>
-    !p || (!p.fullName && !p.email && !p.department);
+// ✅ isProfileEmpty: يظهر Setup Modal بس لو ما في بروفايل خالص (null)
+// لو البروفايل موجود حتى لو فاضي — ما نفتح Setup مرة ثانية
+const isProfileEmpty = (p) => p === null;
 
 export default function ProfilePage() {
     const theme = useTheme();
@@ -63,44 +63,29 @@ export default function ProfilePage() {
     const [teamLoading, setTeamLoading] = useState(true);
 
     // ── جلب البروفايل ──────────────────────────────────────────────
-    // useEffect(() => {
-    //     studentApi.getProfile()
-    //         .then((d) => {
-    //             const normalized = normalizeProfile(d);
-    //             setProfile(normalized);
-    //             // ✅ FIX #2: لو البروفايل فاضي → افتح Setup Modal
-    //             if (isProfileEmpty(normalized)) {
-    //                 setSetupOpen(true);
-    //             }
-    //         })
-    //         .catch(() => {
-    //             setProfile(null);
-    //             // لو فشل الـ request (404 مثلاً) = ما في بروفايل → افتح Setup
-    //             setSetupOpen(true);
-    //         })
-    //         .finally(() => setLoading(false));
-    // }, []);
     useEffect(() => {
         studentApi.getProfile()
             .then((d) => {
                 const normalized = normalizeProfile(d);
                 setProfile(normalized);
-
+                // ✅ normalized === null يعني الـ response فاضي تماماً
                 if (isProfileEmpty(normalized)) {
                     setSetupOpen(true);
                 }
+                // لو normalized موجود (حتى لو فاضي الحقول) → ما نفتح Setup
             })
             .catch((err) => {
-                if (err?.response?.status === 404) {
-                    // ✅ ما في بروفايل
+                const status = err?.response?.status;
+                if (status === 404) {
+                    // ✅ ما في بروفايل أصلاً → افتح Setup
                     setSetupOpen(true);
-                } else {
-                    console.error(err);
                 }
+                // أي خطأ ثاني (401، 500...) → ما نفتح Setup
                 setProfile(null);
             })
             .finally(() => setLoading(false));
     }, []);
+
     // ✅ FIX #5: جلب my-team
     useEffect(() => {
         studentApi.getMyTeam()
@@ -128,49 +113,20 @@ export default function ProfilePage() {
     };
 
     // ✅ FIX #2: بعد إنهاء Setup Modal، خزّن البروفايل وأغلق المودال
-    // const handleSetupDone = (data) => {
-    //     setProfile(normalizeProfile({
-    //         fullName: data.fullName,
-    //         phoneNumber: data.phoneNumber,
-    //         department: data.department,
-    //         field: (data.skills ?? []).join(","),
-    //         gitHubLink: data.github,
-    //         linkedinLink: data.linkedin,
-    //         personalEmail: data.email,
-    //         bio: data.bio,
-    //     }));
-    //     setSetupOpen(false);
-    // };
-    const handleSetupDone = async (data) => {
-        try {
-            await studentApi.createProfile(data);
-        } catch (err) {
-
-            const status = err?.response?.status;
-            const message = err?.response?.data?.message || err?.response?.data;
-
-            console.log("ERROR:", status, message);
-
-            // 🔥 خليه عام مش بس message
-            if (
-                status === 400 ||
-                status === 409 ||
-                (typeof message === "string" && message.includes("exists"))
-            ) {
-                console.log("TRY UPDATE 🔁");
-
-                await studentApi.updateProfile(data);
-            } else {
-                console.error("UNEXPECTED ERROR", err);
-                return;
-            }
-        }
-
-        // ✅ دايمًا بعد النجاح
-        const fresh = await studentApi.getProfile();
-        setProfile(normalizeProfile(fresh));
+    const handleSetupDone = (data) => {
+        setProfile(normalizeProfile({
+            fullName: data.fullName,
+            phoneNumber: data.phoneNumber,
+            department: data.department,
+            field: (data.skills ?? []).join(","),
+            gitHubLink: data.github,
+            linkedinLink: data.linkedin,
+            personalEmail: data.email,
+            bio: data.bio,
+        }));
         setSetupOpen(false);
     };
+
     const displayName = profile?.fullName || user?.name || user?.username || "Student";
     const avatarLetter = displayName.charAt(0).toUpperCase();
 

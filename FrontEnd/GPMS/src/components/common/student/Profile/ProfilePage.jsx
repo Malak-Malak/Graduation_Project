@@ -143,34 +143,32 @@ export default function ProfilePage() {
     // };
     const handleSetupDone = async (data) => {
         try {
-            // 🔥 حاول create أول
             await studentApi.createProfile(data);
-
         } catch (err) {
-            // إذا موجود → اعمل update
+
+            const status = err?.response?.status;
+            const message = err?.response?.data?.message || err?.response?.data;
+
+            console.log("ERROR:", status, message);
+
+            // 🔥 خليه عام مش بس message
             if (
-                err?.response?.data?.message === "Profile already exists" ||
-                err?.response?.status === 409
+                status === 400 ||
+                status === 409 ||
+                (typeof message === "string" && message.includes("exists"))
             ) {
+                console.log("TRY UPDATE 🔁");
+
                 await studentApi.updateProfile(data);
             } else {
-                console.error(err);
+                console.error("UNEXPECTED ERROR", err);
                 return;
             }
         }
 
-        // ✅ دايمًا حدّث الواجهة بعد النجاح
-        setProfile(normalizeProfile({
-            fullName: data.fullName,
-            phoneNumber: data.phoneNumber,
-            department: data.department,
-            field: (data.skills ?? []).join(","),
-            gitHubLink: data.github,
-            linkedinLink: data.linkedin,
-            personalEmail: data.email,
-            bio: data.bio,
-        }));
-
+        // ✅ دايمًا بعد النجاح
+        const fresh = await studentApi.getProfile();
+        setProfile(normalizeProfile(fresh));
         setSetupOpen(false);
     };
     const displayName = profile?.fullName || user?.name || user?.username || "Student";

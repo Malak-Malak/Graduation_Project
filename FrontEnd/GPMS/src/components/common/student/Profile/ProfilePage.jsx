@@ -1,3 +1,10 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// ProfilePage.jsx
+// عرض بروفايل الطالب الكامل مع زر التعديل.
+// البيانات من GET /api/UserProfile
+// الـ backend بيرجع: fullName, phoneNumber, department, gitHubLink,
+//                    linkedinLink, field, personalEmail
+// ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useEffect } from "react";
 import {
@@ -19,6 +26,28 @@ import studentApi from "../../../../api/handler/endpoints/studentApi";
 
 const SKILL_COLORS = ["#B46F4C", "#6D8A7D", "#C49A6C", "#7E9FC4", "#9B7EC8", "#C47E7E"];
 
+// ── مساعد: بيحوّل الـ response من الـ backend لشكل موحد داخل الـ UI ────────
+// Backend keys  →  UI keys
+// gitHubLink    →  github
+// linkedinLink  →  linkedin
+// personalEmail →  email
+// field         →  field  (نفسه)
+// department    →  department (نفسه)
+const normalizeProfile = (raw) => {
+    if (!raw) return {};
+    return {
+        fullName: raw.fullName ?? "",
+        phoneNumber: raw.phoneNumber ?? "",
+        department: raw.department ?? "",
+        field: raw.field ?? "",
+        github: raw.gitHubLink ?? raw.github ?? "",
+        linkedin: raw.linkedinLink ?? raw.linkedin ?? "",
+        email: raw.personalEmail ?? raw.email ?? "",
+        bio: raw.bio ?? "",
+        skills: raw.skills ?? [],
+    };
+};
+
 export default function ProfilePage() {
     const theme = useTheme();
     const isDark = theme.palette.mode === "dark";
@@ -28,29 +57,38 @@ export default function ProfilePage() {
     const [loading, setLoading] = useState(true);
     const [editOpen, setEditOpen] = useState(false);
 
+    // ── جلب البروفايل عند أول تحميل ──────────────────────────────────────────
     useEffect(() => {
         studentApi.getProfile()
-            .then((d) => setProfile(d))
-            .catch(() => setProfile({}))
+            .then((d) => setProfile(normalizeProfile(d)))
+            .catch(() => setProfile({}))           // لو فشل نعرض بروفايل فاضي
             .finally(() => setLoading(false));
     }, []);
 
+    // ── بعد حفظ التعديلات من الـ modal ───────────────────────────────────────
     const handleSave = async (updated) => {
-        try { await studentApi.updateProfile(updated); } catch { /**/ }
-        setProfile(updated);
+        try {
+            await studentApi.updateProfile(updated);
+            setProfile(normalizeProfile(updated)); // نحدث الـ state بالشكل الصح
+        } catch {
+            // لو فشل الـ request خليّ الـ UI يبقى كما هو
+        }
         setEditOpen(false);
     };
 
-    const displayName = user?.name ?? user?.username ?? "Student";
+    // ── الاسم وأول حرف للأفاتار ─────────────────────────────────────────────
+    // نعطي الأولوية للاسم اللي الطالب دخله في البروفايل
+    const displayName = profile?.fullName || user?.name || user?.username || "Student";
     const avatarLetter = displayName.charAt(0).toUpperCase();
 
+    // ── Loading ───────────────────────────────────────────────────────────────
     if (loading) return (
         <Box display="flex" justifyContent="center" alignItems="center" minHeight={300}>
             <CircularProgress size={26} sx={{ color: "#d0895b" }} />
         </Box>
     );
 
-    /* tokens */
+    /* ── Design tokens ────────────────────────────────────────────────── */
     const accent = "#d0895b";
     const a10 = isDark ? "rgba(208,137,91,0.10)" : "rgba(208,137,91,0.07)";
     const a22 = "rgba(208,137,91,0.22)";
@@ -64,7 +102,7 @@ export default function ProfilePage() {
         letterSpacing: "0.08em", textTransform: "uppercase", color: textSec,
     };
 
-    /* inner section card */
+    /* ── Reusable section card ────────────────────────────────────────── */
     const SectionCard = ({ icon: Icon, title, count, onEdit, children }) => (
         <Paper elevation={0} sx={{ borderRadius: 2.5, border: `1px solid ${border}`, bgcolor: cardBg, overflow: "hidden" }}>
             <Box sx={{
@@ -75,11 +113,15 @@ export default function ProfilePage() {
             }}>
                 <Icon sx={{ fontSize: 14, color: accent }} />
                 <Typography sx={sectionLabelSx}>{title}</Typography>
+
+                {/* Badge عداد */}
                 {count !== undefined && (
                     <Box sx={{ px: 1, py: 0.1, borderRadius: 10, bgcolor: a10, border: `1px solid ${a22}` }}>
                         <Typography fontSize="0.64rem" fontWeight={700} sx={{ color: accent }}>{count}</Typography>
                     </Box>
                 )}
+
+                {/* زر التعديل */}
                 {onEdit && (
                     <Tooltip title={`Edit ${title}`}>
                         <IconButton size="small" onClick={onEdit} sx={{
@@ -98,7 +140,7 @@ export default function ProfilePage() {
     return (
         <Box sx={{ maxWidth: 740, mx: "auto", pb: 4 }}>
 
-            {/* ══ PROFILE HERO CARD ══════════════════════════════════ */}
+            {/* ══ PROFILE HERO CARD ══════════════════════════════════════════ */}
             <Paper elevation={0} sx={{
                 borderRadius: 3, border: `1px solid ${border}`,
                 bgcolor: cardBg, overflow: "hidden", mb: 2,
@@ -112,7 +154,7 @@ export default function ProfilePage() {
                         : `linear-gradient(135deg, #fdf0e8 0%, #f5e0cc 100%)`,
                     overflow: "hidden",
                 }}>
-                    {/* decorative circles */}
+                    {/* دوائر ديكورية */}
                     {[
                         { size: 180, top: -60, right: -40, opacity: isDark ? 0.12 : 0.18 },
                         { size: 100, top: 20, right: 120, opacity: isDark ? 0.07 : 0.12 },
@@ -120,28 +162,28 @@ export default function ProfilePage() {
                     ].map((c, i) => (
                         <Box key={i} sx={{
                             position: "absolute",
-                            width: c.size, height: c.size,
-                            borderRadius: "50%",
+                            width: c.size, height: c.size, borderRadius: "50%",
                             border: `2px solid ${accent}`,
                             top: c.top, right: c.right, left: c.left,
                             opacity: c.opacity,
                         }} />
                     ))}
-                    {/* dot grid */}
+
+                    {/* شبكة نقاط */}
                     <Box sx={{
                         position: "absolute", inset: 0,
                         backgroundImage: `radial-gradient(${accent}30 1px, transparent 1px)`,
                         backgroundSize: "20px 20px",
                         opacity: isDark ? 0.4 : 0.5,
                     }} />
-                    {/* edit button */}
+
+                    {/* زر تعديل البروفايل */}
                     <Tooltip title="Edit Profile">
                         <IconButton onClick={() => setEditOpen(true)} size="small" sx={{
                             position: "absolute", top: 12, right: 14,
                             bgcolor: isDark ? "rgba(0,0,0,0.35)" : "rgba(255,255,255,0.7)",
                             backdropFilter: "blur(6px)",
-                            border: `1px solid ${border}`,
-                            color: textSec,
+                            border: `1px solid ${border}`, color: textSec,
                             "&:hover": { color: accent, bgcolor: isDark ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.9)" },
                         }}>
                             <EditOutlinedIcon sx={{ fontSize: 15 }} />
@@ -149,15 +191,14 @@ export default function ProfilePage() {
                     </Tooltip>
                 </Box>
 
-                {/* Avatar row — overlapping cover */}
+                {/* Avatar + social links */}
                 <Box sx={{ px: 3, pb: 2.5 }}>
                     <Stack direction="row" alignItems="flex-end" justifyContent="space-between"
                         sx={{ mt: "-36px", mb: 2 }}>
 
-                        {/* Avatar */}
+                        {/* الأفاتار */}
                         <Avatar sx={{
-                            width: 72, height: 72,
-                            bgcolor: accent,
+                            width: 72, height: 72, bgcolor: accent,
                             fontSize: "1.65rem", fontWeight: 800,
                             border: `3px solid ${cardBg}`,
                             boxShadow: `0 4px 16px ${a22}`,
@@ -166,10 +207,11 @@ export default function ProfilePage() {
                             {avatarLetter}
                         </Avatar>
 
-                        {/* social pills */}
+                        {/* أزرار السوشيال — من الـ profile المحفوظ في الـ backend */}
                         <Stack direction="row" gap={1} pb={0.5}>
                             {profile?.linkedin && (
-                                <Button size="small" startIcon={<LinkedInIcon sx={{ fontSize: "14px !important" }} />}
+                                <Button size="small"
+                                    startIcon={<LinkedInIcon sx={{ fontSize: "14px !important" }} />}
                                     href={profile.linkedin} target="_blank" sx={{
                                         color: "#0077B5",
                                         bgcolor: isDark ? "rgba(0,119,181,0.10)" : "rgba(0,119,181,0.07)",
@@ -180,7 +222,8 @@ export default function ProfilePage() {
                                     }}>LinkedIn</Button>
                             )}
                             {profile?.github && (
-                                <Button size="small" startIcon={<GitHubIcon sx={{ fontSize: "14px !important" }} />}
+                                <Button size="small"
+                                    startIcon={<GitHubIcon sx={{ fontSize: "14px !important" }} />}
                                     href={profile.github} target="_blank" sx={{
                                         color: textPri,
                                         bgcolor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
@@ -193,28 +236,33 @@ export default function ProfilePage() {
                         </Stack>
                     </Stack>
 
-                    {/* Name + meta */}
+                    {/* الاسم */}
                     <Typography fontWeight={800} fontSize="1.15rem" sx={{ color: textPri, lineHeight: 1.2 }}>
                         {displayName}
                     </Typography>
 
-                    {/* meta row */}
+                    {/* معلومات التواصل */}
                     <Stack direction="row" flexWrap="wrap" gap={2} mt={1}>
-                        {user?.email && (
+                        {/* الإيميل: من البروفايل أولاً، ثم من الـ auth */}
+                        {(profile?.email || user?.email) && (
                             <Stack direction="row" alignItems="center" gap={0.7}>
                                 <EmailOutlinedIcon sx={{ fontSize: 13, color: textSec }} />
-                                <Typography fontSize="0.78rem" sx={{ color: textSec }}>{user.email}</Typography>
+                                <Typography fontSize="0.78rem" sx={{ color: textSec }}>
+                                    {profile?.email || user?.email}
+                                </Typography>
                             </Stack>
                         )}
                         {profile?.phoneNumber && (
                             <Stack direction="row" alignItems="center" gap={0.7}>
                                 <PhoneOutlinedIcon sx={{ fontSize: 13, color: textSec }} />
-                                <Typography fontSize="0.78rem" sx={{ color: textSec }}>{profile.phoneNumber}</Typography>
+                                <Typography fontSize="0.78rem" sx={{ color: textSec }}>
+                                    {profile.phoneNumber}
+                                </Typography>
                             </Stack>
                         )}
                     </Stack>
 
-                    {/* Department badge */}
+                    {/* التخصص (field) */}
                     {profile?.field && (
                         <Box sx={{ mt: 1.5 }}>
                             <Chip
@@ -233,7 +281,7 @@ export default function ProfilePage() {
                 </Box>
             </Paper>
 
-            {/* ══ ABOUT ══════════════════════════════════════════════ */}
+            {/* ══ ABOUT (bio) ════════════════════════════════════════════════ */}
             {profile?.bio && (
                 <Box mb={2}>
                     <SectionCard icon={PersonOutlineIcon} title="About">
@@ -244,7 +292,7 @@ export default function ProfilePage() {
                 </Box>
             )}
 
-            {/* ══ SKILLS ═════════════════════════════════════════════ */}
+            {/* ══ SKILLS ════════════════════════════════════════════════════ */}
             <Box mb={2}>
                 <SectionCard
                     icon={CodeOutlinedIcon}
@@ -278,7 +326,7 @@ export default function ProfilePage() {
                 </SectionCard>
             </Box>
 
-            {/* ══ EMPTY STATE ════════════════════════════════════════ */}
+            {/* ══ EMPTY STATE — لو البروفايل فاضي تماماً ════════════════════ */}
             {!profile?.bio && !profile?.linkedin && !profile?.github && !profile?.skills?.length && (
                 <Paper elevation={0} sx={{
                     borderRadius: 3, border: `1px dashed ${a22}`,
@@ -308,7 +356,13 @@ export default function ProfilePage() {
                 </Paper>
             )}
 
-            <EditProfileModal open={editOpen} profile={profile} onSave={handleSave} onClose={() => setEditOpen(false)} />
+            {/* Modal التعديل */}
+            <EditProfileModal
+                open={editOpen}
+                profile={profile}
+                onSave={handleSave}
+                onClose={() => setEditOpen(false)}
+            />
         </Box>
     );
 }

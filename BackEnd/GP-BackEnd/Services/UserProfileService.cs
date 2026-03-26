@@ -35,7 +35,8 @@ namespace GP_BackEnd.Services
                 LinkedinLink = profile.LinkedinLink,
                 PersonalEmail = profile.PersonalEmail,
                 IsGraduate = profile.IsGraduate,
-                TotalNumOfCreditCards = profile.TotalNumOfCreditCards
+                TotalNumOfCreditCards = profile.TotalNumOfCreditCards,
+                Bio = profile.Bio
             };
         }
 
@@ -56,6 +57,7 @@ namespace GP_BackEnd.Services
                 GitHubLink = dto.GitHubLink,
                 LinkedinLink = dto.LinkedinLink,
                 Field = dto.Field,
+                Bio = dto.Bio,
                 PersonalEmail = dto.PersonalEmail,
                 TotalNumOfCreditCards = 0
             };
@@ -81,6 +83,7 @@ namespace GP_BackEnd.Services
             profile.LinkedinLink = dto.LinkedinLink;
             profile.Field = dto.Field;
             profile.TotalNumOfCreditCards = dto.TotalNumOfCreditCards;
+            profile.Bio = dto.Bio;
             profile.PersonalEmail = dto.PersonalEmail;
 
             await _context.SaveChangesAsync();

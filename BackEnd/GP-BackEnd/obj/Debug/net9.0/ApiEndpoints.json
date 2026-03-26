@@ -152,6 +152,95 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "GP_BackEnd.Controllers.KanbanController",
+    "Method": "GetBoard",
+    "RelativePath": "api/Kanban/board",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.KanbanController",
+    "Method": "CreateTask",
+    "RelativePath": "api/Kanban/create-task",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "GP_BackEnd.DTOs.Kanban.CreateTaskDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.KanbanController",
+    "Method": "DeleteTask",
+    "RelativePath": "api/Kanban/delete-task/{taskId}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "taskId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.KanbanController",
+    "Method": "GetTeamMembers",
+    "RelativePath": "api/Kanban/team-members",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.KanbanController",
+    "Method": "UpdateTaskStatus",
+    "RelativePath": "api/Kanban/update-status",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "GP_BackEnd.DTOs.Kanban.UpdateTaskStatusDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.KanbanController",
+    "Method": "UpdateTask",
+    "RelativePath": "api/Kanban/update-task/{taskId}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "taskId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      },
+      {
+        "Name": "dto",
+        "Type": "GP_BackEnd.DTOs.Kanban.UpdateTaskDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "GP_BackEnd.Controllers.StudentController",
     "Method": "GetAvailableStudents",
     "RelativePath": "api/Student/available-students",

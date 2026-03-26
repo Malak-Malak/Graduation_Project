@@ -15,9 +15,14 @@ namespace GP_BackEnd.Models
         public DateTime Deadline { get; set; }
         public int TeamId { get; set; }
         public int? ProjectId { get; set; }
+        public int CreatedByUserId { get; set; }
         public Team Team { get; set; }
         public Project Project { get; set; }
+        public User CreatedBy { get; set; }
+
         public ICollection<TaskAttachment> Attachments { get; set; }
+        public ICollection<TaskAssignment> Assignments { get; set; }
+
         public ICollection<Feedback> Feedbacks { get; set; }
     }
 }

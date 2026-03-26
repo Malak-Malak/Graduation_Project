@@ -19,6 +19,7 @@ namespace GP_BackEnd.Models
         public ICollection<TaskAttachment> TaskAttachments { get; set; }
         public ICollection<Notification> Notifications { get; set; }
         public ICollection<Team> SupervisedTeams { get; set; }
+        public ICollection<TaskAssignment> TaskAssignments { get; set; }
         public ICollection<Feedback> Feedbacks { get; set; }
     }
 }

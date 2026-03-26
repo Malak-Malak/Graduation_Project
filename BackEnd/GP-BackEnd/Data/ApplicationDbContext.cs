@@ -24,7 +24,7 @@ namespace GP_BackEnd.Data
         public DbSet<RegistrationRequest> RegistrationRequests { get; set; }
         public DbSet<UniversityRecord> UniversityRecords { get; set; }
         public DbSet<TeamJoinRequest> TeamJoinRequests { get; set; }
-
+        public DbSet<TaskAssignment> TaskAssignments { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -175,6 +175,27 @@ namespace GP_BackEnd.Data
                 .WithMany()
                 .HasForeignKey(jr => jr.StudentId)
                 .OnDelete(DeleteBehavior.Restrict);
+            // TaskAssignment -> TaskItem
+            modelBuilder.Entity<TaskAssignment>()
+                .HasOne(ta => ta.TaskItem)
+                .WithMany(t => t.Assignments)
+                .HasForeignKey(ta => ta.TaskItemId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // TaskAssignment -> User
+            modelBuilder.Entity<TaskAssignment>()
+                .HasOne(ta => ta.User)
+                .WithMany(u => u.TaskAssignments)
+                .HasForeignKey(ta => ta.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // TaskItem -> CreatedBy (User)
+            modelBuilder.Entity<TaskItem>()
+                .HasOne(ti => ti.CreatedBy)
+                .WithMany()
+                .HasForeignKey(ti => ti.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
+
     }
 }

@@ -145,7 +145,7 @@ export default function ProfileSetupModal({ open, onDone }) {
         setSaving(true);
         setError("");
         try {
-            await UserProfileApi.createProfile(data);
+            await studentApi.createProfile(data);
             onDone(data);
         } catch (e) {
             setError(e?.response?.data?.message ?? "Failed to save profile, please try again.");

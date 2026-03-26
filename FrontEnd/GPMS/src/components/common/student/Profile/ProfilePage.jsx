@@ -108,20 +108,68 @@ export default function ProfilePage() {
     };
 
     // ✅ FIX #2: بعد إنهاء Setup Modal، خزّن البروفايل وأغلق المودال
-    const handleSetupDone = (data) => {
-        setProfile(normalizeProfile({
-            fullName: data.fullName,
-            phoneNumber: data.phoneNumber,
-            department: data.department,
-            field: (data.skills ?? []).join(","),
-            gitHubLink: data.github,
-            linkedinLink: data.linkedin,
-            personalEmail: data.email,
-            bio: data.bio,
-        }));
-        setSetupOpen(false);
-    };
+    // const handleSetupDone = (data) => {
+    //     setProfile(normalizeProfile({
+    //         fullName: data.fullName,
+    //         phoneNumber: data.phoneNumber,
+    //         department: data.department,
+    //         field: (data.skills ?? []).join(","),
+    //         gitHubLink: data.github,
+    //         linkedinLink: data.linkedin,
+    //         personalEmail: data.email,
+    //         bio: data.bio,
+    //     }));
+    //     setSetupOpen(false);
+    // };
+    const handleSetupDone = async (data) => {
+        try {
+            if (profile) {
+                // ✅ إذا موجود → update
+                await studentApi.updateProfile(data);
+            } else {
+                // ✅ إذا مش موجود → create
+                await studentApi.createProfile(data);
+            }
 
+            setProfile(normalizeProfile({
+                fullName: data.fullName,
+                phoneNumber: data.phoneNumber,
+                department: data.department,
+                field: (data.skills ?? []).join(","),
+                gitHubLink: data.github,
+                linkedinLink: data.linkedin,
+                personalEmail: data.email,
+                bio: data.bio,
+            }));
+
+            setSetupOpen(false);
+
+        } catch (err) {
+            console.log(err);
+
+            // 🔥 الحل الذكي: لو قال already exists → اعمل update مباشرة
+            if (err?.response?.data?.message === "Profile already exists") {
+                try {
+                    await studentApi.updateProfile(data);
+
+                    setProfile(normalizeProfile({
+                        fullName: data.fullName,
+                        phoneNumber: data.phoneNumber,
+                        department: data.department,
+                        field: (data.skills ?? []).join(","),
+                        gitHubLink: data.github,
+                        linkedinLink: data.linkedin,
+                        personalEmail: data.email,
+                        bio: data.bio,
+                    }));
+
+                    setSetupOpen(false);
+                } catch (e) {
+                    console.error("Update failed after create error", e);
+                }
+            }
+        }
+    };
     const displayName = profile?.fullName || user?.name || user?.username || "Student";
     const avatarLetter = displayName.charAt(0).toUpperCase();
 

@@ -165,6 +165,7 @@ const studentApi = {
             linkedinLink: data.linkedin ?? "",
             field: (data.skills ?? []).join(","),   // skills[] → "Frontend,Backend,…"
             personalEmail: data.email ?? "",
+            bio: data.bio ?? "",
         }).then((r) => r.data),
 
     /**
@@ -180,6 +181,7 @@ const studentApi = {
             field: (data.skills ?? []).join(","),  // skills[] → "Frontend,Backend,…"
             totalNumOfCreditCards: 0,
             personalEmail: data.email ?? "",
+            bio: data.bio ?? "",
         }).then((r) => r.data),
 };
 

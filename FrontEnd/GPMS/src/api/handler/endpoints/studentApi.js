@@ -1,7 +1,102 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // studentApi.js
-// Handles all Student + UserProfile API calls.
-// Backend base: /api/Student  and  /api/UserProfile
+// Backend keys:
+//   fullName, phoneNumber, department, field (نفس department),
+//   gitHubLink, linkedinLink, personalEmail
+// ملاحظة: skills مش موجودة في الـ backend — بس محتفظين بيها في الـ UI فقط
+// ─────────────────────────────────────────────────────────────────────────────
+
+// import axiosInstance from "./../../axiosInstance";
+
+// const studentApi = {
+
+//     // ── Team Queries ──────────────────────────────────────────────────────────
+
+//     getMyTeam: () =>
+//         axiosInstance.get("/Student/my-team").then((r) => r.data),
+
+//     getSupervisors: () =>
+//         axiosInstance.get("/Student/supervisors").then((r) => r.data),
+
+//     getAvailableStudents: () =>
+//         axiosInstance.get("/Student/available-students").then((r) => r.data),
+
+//     getAvailableTeams: () =>
+//         axiosInstance.get("/Student/available-teams").then((r) => r.data),
+
+//     getMyInvitations: () =>
+//         axiosInstance.get("/Student/my-invitations").then((r) => r.data),
+
+//     // ── Team Actions ──────────────────────────────────────────────────────────
+
+//     createTeam: (body) =>
+//         axiosInstance.post("/Student/create-team", {
+//             projectTitle: body.projectTitle,
+//             supervisorId: body.supervisorId,
+//             studentIds: body.studentIds ?? [],
+//         }).then((r) => r.data),
+
+//     sendInvitation: (studentId) =>
+//         axiosInstance.post("/Student/send-invitation", { studentId }).then((r) => r.data),
+
+//     requestToJoin: (teamId) =>
+//         axiosInstance.post("/Student/request-to-join", { teamId }).then((r) => r.data),
+
+//     respondToInvitation: (joinRequestId, isAccepted) =>
+//         axiosInstance.post("/Student/respond-to-invitation", { joinRequestId, isAccepted }).then((r) => r.data),
+
+//     respondToJoinRequest: (joinRequestId, isAccepted) =>
+//         axiosInstance.post("/Student/respond-to-join-request", { joinRequestId, isAccepted }).then((r) => r.data),
+
+//     requestLeave: () =>
+//         axiosInstance.post("/Student/request-leave").then((r) => r.data),
+
+//     // ── User Profile ──────────────────────────────────────────────────────────
+
+//     /** GET /api/UserProfile */
+//     getProfile: () =>
+//         axiosInstance.get("/UserProfile").then((r) => r.data),
+
+//     /**
+//      * POST /api/UserProfile — إنشاء البروفايل لأول مرة
+//      * department و field نفس القيمة (اسم التخصص)
+//      */
+//     createProfile: (data) =>
+//         axiosInstance.post("/UserProfile", {
+//             phoneNumber: data.phoneNumber ?? "",
+//             fullName: data.fullName ?? "",
+//             department: data.Department ?? "",   // اسم التخصص
+//             field: data.field ?? "",   // نفس التخصص
+//             gitHubLink: data.github ?? "",
+//             linkedinLink: data.linkedin ?? "",
+//             personalEmail: data.email ?? "",
+//         }).then((r) => r.data),
+
+//     /**
+//      * PUT /api/UserProfile — تعديل البروفايل
+//      */
+//     updateProfile: (data) =>
+//         axiosInstance.put("/UserProfile", {
+//             phoneNumber: data.phoneNumber ?? "",
+//             fullName: data.fullName ?? "",
+//             department: data.Department ?? "",   // اسم التخصص
+//             field: data.field ?? "",   // نفس التخصص
+//             gitHubLink: data.github ?? "",
+//             linkedinLink: data.linkedin ?? "",
+//             personalEmail: data.email ?? "",
+//             totalNumOfCreditCards: 0,
+//         }).then((r) => r.data),
+// };
+
+// export default studentApi;
+// ─────────────────────────────────────────────────────────────────────────────
+// studentApi.js
+// Backend keys:
+//   fullName, phoneNumber, department, field, gitHubLink, linkedinLink, personalEmail
+//
+// التعيين:
+//   department  →  التخصص الأكاديمي (Computer Science, Software Engineering…)
+//   field       →  الـ skills مجمّعة بـ comma  e.g. "Frontend,Backend,AI / ML"
 // ─────────────────────────────────────────────────────────────────────────────
 
 import axiosInstance from "./../../axiosInstance";
@@ -10,33 +105,23 @@ const studentApi = {
 
     // ── Team Queries ──────────────────────────────────────────────────────────
 
-    /** GET /api/Student/my-team — بيجيب فريق الطالب الحالي */
     getMyTeam: () =>
         axiosInstance.get("/Student/my-team").then((r) => r.data),
 
-    /** GET /api/Student/supervisors — قائمة المشرفين المتاحين */
     getSupervisors: () =>
         axiosInstance.get("/Student/supervisors").then((r) => r.data),
 
-    /** GET /api/Student/available-students — الطلاب اللي ما عندهم فريق بعد */
     getAvailableStudents: () =>
         axiosInstance.get("/Student/available-students").then((r) => r.data),
 
-    /** GET /api/Student/available-teams — الفرق اللي تقبل أعضاء جدد */
     getAvailableTeams: () =>
         axiosInstance.get("/Student/available-teams").then((r) => r.data),
 
-    /** GET /api/Student/my-invitations — دعوات الانضمام الواردة على الطالب */
     getMyInvitations: () =>
         axiosInstance.get("/Student/my-invitations").then((r) => r.data),
 
     // ── Team Actions ──────────────────────────────────────────────────────────
 
-    /**
-     * POST /api/Student/create-team
-     * body: { projectTitle, supervisorId, studentIds[] }
-     * studentIds = [] لو الطالب بدو يبدأ لحاله
-     */
     createTeam: (body) =>
         axiosInstance.post("/Student/create-team", {
             projectTitle: body.projectTitle,
@@ -44,77 +129,58 @@ const studentApi = {
             studentIds: body.studentIds ?? [],
         }).then((r) => r.data),
 
-    /**
-     * POST /api/Student/send-invitation
-     * body: { studentId }  — قائد الفريق يدعو طالب
-     */
     sendInvitation: (studentId) =>
         axiosInstance.post("/Student/send-invitation", { studentId }).then((r) => r.data),
 
-    /**
-     * POST /api/Student/request-to-join
-     * body: { teamId }  — الطالب يطلب الانضمام لفريق
-     */
     requestToJoin: (teamId) =>
         axiosInstance.post("/Student/request-to-join", { teamId }).then((r) => r.data),
 
-    /**
-     * POST /api/Student/respond-to-invitation
-     * body: { joinRequestId, isAccepted }  — الطالب يرد على دعوة وصلته
-     */
     respondToInvitation: (joinRequestId, isAccepted) =>
         axiosInstance.post("/Student/respond-to-invitation", { joinRequestId, isAccepted }).then((r) => r.data),
 
-    /**
-     * POST /api/Student/respond-to-join-request
-     * body: { joinRequestId, isAccepted }  — قائد الفريق يرد على طلب انضمام
-     */
     respondToJoinRequest: (joinRequestId, isAccepted) =>
         axiosInstance.post("/Student/respond-to-join-request", { joinRequestId, isAccepted }).then((r) => r.data),
 
-    /** POST /api/Student/request-leave — الطالب يطلب مغادرة فريقه */
     requestLeave: () =>
         axiosInstance.post("/Student/request-leave").then((r) => r.data),
 
     // ── User Profile ──────────────────────────────────────────────────────────
 
-    /** GET /api/UserProfile — بيجيب بروفايل الطالب الحالي */
+    /** GET /api/UserProfile */
     getProfile: () =>
         axiosInstance.get("/UserProfile").then((r) => r.data),
 
     /**
-     * POST /api/UserProfile — إنشاء البروفايل لأول مرة (ProfileSetupModal)
-     * body: { phoneNumber, fullName, department, gitHubLink, linkedinLink, field, personalEmail }
+     * POST /api/UserProfile — إنشاء البروفايل لأول مرة
+     *
+     * data.department  →  التخصص الأكاديمي  (string)
+     * data.skills      →  مصفوفة الـ skills  → بنحوّلها لـ string مفصول بـ comma → field
      */
     createProfile: (data) =>
         axiosInstance.post("/UserProfile", {
             phoneNumber: data.phoneNumber ?? "",
             fullName: data.fullName ?? "",
             department: data.department ?? "",
-            gitHubLink: data.github ?? data.gitHubLink ?? "",
-            linkedinLink: data.linkedin ?? data.linkedinLink ?? "",
-            field: data.field ?? "",
-            personalEmail: data.email ?? data.personalEmail ?? "",
+            gitHubLink: data.github ?? "",
+            linkedinLink: data.linkedin ?? "",
+            field: (data.skills ?? []).join(","),   // skills[] → "Frontend,Backend,…"
+            personalEmail: data.email ?? "",
         }).then((r) => r.data),
 
     /**
-     * PUT /api/UserProfile — تعديل البروفايل (EditProfileModal)
-     * body: { phoneNumber, fullName, department, gitHubLink, linkedinLink,
-     *         field, totalNumOfCreditCards, personalEmail }
-     * ملاحظة: totalNumOfCreditCards موجود في الـ schema لكن مش مستخدم عندنا → نبعته 0
+     * PUT /api/UserProfile — تعديل البروفايل
      */
     updateProfile: (data) =>
         axiosInstance.put("/UserProfile", {
             phoneNumber: data.phoneNumber ?? "",
             fullName: data.fullName ?? "",
             department: data.department ?? "",
-            gitHubLink: data.github ?? data.gitHubLink ?? "",
-            linkedinLink: data.linkedin ?? data.linkedinLink ?? "",
-            field: data.field ?? "",
-            totalNumOfCreditCards: 0,                          // مش مستخدم في الـ UI
-            personalEmail: data.email ?? data.personalEmail ?? "",
+            gitHubLink: data.github ?? "",
+            linkedinLink: data.linkedin ?? "",
+            field: (data.skills ?? []).join(","),  // skills[] → "Frontend,Backend,…"
+            totalNumOfCreditCards: 0,
+            personalEmail: data.email ?? "",
         }).then((r) => r.data),
-
 };
 
 export default studentApi;

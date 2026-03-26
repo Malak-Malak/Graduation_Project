@@ -86,7 +86,7 @@ export default function TeamFinder() {
 
             {/* ── Header ───────────────────────────────────────────────────── */}
             <Box sx={{ mb: 3 }}>
-                <Typography variant="h2" sx={{ color: t.textPrimary, mb: 0.5 }}>Team Finder</Typography>
+                <Typography variant="h2" sx={{ color: t.textPrimary, mb: 0.5 }}>Team Discovery Hub</Typography>
                 <Typography sx={{ color: t.textSecondary, fontSize: "0.9rem" }}>
                     Find teammates by skill ·{" "}
                     {loading ? "Loading…" : `${filtered.length} students available`}

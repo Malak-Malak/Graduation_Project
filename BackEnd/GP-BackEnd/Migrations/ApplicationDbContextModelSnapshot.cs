@@ -476,8 +476,7 @@ namespace GP_BackEnd.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Field")
-                        .HasColumnType("text")
-                        .HasColumnName("field");
+                        .HasColumnType("text");
 
                     b.Property<string>("FullName")
                         .IsRequired()

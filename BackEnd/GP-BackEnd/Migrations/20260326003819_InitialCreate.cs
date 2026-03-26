@@ -116,11 +116,16 @@ namespace GP_BackEnd.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     UserId = table.Column<int>(type: "integer", nullable: false),
-                    PhoneNumber = table.Column<string>(type: "text", nullable: false),
+                    PhoneNumber = table.Column<string>(type: "text", nullable: true),
                     FullName = table.Column<string>(type: "text", nullable: false),
                     Department = table.Column<string>(type: "text", nullable: false),
+                    GitHubLink = table.Column<string>(type: "text", nullable: true),
+                    LinkedinLink = table.Column<string>(type: "text", nullable: true),
+                    Field = table.Column<string>(type: "text", nullable: true),
                     TotalNumOfCreditCards = table.Column<int>(type: "integer", nullable: false),
-                    IsGraduate = table.Column<bool>(type: "boolean", nullable: false)
+                    PersonalEmail = table.Column<string>(type: "text", nullable: false),
+                    IsGraduate = table.Column<bool>(type: "boolean", nullable: false),
+                    MaxTeams = table.Column<int>(type: "integer", nullable: true)
                 },
                 constraints: table =>
                 {

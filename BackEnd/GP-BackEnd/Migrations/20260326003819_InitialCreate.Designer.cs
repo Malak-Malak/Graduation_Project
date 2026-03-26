@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace GP_BackEnd.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260315210000_addedFieldAttribute")]
-    partial class addedFieldAttribute
+    [Migration("20260326003819_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -478,18 +478,30 @@ namespace GP_BackEnd.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("Field")
+                        .HasColumnType("text");
+
                     b.Property<string>("FullName")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("GitHubLink")
                         .HasColumnType("text");
 
                     b.Property<bool>("IsGraduate")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("LinkedinLink")
+                        .HasColumnType("text");
+
                     b.Property<int?>("MaxTeams")
                         .HasColumnType("integer");
 
-                    b.Property<string>("PhoneNumber")
+                    b.Property<string>("PersonalEmail")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PhoneNumber")
                         .HasColumnType("text");
 
                     b.Property<int>("TotalNumOfCreditCards")
@@ -497,9 +509,6 @@ namespace GP_BackEnd.Migrations
 
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
-
-                    b.Property<string>("field")
-                        .HasColumnType("text");
 
                     b.HasKey("Id");
 

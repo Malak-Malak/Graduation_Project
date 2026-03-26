@@ -3,6 +3,7 @@ using GP_BackEnd.Services;
 using GP_BackEnd.Settings;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -37,29 +38,11 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-////TEMPORARY - SQL Server only for migration generation
-//builder.Services.AddDbContext<ApplicationDbContext>(options =>
-//    options.UseSqlServer(
-//        builder.Configuration.GetConnectionString("DefaultConnection")));
-
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection")));
-
-
-//if (builder.Environment.IsDevelopment())
-//{
-//    builder.Services.AddDbContext<ApplicationDbContext>(options =>
-//        options.UseSqlServer(
-//            builder.Configuration.GetConnectionString("DefaultConnection")));
-//}
-//else
-//{
-//    builder.Services.AddDbContext<ApplicationDbContext>(options =>
-//        options.UseNpgsql(
-//            builder.Configuration.GetConnectionString("DefaultConnection")));
-//}
-
+        builder.Configuration.GetConnectionString("DefaultConnection"))
+    .ConfigureWarnings(w =>
+        w.Ignore(RelationalEventId.PendingModelChangesWarning)));
 
 // JWT Settings
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
@@ -84,6 +67,7 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey))
     };
 });
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
@@ -96,26 +80,20 @@ builder.Services.AddCors(options =>
     });
 });
 
-
-
 builder.Services.AddAuthorization();
-//regeister the services 
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<AdminService>();
 builder.Services.AddScoped<StudentService>();
 builder.Services.AddScoped<SupervisorService>();
 builder.Services.AddScoped<UserProfileService>();
 
-
 var app = builder.Build();
+
 // Auto migrate on Railway
-if (!app.Environment.IsDevelopment())
+using (var scope = app.Services.CreateScope())
 {
-    using (var scope = app.Services.CreateScope())
-    {
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        db.Database.Migrate();
-    }
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    db.Database.Migrate();
 }
 
 // Seed admin account
@@ -135,6 +113,7 @@ using (var scope = app.Services.CreateScope())
         context.SaveChanges();
     }
 }
+
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseCors("AllowFrontend");

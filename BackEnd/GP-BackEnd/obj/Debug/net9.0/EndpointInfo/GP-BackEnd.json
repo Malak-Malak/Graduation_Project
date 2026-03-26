@@ -936,6 +936,11 @@
             "type": "string",
             "nullable": true
           },
+          "bio": {
+            "maxLength": 500,
+            "type": "string",
+            "nullable": true
+          },
           "personalEmail": {
             "maxLength": 150,
             "minLength": 1,
@@ -1072,6 +1077,11 @@
           },
           "field": {
             "maxLength": 100,
+            "type": "string",
+            "nullable": true
+          },
+          "bio": {
+            "maxLength": 500,
             "type": "string",
             "nullable": true
           },

@@ -16,6 +16,7 @@ namespace GP_BackEnd.Models
         public string? GitHubLink { get; set; }
         public string? LinkedinLink { get; set; }
         public string? Field { get; set; }
+        public string? Bio { get; set; }
         public int TotalNumOfCreditCards { get; set; }
         [Required]
         public string PersonalEmail { get; set; }   

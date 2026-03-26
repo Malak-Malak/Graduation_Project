@@ -12,6 +12,7 @@
         public string? LinkedinLink { get; set; }
         public string PersonalEmail { get; set; }
         public bool IsGraduate { get; set; }
+        public string? Bio { get; set; }
         public int TotalNumOfCreditCards { get; set; }
     }
 }

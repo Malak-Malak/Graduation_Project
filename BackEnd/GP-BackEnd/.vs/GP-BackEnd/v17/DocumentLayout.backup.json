@@ -3,6 +3,26 @@
   "WorkspaceRootPath": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{591F95A2-816A-4FBD-B826-135BB45239A8}|GP-BackEnd.csproj|c:\\users\\x1 zano\\onedrive\\desktop\\graduation_project\\backend\\gp-backend\\services\\userprofileservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{591F95A2-816A-4FBD-B826-135BB45239A8}|GP-BackEnd.csproj|solutionrelative:services\\userprofileservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{591F95A2-816A-4FBD-B826-135BB45239A8}|GP-BackEnd.csproj|c:\\users\\x1 zano\\onedrive\\desktop\\graduation_project\\backend\\gp-backend\\dtos\\userprofile\\createuserprofile.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{591F95A2-816A-4FBD-B826-135BB45239A8}|GP-BackEnd.csproj|solutionrelative:dtos\\userprofile\\createuserprofile.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{591F95A2-816A-4FBD-B826-135BB45239A8}|GP-BackEnd.csproj|c:\\users\\x1 zano\\onedrive\\desktop\\graduation_project\\backend\\gp-backend\\dtos\\userprofile\\updateprofiledto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{591F95A2-816A-4FBD-B826-135BB45239A8}|GP-BackEnd.csproj|solutionrelative:dtos\\userprofile\\updateprofiledto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{591F95A2-816A-4FBD-B826-135BB45239A8}|GP-BackEnd.csproj|c:\\users\\x1 zano\\onedrive\\desktop\\graduation_project\\backend\\gp-backend\\dtos\\userprofile\\userprofiledto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{591F95A2-816A-4FBD-B826-135BB45239A8}|GP-BackEnd.csproj|solutionrelative:dtos\\userprofile\\userprofiledto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{591F95A2-816A-4FBD-B826-135BB45239A8}|GP-BackEnd.csproj|c:\\users\\x1 zano\\onedrive\\desktop\\graduation_project\\backend\\gp-backend\\models\\userprofile.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{591F95A2-816A-4FBD-B826-135BB45239A8}|GP-BackEnd.csproj|solutionrelative:models\\userprofile.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{591F95A2-816A-4FBD-B826-135BB45239A8}|GP-BackEnd.csproj|c:\\users\\x1 zano\\onedrive\\desktop\\graduation_project\\backend\\gp-backend\\controllers\\kanbancontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{591F95A2-816A-4FBD-B826-135BB45239A8}|GP-BackEnd.csproj|solutionrelative:controllers\\kanbancontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -55,28 +75,8 @@
       "RelativeMoniker": "D:0:0:{591F95A2-816A-4FBD-B826-135BB45239A8}|GP-BackEnd.csproj|solutionrelative:models\\taskassignment.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{591F95A2-816A-4FBD-B826-135BB45239A8}|GP-BackEnd.csproj|c:\\users\\x1 zano\\onedrive\\desktop\\graduation_project\\backend\\gp-backend\\models\\userprofile.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{591F95A2-816A-4FBD-B826-135BB45239A8}|GP-BackEnd.csproj|solutionrelative:models\\userprofile.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{591F95A2-816A-4FBD-B826-135BB45239A8}|GP-BackEnd.csproj|c:\\users\\x1 zano\\onedrive\\desktop\\graduation_project\\backend\\gp-backend\\services\\studentservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{591F95A2-816A-4FBD-B826-135BB45239A8}|GP-BackEnd.csproj|solutionrelative:services\\studentservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{591F95A2-816A-4FBD-B826-135BB45239A8}|GP-BackEnd.csproj|c:\\users\\x1 zano\\onedrive\\desktop\\graduation_project\\backend\\gp-backend\\services\\userprofileservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{591F95A2-816A-4FBD-B826-135BB45239A8}|GP-BackEnd.csproj|solutionrelative:services\\userprofileservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{591F95A2-816A-4FBD-B826-135BB45239A8}|GP-BackEnd.csproj|c:\\users\\x1 zano\\onedrive\\desktop\\graduation_project\\backend\\gp-backend\\dtos\\userprofile\\createuserprofile.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{591F95A2-816A-4FBD-B826-135BB45239A8}|GP-BackEnd.csproj|solutionrelative:dtos\\userprofile\\createuserprofile.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{591F95A2-816A-4FBD-B826-135BB45239A8}|GP-BackEnd.csproj|c:\\users\\x1 zano\\onedrive\\desktop\\graduation_project\\backend\\gp-backend\\dtos\\userprofile\\updateprofiledto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{591F95A2-816A-4FBD-B826-135BB45239A8}|GP-BackEnd.csproj|solutionrelative:dtos\\userprofile\\updateprofiledto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{591F95A2-816A-4FBD-B826-135BB45239A8}|GP-BackEnd.csproj|c:\\users\\x1 zano\\onedrive\\desktop\\graduation_project\\backend\\gp-backend\\dtos\\userprofile\\userprofiledto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{591F95A2-816A-4FBD-B826-135BB45239A8}|GP-BackEnd.csproj|solutionrelative:dtos\\userprofile\\userprofiledto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{591F95A2-816A-4FBD-B826-135BB45239A8}|GP-BackEnd.csproj|c:\\users\\x1 zano\\onedrive\\desktop\\graduation_project\\backend\\gp-backend\\controllers\\userprofilecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -205,7 +205,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": 7,
           "Children": [
             {
               "$type": "Bookmark",
@@ -213,124 +213,181 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 5,
               "Title": "KanbanController.cs",
               "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\Controllers\\KanbanController.cs",
               "RelativeDocumentMoniker": "Controllers\\KanbanController.cs",
-              "ToolTip": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\Controllers\\KanbanController.cs*",
-              "RelativeToolTip": "Controllers\\KanbanController.cs*",
-              "ViewState": "AgIAAFcAAAAAAAAAAAA+wGIAAAABAAAAAAAAAA==",
+              "ToolTip": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\Controllers\\KanbanController.cs",
+              "RelativeToolTip": "Controllers\\KanbanController.cs",
+              "ViewState": "AgIAAFgAAAAAAAAAAAAqwGIAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-03-26T01:37:35.428Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "KanbanService.cs",
-              "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\Services\\KanbanService.cs",
-              "RelativeDocumentMoniker": "Services\\KanbanService.cs",
-              "ToolTip": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\Services\\KanbanService.cs*",
-              "RelativeToolTip": "Services\\KanbanService.cs*",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAANcAAAABAAAAAAAAAA==",
+              "DocumentIndex": 12,
+              "Title": "UpdateTaskDto.cs",
+              "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\Kanban\\UpdateTaskDto.cs",
+              "RelativeDocumentMoniker": "DTOs\\Kanban\\UpdateTaskDto.cs",
+              "ToolTip": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\Kanban\\UpdateTaskDto.cs",
+              "RelativeToolTip": "DTOs\\Kanban\\UpdateTaskDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-26T01:36:12.569Z",
+              "WhenOpened": "2026-03-26T01:34:14.286Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "UserProfile.cs",
+              "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\Models\\UserProfile.cs",
+              "RelativeDocumentMoniker": "Models\\UserProfile.cs",
+              "ToolTip": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\Models\\UserProfile.cs*",
+              "RelativeToolTip": "Models\\UserProfile.cs*",
+              "ViewState": "AgIAAA4AAAAAAAAAAAAgwBIAAAAoAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-15T18:16:42.666Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 3,
-              "Title": "KanbanBoardDto.cs",
-              "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\Kanban\\KanbanBoardDto.cs",
-              "RelativeDocumentMoniker": "DTOs\\Kanban\\KanbanBoardDto.cs",
-              "ToolTip": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\Kanban\\KanbanBoardDto.cs*",
-              "RelativeToolTip": "DTOs\\Kanban\\KanbanBoardDto.cs*",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAABAAAAAAAAAA==",
+              "Title": "UserProfileDto.cs",
+              "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\UserProfile\\UserProfileDto.cs",
+              "RelativeDocumentMoniker": "DTOs\\UserProfile\\UserProfileDto.cs",
+              "ToolTip": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\UserProfile\\UserProfileDto.cs*",
+              "RelativeToolTip": "DTOs\\UserProfile\\UserProfileDto.cs*",
+              "ViewState": "AgIAAAkAAAAAAAAAAAAowA4AAAAoAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-26T01:35:40.906Z",
+              "WhenOpened": "2026-03-25T15:54:59.763Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "UpdateProfileDto.cs",
+              "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\UserProfile\\UpdateProfileDto.cs",
+              "RelativeDocumentMoniker": "DTOs\\UserProfile\\UpdateProfileDto.cs",
+              "ToolTip": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\UserProfile\\UpdateProfileDto.cs*",
+              "RelativeToolTip": "DTOs\\UserProfile\\UpdateProfileDto.cs*",
+              "ViewState": "AgIAABQAAAAAAAAAAAAzwBkAAAAoAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-25T15:54:01.071Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 1,
-              "Title": "Program.cs",
-              "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\Program.cs",
-              "RelativeDocumentMoniker": "Program.cs",
-              "ToolTip": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\Program.cs*",
-              "RelativeToolTip": "Program.cs*",
-              "ViewState": "AgIAAEcAAAAAAAAAAAAYwFgAAAAsAAAAAAAAAA==",
+              "Title": "CreateUserProfile.cs",
+              "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\UserProfile\\CreateUserProfile.cs",
+              "RelativeDocumentMoniker": "DTOs\\UserProfile\\CreateUserProfile.cs",
+              "ToolTip": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\UserProfile\\CreateUserProfile.cs*",
+              "RelativeToolTip": "DTOs\\UserProfile\\CreateUserProfile.cs*",
+              "ViewState": "AgIAABUAAAAAAAAAAAAzwBoAAAAoAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-09T13:17:06.574Z",
+              "WhenOpened": "2026-03-25T15:59:53.793Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "AssignedMemberDto.cs",
-              "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\Kanban\\AssignedMemberDto.cs",
-              "RelativeDocumentMoniker": "DTOs\\Kanban\\AssignedMemberDto.cs",
-              "ToolTip": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\Kanban\\AssignedMemberDto.cs*",
-              "RelativeToolTip": "DTOs\\Kanban\\AssignedMemberDto.cs*",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAABAAAAAAAAAA==",
+              "DocumentIndex": 0,
+              "Title": "UserProfileService.cs",
+              "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\Services\\UserProfileService.cs",
+              "RelativeDocumentMoniker": "Services\\UserProfileService.cs",
+              "ToolTip": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\Services\\UserProfileService.cs*",
+              "RelativeToolTip": "Services\\UserProfileService.cs*",
+              "ViewState": "AgIAAEEAAAAAAAAAAAAgwFUAAAAiAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-26T01:35:27.12Z",
+              "WhenOpened": "2026-03-25T16:08:08.079Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
-              "Title": "TaskDto.cs",
-              "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\Kanban\\TaskDto.cs",
-              "RelativeDocumentMoniker": "DTOs\\Kanban\\TaskDto.cs",
-              "ToolTip": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\Kanban\\TaskDto.cs*",
-              "RelativeToolTip": "DTOs\\Kanban\\TaskDto.cs*",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-26T01:34:46.269Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 11,
               "Title": "UpdateTaskStatusDto.cs",
               "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\Kanban\\UpdateTaskStatusDto.cs",
               "RelativeDocumentMoniker": "DTOs\\Kanban\\UpdateTaskStatusDto.cs",
-              "ToolTip": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\Kanban\\UpdateTaskStatusDto.cs*",
-              "RelativeToolTip": "DTOs\\Kanban\\UpdateTaskStatusDto.cs*",
+              "ToolTip": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\Kanban\\UpdateTaskStatusDto.cs",
+              "RelativeToolTip": "DTOs\\Kanban\\UpdateTaskStatusDto.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-26T01:34:31.337Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-26T01:34:31.337Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
-              "Title": "UpdateTaskDto.cs",
-              "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\Kanban\\UpdateTaskDto.cs",
-              "RelativeDocumentMoniker": "DTOs\\Kanban\\UpdateTaskDto.cs",
-              "ToolTip": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\Kanban\\UpdateTaskDto.cs*",
-              "RelativeToolTip": "DTOs\\Kanban\\UpdateTaskDto.cs*",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAABAAAAAAAAAA==",
+              "DocumentIndex": 10,
+              "Title": "TaskDto.cs",
+              "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\Kanban\\TaskDto.cs",
+              "RelativeDocumentMoniker": "DTOs\\Kanban\\TaskDto.cs",
+              "ToolTip": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\Kanban\\TaskDto.cs",
+              "RelativeToolTip": "DTOs\\Kanban\\TaskDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-26T01:34:14.286Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 8,
-              "Title": "CreateTaskDto.cs",
-              "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\Kanban\\CreateTaskDto.cs",
-              "RelativeDocumentMoniker": "DTOs\\Kanban\\CreateTaskDto.cs",
-              "ToolTip": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\Kanban\\CreateTaskDto.cs*",
-              "RelativeToolTip": "DTOs\\Kanban\\CreateTaskDto.cs*",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-26T01:33:57.615Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-26T01:34:46.269Z"
             },
             {
               "$type": "Document",
               "DocumentIndex": 9,
+              "Title": "AssignedMemberDto.cs",
+              "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\Kanban\\AssignedMemberDto.cs",
+              "RelativeDocumentMoniker": "DTOs\\Kanban\\AssignedMemberDto.cs",
+              "ToolTip": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\Kanban\\AssignedMemberDto.cs",
+              "RelativeToolTip": "DTOs\\Kanban\\AssignedMemberDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-26T01:35:27.12Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\Program.cs",
+              "RelativeDocumentMoniker": "Program.cs",
+              "ToolTip": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\Program.cs",
+              "RelativeToolTip": "Program.cs",
+              "ViewState": "AgIAAEcAAAAAAAAAAAAYwFgAAAAsAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-09T13:17:06.574Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "KanbanBoardDto.cs",
+              "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\Kanban\\KanbanBoardDto.cs",
+              "RelativeDocumentMoniker": "DTOs\\Kanban\\KanbanBoardDto.cs",
+              "ToolTip": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\Kanban\\KanbanBoardDto.cs",
+              "RelativeToolTip": "DTOs\\Kanban\\KanbanBoardDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-26T01:35:40.906Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "KanbanService.cs",
+              "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\Services\\KanbanService.cs",
+              "RelativeDocumentMoniker": "Services\\KanbanService.cs",
+              "ToolTip": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\Services\\KanbanService.cs",
+              "RelativeToolTip": "Services\\KanbanService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAANcAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-26T01:36:12.569Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 13,
+              "Title": "CreateTaskDto.cs",
+              "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\Kanban\\CreateTaskDto.cs",
+              "RelativeDocumentMoniker": "DTOs\\Kanban\\CreateTaskDto.cs",
+              "ToolTip": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\Kanban\\CreateTaskDto.cs",
+              "RelativeToolTip": "DTOs\\Kanban\\CreateTaskDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-26T01:33:57.615Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
               "Title": "TaskItem.cs",
               "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\Models\\TaskItem.cs",
               "RelativeDocumentMoniker": "Models\\TaskItem.cs",
@@ -338,12 +395,11 @@
               "RelativeToolTip": "Models\\TaskItem.cs",
               "ViewState": "AgIAAA0AAAAAAAAAAAAkwBUAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-26T01:28:22.188Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-26T01:28:22.188Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 16,
               "Title": "User.cs",
               "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\Models\\User.cs",
               "RelativeDocumentMoniker": "Models\\User.cs",
@@ -351,12 +407,11 @@
               "RelativeToolTip": "Models\\User.cs",
               "ViewState": "AgIAAA0AAAAAAAAAAAAkwBUAAABIAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-11T22:24:42.47Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-11T22:24:42.47Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 15,
               "Title": "ApplicationDbContext.cs",
               "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\Data\\ApplicationDbContext.cs",
               "RelativeDocumentMoniker": "Data\\ApplicationDbContext.cs",
@@ -364,12 +419,11 @@
               "RelativeToolTip": "Data\\ApplicationDbContext.cs",
               "ViewState": "AgIAALYAAAAAAAAAAAAvwL4AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-25T15:55:15.461Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-25T15:55:15.461Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 17,
               "Title": "TaskAssignment.cs",
               "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\Models\\TaskAssignment.cs",
               "RelativeDocumentMoniker": "Models\\TaskAssignment.cs",
@@ -377,21 +431,7 @@
               "RelativeToolTip": "Models\\TaskAssignment.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-26T01:27:58.055Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 13,
-              "Title": "UserProfile.cs",
-              "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\Models\\UserProfile.cs",
-              "RelativeDocumentMoniker": "Models\\UserProfile.cs",
-              "ToolTip": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\Models\\UserProfile.cs",
-              "RelativeToolTip": "Models\\UserProfile.cs",
-              "ViewState": "AgIAABIAAAAAAAAAAAAywBIAAAA2AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-15T18:16:42.666Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-26T01:27:58.055Z"
             },
             {
               "$type": "Document",
@@ -404,18 +444,6 @@
               "ViewState": "AgIAABwAAAAAAAAAAAAmwDsAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-03-25T15:42:56.747Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 15,
-              "Title": "UserProfileService.cs",
-              "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\Services\\UserProfileService.cs",
-              "RelativeDocumentMoniker": "Services\\UserProfileService.cs",
-              "ToolTip": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\Services\\UserProfileService.cs",
-              "RelativeToolTip": "Services\\UserProfileService.cs",
-              "ViewState": "AgIAABwAAAAAAAAAAAApwCYAAAAOAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-25T16:08:08.079Z"
             },
             {
               "$type": "Document",
@@ -443,7 +471,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 18,
               "Title": "StudentService.cs",
               "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\Services\\StudentService.cs",
               "RelativeDocumentMoniker": "Services\\StudentService.cs",
@@ -452,42 +480,6 @@
               "ViewState": "AgIAAAsAAAAAAAAAAAA0wB0AAABPAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-03-15T18:02:27.206Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 18,
-              "Title": "UserProfileDto.cs",
-              "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\UserProfile\\UserProfileDto.cs",
-              "RelativeDocumentMoniker": "DTOs\\UserProfile\\UserProfileDto.cs",
-              "ToolTip": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\UserProfile\\UserProfileDto.cs",
-              "RelativeToolTip": "DTOs\\UserProfile\\UserProfileDto.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-25T15:54:59.763Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 16,
-              "Title": "CreateUserProfile.cs",
-              "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\UserProfile\\CreateUserProfile.cs",
-              "RelativeDocumentMoniker": "DTOs\\UserProfile\\CreateUserProfile.cs",
-              "ToolTip": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\UserProfile\\CreateUserProfile.cs",
-              "RelativeToolTip": "DTOs\\UserProfile\\CreateUserProfile.cs",
-              "ViewState": "AgIAABUAAAAAAAAAAAAQwB8AAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-25T15:59:53.793Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 17,
-              "Title": "UpdateProfileDto.cs",
-              "DocumentMoniker": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\UserProfile\\UpdateProfileDto.cs",
-              "RelativeDocumentMoniker": "DTOs\\UserProfile\\UpdateProfileDto.cs",
-              "ToolTip": "C:\\Users\\X1 Zano\\OneDrive\\Desktop\\Graduation_Project\\BackEnd\\GP-BackEnd\\DTOs\\UserProfile\\UpdateProfileDto.cs",
-              "RelativeToolTip": "DTOs\\UserProfile\\UpdateProfileDto.cs",
-              "ViewState": "AgIAAAoAAAAAAAAAAAAuwAYAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-25T15:54:01.071Z"
             },
             {
               "$type": "Document",

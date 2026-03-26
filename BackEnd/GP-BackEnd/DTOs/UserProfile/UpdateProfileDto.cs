@@ -22,7 +22,8 @@ namespace GP_BackEnd.DTOs.UserProfile
 
         [MaxLength(100)]
         public string? Field { get; set; }
-
+        [MaxLength(500)]
+        public string? Bio { get; set; }
         public int TotalNumOfCreditCards { get; set; }
 
         [Required]

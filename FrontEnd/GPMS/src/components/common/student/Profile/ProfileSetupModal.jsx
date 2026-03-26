@@ -1,3 +1,8 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// ProfileSetupModal.jsx
+// يظهر مرة واحدة فقط عند أول دخول الطالب لإنشاء بروفايله.
+// يستخدم POST /api/UserProfile (createProfile) مش PUT
+// ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useRef } from "react";
 import {
@@ -19,6 +24,7 @@ import IconButton from "@mui/material/IconButton";
 import CheckIcon from "@mui/icons-material/Check";
 import studentApi from "../../../../api/handler/endpoints/studentApi";
 
+// ── ثوابت ─────────────────────────────────────────────────────────────────
 const SUGGESTED_SKILLS = [
     "Frontend", "Backend", "AI / ML", "Data Analysis",
     "UI/UX", "DevOps", "Mobile", "Security",
@@ -42,6 +48,7 @@ export default function ProfileSetupModal({ open, onDone }) {
     const theme = useTheme();
     const isDark = theme.palette.mode === "dark";
 
+    // ── State ─────────────────────────────────────────────────────────────────
     const [step, setStep] = useState(0);
     const [field, setField] = useState("");
     const [skills, setSkills] = useState([]);
@@ -53,27 +60,48 @@ export default function ProfileSetupModal({ open, onDone }) {
     const [github, setGithub] = useState("");
     const [bio, setBio] = useState("");
     const [saving, setSaving] = useState(false);
+    const [error, setError] = useState("");
 
-    const toggleSkill = (s) => setSkills((p) => p.includes(s) ? p.filter((x) => x !== s) : [...p, s]);
+    // ── Skills helpers ────────────────────────────────────────────────────────
+    const toggleSkill = (s) =>
+        setSkills((p) => p.includes(s) ? p.filter((x) => x !== s) : [...p, s]);
+
     const addCustomSkill = () => {
         const t = skillInputRef.current?.value?.trim();
         if (t && !skills.includes(t)) setSkills((p) => [...p, t]);
         if (skillInputRef.current) skillInputRef.current.value = "";
     };
+
     const removeSkill = (s) => setSkills((p) => p.filter((x) => x !== s));
 
+    // ── Next / Finish ─────────────────────────────────────────────────────────
     const handleNext = async () => {
+        // لو مش آخر خطوة انتقل للتالية
         if (step < STEPS.length - 1) { setStep((s) => s + 1); return; }
+
+        // آخر خطوة: أرسل البيانات للـ backend
         const data = { field, skills, fullName, email, phoneNumber, linkedin, github, bio };
         setSaving(true);
-        try { await studentApi.updateProfile(data); } catch {/**/ }
-        finally { setSaving(false); }
-        onDone(data);
+        setError("");
+        try {
+            // ✅ نستخدم createProfile (POST) مش updateProfile (PUT)
+            // لأن هذا أول مرة الطالب يعمل بروفايل
+            await studentApi.createProfile(data);
+            onDone(data); // أعلم الـ parent إن البروفايل اتحفظ
+        } catch (e) {
+            setError(e?.response?.data?.message ?? "Failed to save profile, please try again.");
+        } finally {
+            setSaving(false);
+        }
     };
 
-    const canNext = step === 0 ? Boolean(field) : step === 2 ? Boolean(fullName.trim()) && Boolean(email.trim()) : true;
+    // ── Validation: متى يُفعَّل زر Next ─────────────────────────────────────
+    const canNext =
+        step === 0 ? Boolean(field) :                                           // لازم يختار department
+            step === 2 ? Boolean(fullName.trim()) && Boolean(email.trim()) :        // لازم name + email
+                true;                                                                   // باقي الخطوات اختيارية
 
-    /* ── tokens ── */
+    /* ── Design tokens ────────────────────────────────────────────────── */
     const accent = "#d0895b";
     const a10 = isDark ? "rgba(208,137,91,0.10)" : "rgba(208,137,91,0.07)";
     const a22 = "rgba(208,137,91,0.22)";
@@ -91,12 +119,13 @@ export default function ProfileSetupModal({ open, onDone }) {
     const inputSx = {
         "& .MuiOutlinedInput-root": {
             borderRadius: 2, fontSize: "0.875rem",
-            "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: accent }
+            "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: accent },
         },
         "& .MuiInputLabel-root.Mui-focused": { color: accent },
         "& .MuiInputLabel-root": { fontSize: "0.875rem" },
     };
 
+    // chip style — selected أو لا
     const chipSx = (sel) => ({
         height: 30, borderRadius: 1.5, fontSize: "0.78rem", fontWeight: sel ? 700 : 400,
         bgcolor: sel ? accent : "transparent", color: sel ? "#fff" : textSec,
@@ -104,6 +133,7 @@ export default function ProfileSetupModal({ open, onDone }) {
         "&:hover": { bgcolor: sel ? "#be7a4f" : a10, borderColor: sel ? "#be7a4f" : a22 },
     });
 
+    /* ── Reusable inner card ──────────────────────────────────────────── */
     const InnerCard = ({ icon: Icon, title, count, action, children }) => (
         <Box sx={{ borderRadius: 2.5, border: `1px solid ${border}`, bgcolor: cardAlt, overflow: "hidden" }}>
             <Box sx={{
@@ -132,8 +162,7 @@ export default function ProfileSetupModal({ open, onDone }) {
             maxWidth="sm"
             fullWidth
             disableEscapeKeyDown
-            /* ✅ الحل الحقيقي: نوقف كل keyboard event عند الـ Dialog */
-            onKeyDown={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}   // منع إغلاق الـ Dialog بالـ keyboard
             PaperProps={{
                 sx: {
                     borderRadius: 3, overflow: "hidden",
@@ -142,7 +171,7 @@ export default function ProfileSetupModal({ open, onDone }) {
                 }
             }}
         >
-            {/* ── Progress bar ───────────────────────────────────── */}
+            {/* ── Progress bar ──────────────────────────────────────────────── */}
             <LinearProgress
                 variant="determinate"
                 value={((step + 1) / STEPS.length) * 100}
@@ -153,13 +182,11 @@ export default function ProfileSetupModal({ open, onDone }) {
                 }}
             />
 
-            {/* ── Clean formal header ─────────────────────────────── */}
+            {/* ── Header ────────────────────────────────────────────────────── */}
             <Box sx={{
-                px: 3, py: 2.5,
-                borderBottom: `1px solid ${border}`,
+                px: 3, py: 2.5, borderBottom: `1px solid ${border}`,
                 display: "flex", alignItems: "center", gap: 2,
             }}>
-                {/* Icon badge */}
                 <Box sx={{
                     width: 44, height: 44, borderRadius: 2.5, flexShrink: 0,
                     bgcolor: a10, border: `1px solid ${a22}`,
@@ -167,8 +194,6 @@ export default function ProfileSetupModal({ open, onDone }) {
                 }}>
                     <CurrentIcon sx={{ fontSize: 22, color: accent }} />
                 </Box>
-
-                {/* Title + desc */}
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography fontWeight={700} fontSize="0.95rem" sx={{ color: textPri, lineHeight: 1.2 }}>
                         {STEPS[step].label}
@@ -177,40 +202,38 @@ export default function ProfileSetupModal({ open, onDone }) {
                         {STEPS[step].desc}
                     </Typography>
                 </Box>
-
-                {/* Step pill */}
-                <Box sx={{
-                    px: 1.5, py: 0.4, borderRadius: 10, flexShrink: 0,
-                    bgcolor: a10, border: `1px solid ${a22}`,
-                }}>
+                <Box sx={{ px: 1.5, py: 0.4, borderRadius: 10, flexShrink: 0, bgcolor: a10, border: `1px solid ${a22}` }}>
                     <Typography fontSize="0.7rem" fontWeight={700} sx={{ color: accent }}>
                         {step + 1} / {STEPS.length}
                     </Typography>
                 </Box>
             </Box>
 
-            {/* ── Step dots ───────────────────────────────────────── */}
+            {/* ── Step dots ─────────────────────────────────────────────────── */}
             <Box sx={{
-                px: 3.5, py: 1.6,
-                borderBottom: `1px solid ${border}`,
+                px: 3.5, py: 1.6, borderBottom: `1px solid ${border}`,
                 bgcolor: isDark ? "rgba(255,255,255,0.015)" : "rgba(0,0,0,0.012)",
             }}>
                 <Stack direction="row" alignItems="center">
                     {STEPS.map((s, i) => {
-                        const done = i < step, current = i === step;
+                        const done = i < step;
+                        const current = i === step;
                         return (
-                            <Stack key={i} direction="row" alignItems="center" sx={{ flex: i < STEPS.length - 1 ? 1 : 0 }}>
+                            <Stack key={i} direction="row" alignItems="center"
+                                sx={{ flex: i < STEPS.length - 1 ? 1 : 0 }}>
                                 <Stack alignItems="center" spacing={0.5}>
                                     <Box sx={{
                                         width: 22, height: 22, borderRadius: "50%",
                                         display: "flex", alignItems: "center", justifyContent: "center",
-                                        bgcolor: done || current ? accent : isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)",
+                                        bgcolor: done || current ? accent
+                                            : isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)",
                                         border: `1.5px solid ${done || current ? accent : border}`,
                                         transition: "all 0.25s ease",
                                     }}>
                                         {done
                                             ? <CheckIcon sx={{ fontSize: 11, color: "#fff" }} />
-                                            : <Typography fontSize="0.6rem" fontWeight={700} sx={{ color: current ? "#fff" : textSec }}>{i + 1}</Typography>
+                                            : <Typography fontSize="0.6rem" fontWeight={700}
+                                                sx={{ color: current ? "#fff" : textSec }}>{i + 1}</Typography>
                                         }
                                     </Box>
                                     <Typography fontSize="0.6rem" fontWeight={current ? 700 : 400}
@@ -231,18 +254,20 @@ export default function ProfileSetupModal({ open, onDone }) {
                 </Stack>
             </Box>
 
-            {/* ── Content ─────────────────────────────────────────── */}
+            {/* ── Content ───────────────────────────────────────────────────── */}
             <DialogContent sx={{ px: 3.5, py: 3, overflowY: "auto" }}>
 
-                {/* STEP 0 — Department */}
+                {/* ── STEP 0: Department ────────────────────────────────────── */}
                 {step === 0 && (
                     <Stack spacing={2}>
+                        {/* عرض الاختيار الحالي */}
                         <InnerCard icon={SchoolOutlinedIcon} title="Selected">
                             {field ? (
                                 <Stack direction="row" alignItems="center" gap={1.5}>
                                     <Box sx={{
-                                        width: 32, height: 32, borderRadius: 1.5, bgcolor: accent, flexShrink: 0,
-                                        display: "flex", alignItems: "center", justifyContent: "center"
+                                        width: 32, height: 32, borderRadius: 1.5,
+                                        bgcolor: accent, flexShrink: 0,
+                                        display: "flex", alignItems: "center", justifyContent: "center",
                                     }}>
                                         <CheckIcon sx={{ fontSize: 16, color: "#fff" }} />
                                     </Box>
@@ -255,6 +280,8 @@ export default function ProfileSetupModal({ open, onDone }) {
                                 <Typography fontSize="0.82rem" sx={{ color: textSec }}>No department selected yet</Typography>
                             )}
                         </InnerCard>
+
+                        {/* اختيار التخصص */}
                         <InnerCard icon={SchoolOutlinedIcon} title="Choose Department *">
                             <Stack direction="row" flexWrap="wrap" gap={1}>
                                 {ALL_FIELDS.map((f) => (
@@ -265,10 +292,11 @@ export default function ProfileSetupModal({ open, onDone }) {
                     </Stack>
                 )}
 
-                {/* STEP 1 — Skills */}
+                {/* ── STEP 1: Skills ────────────────────────────────────────── */}
                 {step === 1 && (
                     <Stack spacing={2}>
                         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                            {/* حقل إضافة skill مخصص */}
                             <InnerCard icon={AddIcon} title="Add Custom Skill">
                                 <TextField
                                     size="small" fullWidth
@@ -282,15 +310,14 @@ export default function ProfileSetupModal({ open, onDone }) {
                                     InputProps={{
                                         endAdornment: (
                                             <InputAdornment position="end">
-                                                <IconButton size="small" onClick={addCustomSkill}
-                                                    sx={{
-                                                        color: accent, bgcolor: a10,
-                                                        borderRadius: 1.5, mr: -0.5, "&:hover": { bgcolor: a22 }
-                                                    }}>
+                                                <IconButton size="small" onClick={addCustomSkill} sx={{
+                                                    color: accent, bgcolor: a10, borderRadius: 1.5,
+                                                    mr: -0.5, "&:hover": { bgcolor: a22 },
+                                                }}>
                                                     <AddIcon sx={{ fontSize: 17 }} />
                                                 </IconButton>
                                             </InputAdornment>
-                                        )
+                                        ),
                                     }}
                                 />
                                 <Typography fontSize="0.7rem" sx={{ color: textSec, mt: 0.8 }}>
@@ -298,6 +325,7 @@ export default function ProfileSetupModal({ open, onDone }) {
                                 </Typography>
                             </InnerCard>
 
+                            {/* Skills المختارة */}
                             <InnerCard icon={CodeOutlinedIcon} title="Selected" count={skills.length}
                                 action={skills.length > 0 && (
                                     <Button size="small" onClick={() => setSkills([])}
@@ -321,6 +349,7 @@ export default function ProfileSetupModal({ open, onDone }) {
                             </InnerCard>
                         </Stack>
 
+                        {/* Skills مقترحة */}
                         <InnerCard icon={CodeOutlinedIcon} title="Suggestions">
                             <Stack direction="row" flexWrap="wrap" gap={1}>
                                 {SUGGESTED_SKILLS.map((s) => (
@@ -331,48 +360,61 @@ export default function ProfileSetupModal({ open, onDone }) {
                     </Stack>
                 )}
 
-                {/* STEP 2 — Contact */}
+                {/* ── STEP 2: Contact ───────────────────────────────────────── */}
                 {step === 2 && (
                     <Stack spacing={2}>
                         <InnerCard icon={BadgeOutlinedIcon} title="Identity">
                             <Stack spacing={2}>
-                                <TextField size="small" fullWidth label="Full Name *" placeholder="e.g. Hanan Awad"
+                                <TextField size="small" fullWidth label="Full Name *"
+                                    placeholder="e.g. Hanan Awad"
                                     value={fullName} onChange={(e) => setFullName(e.target.value)}
-                                    InputProps={{ startAdornment: <BadgeOutlinedIcon sx={{ mr: 1, color: accent, fontSize: 18 }} /> }} sx={inputSx} />
-                                <TextField size="small" fullWidth label="Contact Email *" placeholder="e.g. personal@gmail.com"
+                                    InputProps={{ startAdornment: <BadgeOutlinedIcon sx={{ mr: 1, color: accent, fontSize: 18 }} /> }}
+                                    sx={inputSx} />
+                                <TextField size="small" fullWidth label="Contact Email *"
+                                    placeholder="e.g. personal@gmail.com"
                                     value={email} onChange={(e) => setEmail(e.target.value)}
-                                    InputProps={{ startAdornment: <EmailOutlinedIcon sx={{ mr: 1, color: accent, fontSize: 18 }} /> }} sx={inputSx} />
-                                <TextField size="small" fullWidth label="Phone Number" placeholder="e.g. +970591234567"
+                                    InputProps={{ startAdornment: <EmailOutlinedIcon sx={{ mr: 1, color: accent, fontSize: 18 }} /> }}
+                                    sx={inputSx} />
+                                <TextField size="small" fullWidth label="Phone Number"
+                                    placeholder="e.g. +970591234567"
                                     value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)}
-                                    InputProps={{ startAdornment: <PhoneOutlinedIcon sx={{ mr: 1, color: textSec, fontSize: 18 }} /> }} sx={inputSx} />
+                                    InputProps={{ startAdornment: <PhoneOutlinedIcon sx={{ mr: 1, color: textSec, fontSize: 18 }} /> }}
+                                    sx={inputSx} />
                             </Stack>
                         </InnerCard>
+
                         <InnerCard icon={LinkedInIcon} title="Social Links">
                             <Stack spacing={2}>
-                                <TextField size="small" fullWidth label="LinkedIn URL" placeholder="https://linkedin.com/in/username"
+                                <TextField size="small" fullWidth label="LinkedIn URL"
+                                    placeholder="https://linkedin.com/in/username"
                                     value={linkedin} onChange={(e) => setLinkedin(e.target.value)}
-                                    InputProps={{ startAdornment: <LinkedInIcon sx={{ mr: 1, color: "#0077B5", fontSize: 18 }} /> }} sx={inputSx} />
-                                <TextField size="small" fullWidth label="GitHub URL" placeholder="https://github.com/username"
+                                    InputProps={{ startAdornment: <LinkedInIcon sx={{ mr: 1, color: "#0077B5", fontSize: 18 }} /> }}
+                                    sx={inputSx} />
+                                <TextField size="small" fullWidth label="GitHub URL"
+                                    placeholder="https://github.com/username"
                                     value={github} onChange={(e) => setGithub(e.target.value)}
-                                    InputProps={{ startAdornment: <GitHubIcon sx={{ mr: 1, color: textSec, fontSize: 18 }} /> }} sx={inputSx} />
+                                    InputProps={{ startAdornment: <GitHubIcon sx={{ mr: 1, color: textSec, fontSize: 18 }} /> }}
+                                    sx={inputSx} />
                             </Stack>
                         </InnerCard>
                     </Stack>
                 )}
 
-                {/* STEP 3 — Bio */}
+                {/* ── STEP 3: Bio ───────────────────────────────────────────── */}
                 {step === 3 && (
                     <Stack spacing={2}>
+                        {/* نصائح */}
                         <Box sx={{ display: "flex", gap: 1.5, p: 2, borderRadius: 2.5, bgcolor: a10, border: `1px solid ${a22}` }}>
                             <Box sx={{
-                                width: 30, height: 30, borderRadius: 1.5, flexShrink: 0, bgcolor: accent,
-                                display: "flex", alignItems: "center", justifyContent: "center"
+                                width: 30, height: 30, borderRadius: 1.5, flexShrink: 0,
+                                bgcolor: accent, display: "flex", alignItems: "center", justifyContent: "center",
                             }}>
                                 <Typography fontSize="0.8rem">💡</Typography>
                             </Box>
                             <Stack spacing={0.3}>
                                 <Typography fontSize="0.78rem" fontWeight={700} sx={{ color: textPri }}>Tips for a great bio</Typography>
-                                {["Programming languages: Python, JavaScript, C++…",
+                                {[
+                                    "Programming languages: Python, JavaScript, C++…",
                                     "Frameworks & tools: React, Django, Flutter…",
                                     "Previous projects or experience",
                                     "Competitions or contributions (e.g. hackathons)",
@@ -381,17 +423,28 @@ export default function ProfileSetupModal({ open, onDone }) {
                                 ))}
                             </Stack>
                         </Box>
+
                         <InnerCard icon={PersonOutlineIcon} title="Your Bio"
                             count={bio.length > 0 ? `${bio.length}/400` : undefined}>
-                            <TextField multiline rows={5} fullWidth placeholder="Tell teammates about yourself…"
-                                value={bio} onChange={(e) => setBio(e.target.value)} inputProps={{ maxLength: 400 }} sx={inputSx} />
+                            <TextField
+                                multiline rows={5} fullWidth
+                                placeholder="Tell teammates about yourself…"
+                                value={bio}
+                                onChange={(e) => setBio(e.target.value)}
+                                inputProps={{ maxLength: 400 }}
+                                sx={inputSx}
+                            />
                         </InnerCard>
                     </Stack>
                 )}
 
+                {/* رسالة خطأ */}
+                {error && (
+                    <Typography fontSize="0.78rem" sx={{ color: "error.main", mt: 1.5 }}>{error}</Typography>
+                )}
             </DialogContent>
 
-            {/* ── Footer ──────────────────────────────────────────── */}
+            {/* ── Footer ────────────────────────────────────────────────────── */}
             <Box sx={{
                 display: "flex", alignItems: "center", justifyContent: "space-between",
                 px: 3.5, py: 2, borderTop: `1px solid ${border}`,
@@ -402,22 +455,22 @@ export default function ProfileSetupModal({ open, onDone }) {
                 <Stack direction="row" gap={1}>
                     {step > 0 && (
                         <Button onClick={() => setStep((s) => s - 1)} sx={{
-                            color: textSec, textTransform: "none", fontWeight: 500,
-                            fontSize: "0.85rem", borderRadius: 2, px: 2.5,
+                            color: textSec, textTransform: "none",
+                            fontWeight: 500, fontSize: "0.85rem", borderRadius: 2, px: 2.5,
                         }}>
                             Back
                         </Button>
                     )}
                     <Button variant="contained" onClick={handleNext} disabled={!canNext || saving} sx={{
                         bgcolor: accent, "&:hover": { bgcolor: "#be7a4f", boxShadow: "none" },
-                        borderRadius: 2, px: 3, textTransform: "none", fontWeight: 700,
-                        fontSize: "0.85rem", boxShadow: "none", "&.Mui-disabled": { opacity: 0.45 },
+                        borderRadius: 2, px: 3, textTransform: "none",
+                        fontWeight: 700, fontSize: "0.85rem", boxShadow: "none",
+                        "&.Mui-disabled": { opacity: 0.45 },
                     }}>
                         {saving ? "Saving…" : step === STEPS.length - 1 ? "Finish" : "Next"}
                     </Button>
                 </Stack>
             </Box>
-
         </Dialog>
     );
 }

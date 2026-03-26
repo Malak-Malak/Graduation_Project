@@ -30,9 +30,40 @@ import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined
 import { useAuth } from "../contexts/AuthContext";
 import { useThemeContext } from "../contexts/ThemeContext";
 
+// const NAV_ITEMS = {
+//     admin: [
+//         { label: "Dashboard", icon: <DashboardOutlinedIcon />, path: "/admin" },
+//         { label: "Pending Requests", icon: <HowToRegOutlinedIcon />, path: "/admin/pending-requests" },
+//         { label: "User Management", icon: <PeopleOutlineIcon />, path: "/admin/users" },
+//         { label: "Reports", icon: <AssessmentOutlinedIcon />, path: "/admin/reports" },
+//         { label: "Activity Logs", icon: <HistoryOutlinedIcon />, path: "/admin/logs" },
+//         { label: "All Requests", icon: <AssessmentOutlinedIcon />, path: "/admin/all-requests" },
+//         { label: "Configuration", icon: <SettingsOutlinedIcon />, path: "/admin/settings" },
+//     ],
+//     supervisor: [
+//         { label: "Dashboard", icon: <DashboardOutlinedIcon />, path: "/supervisor" },
+//         { label: "My Groups", icon: <GroupsOutlinedIcon />, path: "/supervisor/groups" },
+//         { label: "Pending Requests", icon: <PendingActionsOutlinedIcon />, path: "/supervisor/requests" },
+//         { label: "File Review", icon: <FolderOutlinedIcon />, path: "/supervisor/files" },
+//         { label: "Meetings", icon: <CalendarMonthOutlinedIcon />, path: "/supervisor/meetings" },
+//         { label: "AI Reports", icon: <AutoAwesomeOutlinedIcon />, path: "/supervisor/ai-reports" },
+//         { label: "Analytics", icon: <QueryStatsOutlinedIcon />, path: "/supervisor/analytics" },
+//     ],
+//     student: [
+//         { label: "Dashboard", icon: <DashboardOutlinedIcon />, path: "/student" },
+//         { label: "Profile", icon: <AccountCircleOutlinedIcon />, path: "/student/profile" },
+//         { label: "Team Discovery Hub", icon: <SearchOutlinedIcon />, path: "/student/team-finder" },
+//         { label: "Kanban Board", icon: <ViewKanbanOutlinedIcon />, path: "/student/kanban" },
+//         { label: "Timeline", icon: <TimelineOutlinedIcon />, path: "/student/timeline" },
+//         { label: "Files", icon: <FolderOutlinedIcon />, path: "/student/files" },
+//         { label: "Meetings", icon: <CalendarMonthOutlinedIcon />, path: "/student/meetings" },
+//         { label: "Analytics", icon: <QueryStatsOutlinedIcon />, path: "/student/analytics" },
+//     ],
+// };
 const NAV_ITEMS = {
     admin: [
         { label: "Dashboard", icon: <DashboardOutlinedIcon />, path: "/admin" },
+        { label: "Profile", icon: <AccountCircleOutlinedIcon />, path: "/admin/profile" }, // ← هنا أضفنا
         { label: "Pending Requests", icon: <HowToRegOutlinedIcon />, path: "/admin/pending-requests" },
         { label: "User Management", icon: <PeopleOutlineIcon />, path: "/admin/users" },
         { label: "Reports", icon: <AssessmentOutlinedIcon />, path: "/admin/reports" },
@@ -42,6 +73,7 @@ const NAV_ITEMS = {
     ],
     supervisor: [
         { label: "Dashboard", icon: <DashboardOutlinedIcon />, path: "/supervisor" },
+        { label: "Profile", icon: <AccountCircleOutlinedIcon />, path: "/supervisor/profile" }, // ← أضفنا
         { label: "My Groups", icon: <GroupsOutlinedIcon />, path: "/supervisor/groups" },
         { label: "Pending Requests", icon: <PendingActionsOutlinedIcon />, path: "/supervisor/requests" },
         { label: "File Review", icon: <FolderOutlinedIcon />, path: "/supervisor/files" },
@@ -60,7 +92,6 @@ const NAV_ITEMS = {
         { label: "Analytics", icon: <QueryStatsOutlinedIcon />, path: "/student/analytics" },
     ],
 };
-
 const ROLE_LABEL = { admin: "Administrator", supervisor: "Supervisor", student: "Student" };
 const ROLE_COLOR = { admin: "#C47E7E", supervisor: "#6D8A7D", student: "#B46F4C" };
 

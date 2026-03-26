@@ -8,7 +8,7 @@ import FileReview from "../../components/common/supervisor/FileReview/FileReview
 import SupervisorMeetings from "../../components/common/supervisor/Meetings/SupervisorMeetings";
 import AIReports from "../../components/common/supervisor/AIReports/AIReports";
 import SupervisorAnalytics from "../../components/common/supervisor/Analytics/SupervisorAnalytics";
-
+import UserProfilePage from "../UserProfile/UserProfilePage";
 export default function SupervisorPage() {
     return (
         <MainLayout>
@@ -20,6 +20,7 @@ export default function SupervisorPage() {
                 <Route path="meetings" element={<SupervisorMeetings />} />
                 <Route path="ai-reports" element={<AIReports />} />
                 <Route path="analytics" element={<SupervisorAnalytics />} />
+                <Route path="profile" element={<UserProfilePage />} />
                 <Route path="*" element={<Navigate to="/supervisor" replace />} />
             </Routes>
         </MainLayout>

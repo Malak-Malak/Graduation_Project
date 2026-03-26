@@ -19,6 +19,7 @@ import JoinTeamFlow from "../../components/common/student/Onboarding/JoinTeamFlo
 import ProfileSetupModal from "../../components/common/student/Profile/ProfileSetupModal";
 
 import { useAuth } from "../../contexts/AuthContext";
+import UserProfilePage from "../UserProfile/UserProfilePage";
 import studentApi from "../../api/handler/endpoints/studentApi";
 
 const profileDoneKey = (uid) => `gpms_profile_done_${uid}`;
@@ -105,6 +106,7 @@ export default function StudentPage() {
                 <Route path="meetings" element={<StudentMeetings />} />
                 <Route path="analytics" element={<StudentAnalytics />} />
                 <Route path="timeline" element={<ProjectTimeline />} />
+                <Route path="profile" element={<UserProfilePage />} />
                 <Route path="*" element={<Navigate to="/student" replace />} />
             </Routes>
 

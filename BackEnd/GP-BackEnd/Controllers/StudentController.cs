@@ -141,5 +141,17 @@ namespace GP_BackEnd.Controllers
 
             return Ok("Leave request sent to supervisor.");
         }
+        // PUT api/student/update-project-info
+        [HttpPut("update-project-info")]
+        public async Task<IActionResult> UpdateProjectInfo([FromBody] UpdateProjectInfoDto dto)
+        {
+            var studentId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var result = await _studentService.UpdateProjectInfoAsync(studentId, dto);
+
+            if (!result)
+                return BadRequest("Could not update project info. You may not be in a team.");
+
+            return Ok("Project info updated successfully.");
+        }
     }
 }

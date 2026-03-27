@@ -195,6 +195,13 @@ namespace GP_BackEnd.Data
                 .WithMany()
                 .HasForeignKey(ti => ti.CreatedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Team -> Project (one-to-one)
+            modelBuilder.Entity<Team>()
+                .HasOne(t => t.Project)
+                .WithOne(p => p.Team)
+                .HasForeignKey<Team>(t => t.ProjectId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
 
     }

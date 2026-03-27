@@ -18,8 +18,8 @@ namespace GP_BackEnd.Models
         public bool Status { get; set; }
         [Required]
         public int SupervisorId { get; set; }
+        public Team? Team { get; set; }
         public User Supervisor { get; set; }
-        public ICollection<Team> Teams { get; set; }
         public ICollection<TaskItem> Tasks { get; set; }
         public ICollection<TeamProgressReport> ProgressReports { get; set; }
     }

@@ -156,5 +156,67 @@ namespace GP_BackEnd.Services
             await _context.SaveChangesAsync();
             return true;
         }
+        // Get all teams under supervision
+        public async Task<List<SupervisedTeamDto>> GetMyTeamsAsync(int supervisorId)
+        {
+            return await _context.Teams
+                .Include(t => t.TeamMembers)
+                    .ThenInclude(tm => tm.User)
+                        .ThenInclude(u => u.UserProfile)
+                .Include(t => t.Project)
+                .Where(t => t.SupervisorId == supervisorId)
+                .Select(t => new SupervisedTeamDto
+                {
+                    Id = t.Id,
+                    ProjectTitle = t.ProjectTitle,
+                    ProjectDescription = t.Project != null ? t.Project.Description : "",
+                    Status = t.Status,
+                    Members = t.TeamMembers.Select(tm => new SupervisedTeamMemberDto
+                    {
+                        UserId = tm.UserId,
+                        Username = tm.User.Username,
+                        FullName = tm.User.UserProfile != null
+                            ? tm.User.UserProfile.FullName
+                            : tm.User.Username
+                    }).ToList()
+                })
+                .ToListAsync();
+        }
+
+        // Get specific team by id
+        public async Task<SupervisedTeamDto?> GetTeamByIdAsync(int supervisorId, int teamId)
+        {
+            var team = await _context.Teams
+                .Include(t => t.TeamMembers)
+                    .ThenInclude(tm => tm.User)
+                        .ThenInclude(u => u.UserProfile)
+                .Include(t => t.Project)
+                .FirstOrDefaultAsync(t => t.Id == teamId && t.SupervisorId == supervisorId);
+
+            if (team == null) return null;
+
+            return new SupervisedTeamDto
+            {
+                Id = team.Id,
+                ProjectTitle = team.ProjectTitle,
+                ProjectDescription = team.Project != null ? team.Project.Description : "",
+                Status = team.Status,
+                Members = team.TeamMembers.Select(tm => new SupervisedTeamMemberDto
+                {
+                    UserId = tm.UserId,
+                    Username = tm.User.Username,
+                    FullName = tm.User.UserProfile != null
+                        ? tm.User.UserProfile.FullName
+                        : tm.User.Username
+                }).ToList()
+            };
+        }
+
+        // Get total number of teams
+        public async Task<int> GetTotalTeamsCountAsync(int supervisorId)
+        {
+            return await _context.Teams
+                .CountAsync(t => t.SupervisorId == supervisorId);
+        }
     }
 }

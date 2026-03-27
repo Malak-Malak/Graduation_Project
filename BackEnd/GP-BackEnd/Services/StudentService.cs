@@ -460,5 +460,47 @@ namespace GP_BackEnd.Services
             await _context.SaveChangesAsync();
             return true;
         }
+        public async Task<bool> UpdateProjectInfoAsync(int studentId, UpdateProjectInfoDto dto)
+        {
+            var teamMember = await _context.TeamMembers
+                .FirstOrDefaultAsync(tm => tm.UserId == studentId);
+
+            if (teamMember == null) return false;
+
+            var team = await _context.Teams
+                .Include(t => t.Project)
+                .FirstOrDefaultAsync(t => t.Id == teamMember.TeamId);
+
+            if (team == null) return false;
+
+            if (team.Project == null)
+            {
+                // Create new project
+                var project = new Project
+                {
+                    Title = dto.ProjectTitle,
+                    Description = dto.ProjectDescription ?? "",
+                    StartDate = DateTime.UtcNow,
+                    Status = true,
+                    SupervisorId = team.SupervisorId
+                };
+
+                _context.Projects.Add(project);
+                await _context.SaveChangesAsync();
+
+                team.ProjectId = project.Id;
+                team.ProjectTitle = dto.ProjectTitle;
+            }
+            else
+            {
+                // Update existing project
+                team.Project.Title = dto.ProjectTitle;
+                team.Project.Description = dto.ProjectDescription ?? "";
+                team.ProjectTitle = dto.ProjectTitle;
+            }
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 }

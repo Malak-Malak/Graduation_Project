@@ -163,12 +163,13 @@ namespace GP_BackEnd.Services
                 .Include(t => t.TeamMembers)
                     .ThenInclude(tm => tm.User)
                         .ThenInclude(u => u.UserProfile)
+                .Include(t => t.Project)
                 .Where(t => t.SupervisorId == supervisorId)
                 .Select(t => new SupervisedTeamDto
                 {
                     Id = t.Id,
                     ProjectTitle = t.ProjectTitle,
-                    ProjectDescription = "",
+                    ProjectDescription = t.Project != null ? t.Project.Description : "",
                     Status = t.Status,
                     Members = t.TeamMembers.Select(tm => new SupervisedTeamMemberDto
                     {
@@ -189,6 +190,7 @@ namespace GP_BackEnd.Services
                 .Include(t => t.TeamMembers)
                     .ThenInclude(tm => tm.User)
                         .ThenInclude(u => u.UserProfile)
+                .Include(t => t.Project)
                 .FirstOrDefaultAsync(t => t.Id == teamId && t.SupervisorId == supervisorId);
 
             if (team == null) return null;
@@ -197,7 +199,7 @@ namespace GP_BackEnd.Services
             {
                 Id = team.Id,
                 ProjectTitle = team.ProjectTitle,
-                ProjectDescription = "",
+                ProjectDescription = team.Project != null ? team.Project.Description : "",
                 Status = team.Status,
                 Members = team.TeamMembers.Select(tm => new SupervisedTeamMemberDto
                 {

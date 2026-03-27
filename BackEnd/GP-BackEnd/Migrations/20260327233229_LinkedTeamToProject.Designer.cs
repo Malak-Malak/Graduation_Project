@@ -3,6 +3,7 @@ using System;
 using GP_BackEnd.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace GP_BackEnd.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260327233229_LinkedTeamToProject")]
+    partial class LinkedTeamToProject
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -296,6 +299,9 @@ namespace GP_BackEnd.Migrations
                     b.Property<int?>("ProjectId")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("ProjectId1")
+                        .HasColumnType("integer");
+
                     b.Property<string>("ProjectTitle")
                         .IsRequired()
                         .HasColumnType("text");
@@ -313,6 +319,8 @@ namespace GP_BackEnd.Migrations
 
                     b.HasIndex("ProjectId")
                         .IsUnique();
+
+                    b.HasIndex("ProjectId1");
 
                     b.HasIndex("SupervisorId");
 
@@ -698,6 +706,10 @@ namespace GP_BackEnd.Migrations
                         .HasForeignKey("GP_BackEnd.Models.Team", "ProjectId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("GP_BackEnd.Models.Project", null)
+                        .WithMany("Teams")
+                        .HasForeignKey("ProjectId1");
+
                     b.HasOne("GP_BackEnd.Models.User", "Supervisor")
                         .WithMany("SupervisedTeams")
                         .HasForeignKey("SupervisorId")
@@ -790,6 +802,8 @@ namespace GP_BackEnd.Migrations
                     b.Navigation("Tasks");
 
                     b.Navigation("Team");
+
+                    b.Navigation("Teams");
                 });
 
             modelBuilder.Entity("GP_BackEnd.Models.TaskItem", b =>

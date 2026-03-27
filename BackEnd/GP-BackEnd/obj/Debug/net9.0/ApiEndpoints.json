@@ -381,6 +381,22 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "GP_BackEnd.Controllers.StudentController",
+    "Method": "UpdateProjectInfo",
+    "RelativePath": "api/Student/update-project-info",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "GP_BackEnd.DTOs.Student.UpdateProjectInfoDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "GP_BackEnd.Controllers.SupervisorController",
     "Method": "GetMyTeams",
     "RelativePath": "api/Supervisor/my-teams",

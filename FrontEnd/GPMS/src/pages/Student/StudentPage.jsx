@@ -17,7 +17,7 @@ import JoinOrCreateModal from "../../components/common/student/Onboarding/JoinOr
 import CreateTeamFlow from "../../components/common/student/Onboarding/CreateTeamFlow";
 import JoinTeamFlow from "../../components/common/student/Onboarding/JoinTeamFlow";
 import ProfileSetupModal from "../../components/common/student/Profile/ProfileSetupModal";
-
+import MyTeamPage from "../../components/common/student/MyTeam/MyTeamPage";
 import { useAuth } from "../../contexts/AuthContext";
 import UserProfilePage from "../UserProfile/UserProfilePage";
 import studentApi from "../../api/handler/endpoints/studentApi";
@@ -108,6 +108,7 @@ export default function StudentPage() {
                 <Route path="timeline" element={<ProjectTimeline />} />
                 <Route path="profile" element={<UserProfilePage />} />
                 <Route path="*" element={<Navigate to="/student" replace />} />
+                <Route path="my-team" element={<MyTeamPage />} />
             </Routes>
 
             <Snackbar open={snack.open} autoHideDuration={5000}

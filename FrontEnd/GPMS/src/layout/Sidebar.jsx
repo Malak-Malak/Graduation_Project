@@ -26,7 +26,7 @@ import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
 import LightModeOutlinedIcon from "@mui/icons-material/LightModeOutlined";
 import HowToRegOutlinedIcon from "@mui/icons-material/HowToRegOutlined";
 import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined";
-
+// import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
 import { useAuth } from "../contexts/AuthContext";
 import { useThemeContext } from "../contexts/ThemeContext";
 
@@ -90,6 +90,7 @@ const NAV_ITEMS = {
         { label: "Files", icon: <FolderOutlinedIcon />, path: "/student/files" },
         { label: "Meetings", icon: <CalendarMonthOutlinedIcon />, path: "/student/meetings" },
         { label: "Analytics", icon: <QueryStatsOutlinedIcon />, path: "/student/analytics" },
+        { label: "My Team", icon: <GroupsOutlinedIcon />, path: "/student/my-team" },
     ],
 };
 const ROLE_LABEL = { admin: "Administrator", supervisor: "Supervisor", student: "Student" };

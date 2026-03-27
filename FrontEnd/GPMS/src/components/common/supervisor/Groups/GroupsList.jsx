@@ -1,315 +1,782 @@
-import { useState } from "react";
+// C:\Users\Dell\Desktop\Graduation_Project\FrontEnd\GPMS\src\components\common\supervisor\Groups\GroupsList.jsx
+
+import { useState, useEffect, useCallback } from "react";
 import {
     Box, Paper, Typography, Stack, Avatar, Chip, Button, LinearProgress,
-    AvatarGroup, Grid, Dialog, DialogTitle, DialogContent, DialogActions,
-    TextField, Tabs, Tab, Divider, IconButton, Tooltip,
+    AvatarGroup, Grid, Dialog, DialogContent, DialogActions,
+    TextField, Tabs, Tab, IconButton, Tooltip, CircularProgress,
+    Snackbar, Alert,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
-import ViewKanbanOutlinedIcon from "@mui/icons-material/ViewKanbanOutlined";
-import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
 import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
+import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
+import PeopleOutlineIcon from "@mui/icons-material/PeopleOutline";
+import RefreshOutlinedIcon from "@mui/icons-material/RefreshOutlined";
+import HowToRegOutlinedIcon from "@mui/icons-material/HowToRegOutlined";
+import ExitToAppOutlinedIcon from "@mui/icons-material/ExitToAppOutlined";
+import SchoolOutlinedIcon from "@mui/icons-material/SchoolOutlined";
+import CloseIcon from "@mui/icons-material/Close";
 
-const GROUPS = [
-    {
-        id: 1, name: "EcoTrackers", project: "AI-Based Waste Management",
-        members: [
-            { name: "Aya Abu Ghozeh", role: "Lead", initials: "A" },
-            { name: "Hanan Awad", role: "Research", initials: "H" },
-            { name: "Malak Malak", role: "Backend", initials: "M" },
-            { name: "Sara Ahmad", role: "Frontend", initials: "S" },
-        ],
-        tasks: { todo: 4, inProgress: 3, done: 8 },
-        files: { pending: 3, approved: 16, total: 19 },
-        progress: 65, risk: "low", lastActive: "Today", maxMembers: 5,
-    },
-    {
-        id: 2, name: "CodeCraft", project: "Smart Campus Navigation",
-        members: [
-            { name: "Omar Jawad", role: "Lead", initials: "O" },
-            { name: "Lina Said", role: "Design", initials: "L" },
-            { name: "Noor Khalid", role: "Backend", initials: "N" },
-        ],
-        tasks: { todo: 7, inProgress: 2, done: 4 },
-        files: { pending: 5, approved: 8, total: 13 },
-        progress: 42, risk: "medium", lastActive: "2 days ago", maxMembers: 4,
-    },
-    {
-        id: 3, name: "InnovateX", project: "Blockchain Voting System",
-        members: [
-            { name: "Yara Hassan", role: "Lead", initials: "Y" },
-            { name: "Khalid Nour", role: "Backend", initials: "K" },
-            { name: "Rima Saleh", role: "Frontend", initials: "R" },
-        ],
-        tasks: { todo: 2, inProgress: 1, done: 14 },
-        files: { pending: 1, approved: 20, total: 21 },
-        progress: 80, risk: "low", lastActive: "Today", maxMembers: 5,
-    },
-    {
-        id: 4, name: "SmartCampus", project: "IoT Energy Monitor",
-        members: [
-            { name: "Daoud Issa", role: "Lead", initials: "D" },
-            { name: "Farah Nimer", role: "Backend", initials: "F" },
-        ],
-        tasks: { todo: 10, inProgress: 1, done: 3 },
-        files: { pending: 6, approved: 4, total: 10 },
-        progress: 28, risk: "high", lastActive: "4 days ago", maxMembers: 4,
-    },
-];
+import {
+    getPendingTeamRequests,
+    respondToTeamRequest,
+    respondToLeaveRequest,
+    setMaxTeams,
+} from "../../../../api/handler/endpoints/supervisorApi";
 
-const RISK_CLR = { low: "#6D8A7D", medium: "#C49A6C", high: "#C47E7E" };
+/* ─── constants ──────────────────────────────────────────────── */
 const MBR_COLORS = ["#B46F4C", "#6D8A7D", "#C49A6C", "#7E9FC4", "#9B7EC8"];
 const PRIMARY = "#d0895b";
+const RISK_CLR = { low: "#6D8A7D", medium: "#C49A6C", high: "#C47E7E" };
 
-export default function GroupsList() {
+const initials = (name = "") =>
+    (name ?? "?")
+        .split(" ").map((w) => w[0] ?? "").join("").toUpperCase().slice(0, 2) || "?";
+
+/* ─── helpers ─────────────────────────────────────────────────── */
+/**
+ * Normalise pending-team-requests response.
+ * Expected shape (adjust field names if backend differs):
+ * [{ teamId, teamName, projectTitle, studentName, studentId, requestedAt, ... }]
+ */
+const normaliseRequests = (raw) =>
+    (Array.isArray(raw) ? raw : []).map((r) => ({
+        teamId: r.teamId ?? r.id,
+        teamName: r.teamName ?? r.name ?? "Unnamed Team",
+        projectTitle: r.projectTitle ?? r.project ?? "—",
+        studentName: r.studentName ?? r.leadName ?? r.requestedBy ?? "Student",
+        studentId: r.studentId ?? r.userId ?? null,
+        members: r.members ?? r.students ?? [],
+        requestedAt: r.requestedAt ?? r.createdAt ?? null,
+        type: r.type ?? "team",   // "team" | "leave"
+        memberId: r.teamMemberId ?? r.memberId ?? null,  // للـ leave requests
+    }));
+
+/* ─── Request row (pending) ───────────────────────────────────── */
+function RequestRow({ req, onApprove, onReject, busy }) {
     const theme = useTheme();
-    const t = theme.palette.custom;
-
-    const [groups, setGroups] = useState(GROUPS);
-    const [selected, setSelected] = useState(null);
-    const [detailOpen, setDetailOpen] = useState(false);
-    const [sizeOpen, setSizeOpen] = useState(false);
-    const [limitOpen, setLimitOpen] = useState(false);   // ✅ جديد — max groups
-    const [maxVal, setMaxVal] = useState(5);
-    const [maxGroups, setMaxGroups] = useState(6);       // ✅ عدد الفرق الكلي المسموح
-    const [maxGroupsInput, setMaxGroupsInput] = useState(6);
-    const [tab, setTab] = useState(0);
-
-    const openDetail = (g) => { setSelected(g); setTab(0); setDetailOpen(true); };
-    const openSize = (g, e) => { e.stopPropagation(); setSelected(g); setMaxVal(g.maxMembers); setSizeOpen(true); };
-
-    const saveSize = () => {
-        setGroups((p) => p.map((g) => g.id === selected.id ? { ...g, maxMembers: maxVal } : g));
-        setSizeOpen(false);
-    };
-
-    const saveGroupLimit = () => {
-        setMaxGroups(maxGroupsInput);
-        setLimitOpen(false);
-    };
+    const isDark = theme.palette.mode === "dark";
+    const t = theme.palette.custom ?? {};
+    const isLeave = req.type === "leave";
 
     return (
-        <Box sx={{ maxWidth: 1100 }}>
-            {/* Header */}
-            <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 3 }}>
-                <Box>
-                    <Typography variant="h2" sx={{ color: t.textPrimary, mb: 0.5 }}>My Groups</Typography>
-                    <Typography sx={{ color: t.textSecondary, fontSize: "0.9rem" }}>
-                        {groups.length} / {maxGroups} supervised teams · Spring 2025
+        <Stack direction="row" alignItems="center" gap={1.5}
+            sx={{
+                p: 1.8, borderRadius: 2.5,
+                border: `1px solid ${isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)"}`,
+                bgcolor: theme.palette.background.paper,
+            }}>
+
+            {/* icon */}
+            <Box sx={{
+                width: 38, height: 38, borderRadius: 2, flexShrink: 0,
+                bgcolor: isLeave ? "rgba(229,115,115,0.1)" : `${PRIMARY}12`,
+                border: isLeave ? "1px solid rgba(229,115,115,0.25)" : `1px solid ${PRIMARY}28`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+                {isLeave
+                    ? <ExitToAppOutlinedIcon sx={{ fontSize: 18, color: "#e57373" }} />
+                    : <HowToRegOutlinedIcon sx={{ fontSize: 18, color: PRIMARY }} />
+                }
+            </Box>
+
+            <Box flex={1} minWidth={0}>
+                <Typography fontWeight={700} fontSize="0.86rem" noWrap
+                    sx={{ color: theme.palette.text.primary }}>
+                    {isLeave
+                        ? `${req.studentName} wants to leave`
+                        : <><Box component="span" sx={{ color: PRIMARY }}>{req.teamName}</Box>{" — "}{req.studentName}</>
+                    }
+                </Typography>
+                <Stack direction="row" alignItems="center" gap={1} mt={0.3}>
+                    <Typography fontSize="0.73rem" noWrap sx={{ color: theme.palette.text.secondary }}>
+                        {req.projectTitle}
+                    </Typography>
+                    {req.requestedAt && (
+                        <Typography fontSize="0.68rem" sx={{ color: theme.palette.text.secondary, flexShrink: 0 }}>
+                            · {new Date(req.requestedAt).toLocaleDateString()}
+                        </Typography>
+                    )}
+                </Stack>
+            </Box>
+
+            {/* actions */}
+            <Stack direction="row" gap={0.5}>
+                <Tooltip title="Approve">
+                    <IconButton size="small" disabled={busy}
+                        onClick={() => onApprove(req)}
+                        sx={{ color: "#3DB97A", "&:hover": { bgcolor: "rgba(61,185,122,0.1)" } }}>
+                        <CheckCircleOutlineIcon sx={{ fontSize: 20 }} />
+                    </IconButton>
+                </Tooltip>
+                <Tooltip title="Reject">
+                    <IconButton size="small" disabled={busy}
+                        onClick={() => onReject(req)}
+                        sx={{ color: "#e57373", "&:hover": { bgcolor: "rgba(229,115,115,0.1)" } }}>
+                        <CancelOutlinedIcon sx={{ fontSize: 20 }} />
+                    </IconButton>
+                </Tooltip>
+            </Stack>
+        </Stack>
+    );
+}
+
+/* ─── Group card ──────────────────────────────────────────────── */
+function GroupCard({ g, onOpenDetail, onOpenSize }) {
+    const theme = useTheme();
+    const isDark = theme.palette.mode === "dark";
+    const t = theme.palette.custom ?? {};
+    const risk = g.risk ?? "low";
+
+    return (
+        <Paper elevation={0} onClick={() => onOpenDetail(g)}
+            sx={{
+                p: 2.5, borderRadius: 3, cursor: "pointer",
+                bgcolor: theme.palette.background.paper,
+                border: `1px solid ${isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)"}`,
+                transition: "all 0.18s ease",
+                "&:hover": {
+                    transform: "translateY(-2px)",
+                    boxShadow: isDark ? "0 8px 24px rgba(0,0,0,0.3)" : "0 8px 24px rgba(0,0,0,0.08)"
+                },
+            }}>
+
+            {/* header */}
+            <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={1.5}>
+                <Box flex={1} minWidth={0} pr={1}>
+                    <Stack direction="row" alignItems="center" gap={1} mb={0.3}>
+                        <Typography fontSize="0.97rem" fontWeight={700} noWrap
+                            sx={{ color: theme.palette.text.primary }}>{g.name}</Typography>
+                        <Chip label={risk} size="small" sx={{
+                            bgcolor: `${RISK_CLR[risk]}18`, color: RISK_CLR[risk],
+                            fontWeight: 600, fontSize: "0.62rem", height: 19,
+                            textTransform: "capitalize", flexShrink: 0,
+                        }} />
+                    </Stack>
+                    <Typography fontSize="0.77rem" noWrap sx={{ color: theme.palette.text.secondary }}>
+                        {g.projectTitle ?? "—"}
                     </Typography>
                 </Box>
-                {/* ✅ زر تحديد الحد الأقصى للفرق */}
-                <Tooltip title="Set max groups you can supervise">
-                    <Button variant="outlined" startIcon={<TuneOutlinedIcon />}
-                        onClick={() => { setMaxGroupsInput(maxGroups); setLimitOpen(true); }}
+                <Tooltip title="Edit team size">
+                    <Button size="small" startIcon={<SettingsOutlinedIcon sx={{ fontSize: 13 }} />}
+                        onClick={(e) => { e.stopPropagation(); onOpenSize(g); }}
                         sx={{
-                            borderColor: t.borderLight, color: t.textSecondary, fontSize: "0.8rem", borderRadius: 2, textTransform: "none",
-                            "&:hover": { borderColor: PRIMARY, color: PRIMARY }
+                            fontSize: "0.7rem", color: theme.palette.text.secondary,
+                            textTransform: "none", minWidth: "auto", px: 1, py: 0.5, borderRadius: 1.5,
+                            "&:hover": { color: PRIMARY, bgcolor: `${PRIMARY}10` },
                         }}>
-                        Supervising Limit: {maxGroups}
+                        {g.members.length}/{g.maxMembers ?? "?"}
                     </Button>
                 </Tooltip>
             </Stack>
 
-            {/* Capacity bar */}
-            <Box sx={{ mb: 3, p: 2, borderRadius: 2, border: `1px solid ${t.borderLight}`, bgcolor: theme.palette.background.paper }}>
-                <Stack direction="row" justifyContent="space-between" mb={0.6}>
-                    <Typography sx={{ fontSize: "0.78rem", color: t.textSecondary, fontWeight: 600 }}>Supervision Capacity</Typography>
-                    <Typography sx={{ fontSize: "0.78rem", color: groups.length >= maxGroups ? "#C47E7E" : t.accentSecondary, fontWeight: 700 }}>
-                        {groups.length} / {maxGroups} groups
+            {/* progress */}
+            <Box mb={1.5}>
+                <Stack direction="row" justifyContent="space-between" mb={0.5}>
+                    <Typography fontSize="0.7rem" sx={{ color: theme.palette.text.secondary }}>Progress</Typography>
+                    <Typography fontSize="0.7rem" fontWeight={700} sx={{ color: theme.palette.text.primary }}>
+                        {g.progress ?? 0}%
                     </Typography>
                 </Stack>
-                <LinearProgress variant="determinate" value={(groups.length / maxGroups) * 100}
-                    sx={{
-                        height: 6, borderRadius: 3, bgcolor: t.borderLight,
-                        "& .MuiLinearProgress-bar": { bgcolor: groups.length >= maxGroups ? "#C47E7E" : t.accentSecondary, borderRadius: 3 }
-                    }} />
-                {groups.length >= maxGroups && (
-                    <Typography sx={{ fontSize: "0.72rem", color: "#C47E7E", mt: 0.5 }}>
-                        ⚠ You have reached your maximum supervision limit.
-                    </Typography>
+                <LinearProgress variant="determinate" value={g.progress ?? 0} sx={{
+                    height: 5, borderRadius: 3,
+                    bgcolor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
+                    "& .MuiLinearProgress-bar": { bgcolor: RISK_CLR[risk], borderRadius: 3 },
+                }} />
+            </Box>
+
+            {/* footer */}
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <AvatarGroup max={4} sx={{
+                    "& .MuiAvatar-root": { width: 26, height: 26, fontSize: "0.62rem", fontWeight: 700 },
+                }}>
+                    {g.members.map((m, j) => (
+                        <Avatar key={j} sx={{ bgcolor: MBR_COLORS[j % MBR_COLORS.length] }}>
+                            {initials(m.fullName ?? m.name ?? "?")}
+                        </Avatar>
+                    ))}
+                </AvatarGroup>
+                <Stack direction="row" gap={0.8}>
+                    {g.tasks?.inProgress != null && (
+                        <Chip label={`${g.tasks.inProgress} active`} size="small" sx={{
+                            bgcolor: `${PRIMARY}12`, color: PRIMARY,
+                            fontSize: "0.65rem", fontWeight: 600, height: 20,
+                        }} />
+                    )}
+                    {g.files?.pending != null && (
+                        <Chip label={`${g.files.pending} files`} size="small" sx={{
+                            bgcolor: "rgba(126,159,196,0.12)", color: "#7E9FC4",
+                            fontSize: "0.65rem", fontWeight: 600, height: 20,
+                        }} />
+                    )}
+                </Stack>
+            </Stack>
+        </Paper>
+    );
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/*  MAIN                                                           */
+/* ═══════════════════════════════════════════════════════════════ */
+export default function GroupsList() {
+    const theme = useTheme();
+    const isDark = theme.palette.mode === "dark";
+    const t = theme.palette.custom ?? {};
+
+    /* ── data ── */
+    const [groups, setGroups] = useState([]);
+    const [requests, setRequests] = useState([]);  // pending requests
+    const [maxTeams, setMaxTeamsState] = useState(6);
+
+    /* ── loading ── */
+    const [loadingGroups, setLoadingGroups] = useState(true);
+    const [loadingRequests, setLoadingRequests] = useState(true);
+    const [actionBusy, setActionBusy] = useState(false);
+
+    /* ── detail dialog ── */
+    const [selected, setSelected] = useState(null);
+    const [detailOpen, setDetailOpen] = useState(false);
+    const [tab, setTab] = useState(0);
+
+    /* ── size dialog ── */
+    const [sizeOpen, setSizeOpen] = useState(false);
+    const [sizeGroup, setSizeGroup] = useState(null);
+    const [sizeVal, setSizeVal] = useState(5);
+
+    /* ── limit dialog ── */
+    const [limitOpen, setLimitOpen] = useState(false);
+    const [limitInput, setLimitInput] = useState(6);
+
+    /* ── snackbar ── */
+    const [snack, setSnack] = useState({ open: false, msg: "", sev: "success" });
+    const snap = (msg, sev = "success") => setSnack({ open: true, msg, sev });
+
+    /* ─── fetch groups (my-team for supervisor = groups he supervises) ─ */
+    // ملاحظة: إذا في endpoint خاص بالـ supervisor لجلب فرقه، بدّل المسار هون
+    // حالياً بنستخدم pending-team-requests لجلب الطلبات، والـ groups من بياناتهم
+    const fetchRequests = useCallback(async () => {
+        try {
+            setLoadingRequests(true);
+            const data = await getPendingTeamRequests();
+            setRequests(normaliseRequests(data));
+        } catch {
+            setRequests([]);
+        } finally {
+            setLoadingRequests(false);
+        }
+    }, []);
+
+    // TODO: إذا في endpoint GET /api/Supervisor/my-groups أو مشابه، استبدل هاد
+    // حالياً بنبني الـ groups من البيانات الموجودة
+    const fetchGroups = useCallback(async () => {
+        try {
+            setLoadingGroups(true);
+            // بدّل المسار إذا عندك endpoint خاص
+            // const data = await getSupervisorGroups();
+            // setGroups(normaliseGroups(data));
+            setLoadingGroups(false);
+        } catch {
+            setLoadingGroups(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchRequests();
+        fetchGroups();
+    }, [fetchRequests, fetchGroups]);
+
+    /* ─── respond to team request ─────────────────────────────── */
+    const handleRespond = async (req, isApproved) => {
+        try {
+            setActionBusy(true);
+            if (req.type === "leave") {
+                await respondToLeaveRequest({ teamMemberId: req.memberId, isApproved });
+                snap(isApproved ? "Leave request approved." : "Leave request rejected.");
+            } else {
+                await respondToTeamRequest({ teamId: req.teamId, isApproved });
+                snap(isApproved ? "Team request approved! ✓" : "Team request rejected.");
+                if (isApproved) fetchGroups(); // refresh groups after approval
+            }
+            fetchRequests();
+        } catch (e) {
+            snap(e?.response?.data?.message ?? "Action failed.", "error");
+        } finally {
+            setActionBusy(false);
+        }
+    };
+
+    /* ─── set max teams ───────────────────────────────────────── */
+    const handleSaveLimit = async () => {
+        try {
+            setActionBusy(true);
+            await setMaxTeams({ maxTeams: limitInput });
+            setMaxTeamsState(limitInput);
+            setLimitOpen(false);
+            snap("Supervision limit updated.");
+        } catch (e) {
+            snap(e?.response?.data?.message ?? "Failed to update limit.", "error");
+        } finally { setActionBusy(false); }
+    };
+
+    /* ─── open detail ─────────────────────────────────────────── */
+    const openDetail = (g) => { setSelected(g); setTab(0); setDetailOpen(true); };
+    const openSize = (g) => { setSizeGroup(g); setSizeVal(g.maxMembers ?? 5); setSizeOpen(true); };
+
+    /* ─── save size (local only — add API call if endpoint exists) */
+    const handleSaveSize = () => {
+        setGroups((prev) =>
+            prev.map((g) => g.id === sizeGroup.id ? { ...g, maxMembers: sizeVal } : g)
+        );
+        setSizeOpen(false);
+        snap("Team size updated.");
+    };
+
+    /* ─── style helpers ───────────────────────────────────────── */
+    const border = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)";
+    const paperBg = theme.palette.background.paper;
+    const tPri = theme.palette.text.primary;
+    const tSec = theme.palette.text.secondary;
+
+    const inputSx = {
+        "& .MuiOutlinedInput-root": {
+            borderRadius: 2, fontSize: "0.875rem",
+            "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: PRIMARY },
+        },
+        "& .MuiInputLabel-root.Mui-focused": { color: PRIMARY },
+        "& .MuiInputLabel-root": { fontSize: "0.875rem" },
+    };
+
+    const pendingCount = requests.filter((r) => r.type !== "leave").length;
+    const leaveCount = requests.filter((r) => r.type === "leave").length;
+
+    /* ═════════════════════════════════════════════════════════════
+       RENDER
+    ═════════════════════════════════════════════════════════════ */
+    return (
+        <>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+
+                {/* ── PAGE HEADER ─────────────────────────────────────── */}
+                <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                    <Box>
+                        <Typography variant="h2" sx={{ color: tPri, mb: 0.4 }}>My Groups</Typography>
+                        <Typography sx={{ color: tSec, fontSize: "0.85rem" }}>
+                            {groups.length} / {maxTeams} supervised teams
+                        </Typography>
+                    </Box>
+                    <Stack direction="row" gap={1}>
+                        <Tooltip title="Refresh">
+                            <IconButton size="small"
+                                onClick={() => { fetchGroups(); fetchRequests(); }}
+                                sx={{
+                                    color: tSec, border: `1px solid ${border}`,
+                                    borderRadius: 2, "&:hover": { color: PRIMARY },
+                                }}>
+                                <RefreshOutlinedIcon sx={{ fontSize: 17 }} />
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Set max groups you can supervise">
+                            <Button variant="outlined" size="small"
+                                startIcon={<TuneOutlinedIcon sx={{ fontSize: 15 }} />}
+                                onClick={() => { setLimitInput(maxTeams); setLimitOpen(true); }}
+                                sx={{
+                                    borderColor: border, color: tSec, fontSize: "0.78rem",
+                                    borderRadius: 2, textTransform: "none", fontWeight: 600,
+                                    "&:hover": { borderColor: PRIMARY, color: PRIMARY, bgcolor: `${PRIMARY}08` },
+                                }}>
+                                Limit: {maxTeams}
+                            </Button>
+                        </Tooltip>
+                    </Stack>
+                </Stack>
+
+                {/* ── CAPACITY BAR ─────────────────────────────────────── */}
+                <Paper elevation={0} sx={{
+                    p: 2.2, borderRadius: 2.5, border: `1px solid ${border}`, bgcolor: paperBg,
+                }}>
+                    <Stack direction="row" justifyContent="space-between" mb={0.8}>
+                        <Typography fontSize="0.75rem" fontWeight={700} sx={{ color: tSec }}>
+                            Supervision Capacity
+                        </Typography>
+                        <Typography fontSize="0.75rem" fontWeight={700} sx={{
+                            color: groups.length >= maxTeams ? "#C47E7E" : "#3DB97A",
+                        }}>
+                            {groups.length} / {maxTeams} groups
+                        </Typography>
+                    </Stack>
+                    <LinearProgress variant="determinate"
+                        value={Math.min((groups.length / maxTeams) * 100, 100)} sx={{
+                            height: 6, borderRadius: 3,
+                            bgcolor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
+                            "& .MuiLinearProgress-bar": {
+                                bgcolor: groups.length >= maxTeams ? "#C47E7E" : PRIMARY,
+                                borderRadius: 3,
+                            },
+                        }} />
+                    {groups.length >= maxTeams && (
+                        <Typography fontSize="0.72rem" sx={{ color: "#C47E7E", mt: 0.6 }}>
+                            ⚠ You have reached your maximum supervision limit.
+                        </Typography>
+                    )}
+                </Paper>
+
+                {/* ── PENDING REQUESTS ─────────────────────────────────── */}
+                {(loadingRequests || requests.length > 0) && (
+                    <Paper elevation={0} sx={{
+                        borderRadius: 3, border: `1px solid ${border}`,
+                        bgcolor: paperBg, overflow: "hidden",
+                    }}>
+                        {/* section header */}
+                        <Stack direction="row" alignItems="center" justifyContent="space-between"
+                            sx={{
+                                px: 2.5, py: 1.8,
+                                borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)"}`,
+                                bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.015)"
+                            }}>
+                            <Stack direction="row" alignItems="center" gap={1}>
+                                <Box sx={{ color: PRIMARY }}><HowToRegOutlinedIcon sx={{ fontSize: 18 }} /></Box>
+                                <Typography fontWeight={700} fontSize="0.88rem" sx={{ color: tPri }}>
+                                    Pending Requests
+                                </Typography>
+                                {pendingCount > 0 && (
+                                    <Chip label={pendingCount} size="small" sx={{
+                                        height: 18, fontSize: "0.62rem", fontWeight: 700,
+                                        bgcolor: `${PRIMARY}18`, color: PRIMARY,
+                                    }} />
+                                )}
+                                {leaveCount > 0 && (
+                                    <Chip label={`${leaveCount} leave`} size="small" sx={{
+                                        height: 18, fontSize: "0.62rem", fontWeight: 700,
+                                        bgcolor: "rgba(229,115,115,0.12)", color: "#e57373",
+                                    }} />
+                                )}
+                            </Stack>
+                        </Stack>
+
+                        <Stack gap={1.2} sx={{ p: 2.5 }}>
+                            {loadingRequests ? (
+                                <Box display="flex" justifyContent="center" py={2}>
+                                    <CircularProgress size={22} sx={{ color: PRIMARY }} />
+                                </Box>
+                            ) : (
+                                requests.map((req, i) => (
+                                    <RequestRow key={req.teamId ?? i} req={req} busy={actionBusy}
+                                        onApprove={(r) => handleRespond(r, true)}
+                                        onReject={(r) => handleRespond(r, false)} />
+                                ))
+                            )}
+                        </Stack>
+                    </Paper>
+                )}
+
+                {/* ── GROUPS GRID ──────────────────────────────────────── */}
+                {loadingGroups ? (
+                    <Box display="flex" justifyContent="center" py={6}>
+                        <CircularProgress sx={{ color: PRIMARY }} />
+                    </Box>
+                ) : groups.length === 0 ? (
+                    <Paper elevation={0} sx={{
+                        p: 5, borderRadius: 3, border: `1px solid ${border}`,
+                        bgcolor: paperBg, textAlign: "center",
+                    }}>
+                        <Box sx={{
+                            width: 60, height: 60, borderRadius: 3, mx: "auto", mb: 2,
+                            bgcolor: `${PRIMARY}10`, border: `1px solid ${PRIMARY}25`,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                        }}>
+                            <SchoolOutlinedIcon sx={{ fontSize: 28, color: PRIMARY }} />
+                        </Box>
+                        <Typography fontWeight={700} fontSize="0.95rem" sx={{ color: tPri, mb: 0.5 }}>
+                            No groups yet
+                        </Typography>
+                        <Typography fontSize="0.82rem" sx={{ color: tSec }}>
+                            Groups will appear here once team requests are approved
+                        </Typography>
+                    </Paper>
+                ) : (
+                    <Grid container spacing={2}>
+                        {groups.map((g) => (
+                            <Grid item xs={12} sm={6} key={g.id}>
+                                <GroupCard g={g} onOpenDetail={openDetail} onOpenSize={openSize} />
+                            </Grid>
+                        ))}
+                    </Grid>
                 )}
             </Box>
 
-            <Grid container spacing={2}>
-                {groups.map((g) => (
-                    <Grid size={{ xs: 12, sm: 6 }} key={g.id}>
-                        <Paper elevation={1} onClick={() => openDetail(g)}
-                            sx={{
-                                p: 2.5, borderRadius: 3, cursor: "pointer", bgcolor: theme.palette.background.paper,
-                                "&:hover": { transform: "translateY(-2px)", boxShadow: t.shadowMd }, transition: "all 0.2s"
-                            }}>
-                            <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={1.5}>
-                                <Box>
-                                    <Stack direction="row" alignItems="center" gap={1} mb={0.3}>
-                                        <Typography sx={{ fontSize: "1rem", fontWeight: 700, color: t.textPrimary }}>{g.name}</Typography>
-                                        <Chip label={g.risk} size="small"
-                                            sx={{ bgcolor: `${RISK_CLR[g.risk]}18`, color: RISK_CLR[g.risk], fontWeight: 600, fontSize: "0.65rem", height: 20, textTransform: "capitalize" }} />
-                                    </Stack>
-                                    <Typography sx={{ fontSize: "0.78rem", color: t.textSecondary }}>{g.project}</Typography>
-                                </Box>
-                                <Button size="small" startIcon={<SettingsOutlinedIcon sx={{ fontSize: 14 }} />}
-                                    onClick={(e) => openSize(g, e)}
-                                    sx={{ fontSize: "0.72rem", color: t.textTertiary, "&:hover": { color: t.accentPrimary }, textTransform: "none", minWidth: "auto", p: "4px 8px" }}>
-                                    {g.members.length}/{g.maxMembers}
-                                </Button>
-                            </Stack>
-
-                            <Box sx={{ mb: 1.5 }}>
-                                <Stack direction="row" justifyContent="space-between" mb={0.4}>
-                                    <Typography sx={{ fontSize: "0.72rem", color: t.textTertiary }}>Progress</Typography>
-                                    <Typography sx={{ fontSize: "0.72rem", fontWeight: 600, color: t.textPrimary }}>{g.progress}%</Typography>
-                                </Stack>
-                                <LinearProgress variant="determinate" value={g.progress}
-                                    sx={{ bgcolor: t.borderLight, "& .MuiLinearProgress-bar": { bgcolor: RISK_CLR[g.risk] } }} />
-                            </Box>
-
-                            <Stack direction="row" justifyContent="space-between" alignItems="center">
-                                <AvatarGroup max={4} sx={{ "& .MuiAvatar-root": { width: 28, height: 28, fontSize: "0.7rem", fontWeight: 700 } }}>
-                                    {g.members.map((m, j) => <Avatar key={j} sx={{ bgcolor: MBR_COLORS[j % MBR_COLORS.length] }}>{m.initials}</Avatar>)}
-                                </AvatarGroup>
-                                <Stack direction="row" gap={1}>
-                                    <Chip label={`${g.tasks.inProgress} active`} size="small"
-                                        sx={{ bgcolor: `${t.accentPrimary}12`, color: t.accentPrimary, fontSize: "0.68rem", fontWeight: 600, height: 22 }} />
-                                    <Chip label={`${g.files.pending} files`} size="small"
-                                        sx={{ bgcolor: `${t.accentSecondary}12`, color: t.accentSecondary, fontSize: "0.68rem", fontWeight: 600, height: 22 }} />
-                                </Stack>
-                            </Stack>
-                        </Paper>
-                    </Grid>
-                ))}
-            </Grid>
-
-            {/* ── Group detail dialog ── */}
+            {/* ══ DETAIL DIALOG ════════════════════════════════════════ */}
             {selected && (
-                <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} maxWidth="sm" fullWidth>
-                    <DialogTitle>
-                        <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Dialog open={detailOpen} onClose={() => setDetailOpen(false)}
+                    maxWidth="sm" fullWidth
+                    PaperProps={{ sx: { borderRadius: 3, border: `1px solid ${border}`, bgcolor: paperBg } }}>
+
+                    {/* header */}
+                    <Box sx={{ px: 3, py: 2.5, borderBottom: `1px solid ${border}` }}>
+                        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
                             <Box>
-                                <Typography sx={{ fontWeight: 700, fontSize: "1.1rem", color: t.textPrimary }}>{selected.name}</Typography>
-                                <Typography sx={{ fontSize: "0.78rem", color: t.textSecondary }}>{selected.project}</Typography>
+                                <Stack direction="row" alignItems="center" gap={1} mb={0.3}>
+                                    <Typography fontWeight={700} fontSize="1rem" sx={{ color: tPri }}>
+                                        {selected.name}
+                                    </Typography>
+                                    <Chip label={selected.risk ?? "low"} size="small" sx={{
+                                        bgcolor: `${RISK_CLR[selected.risk ?? "low"]}18`,
+                                        color: RISK_CLR[selected.risk ?? "low"],
+                                        fontWeight: 600, fontSize: "0.62rem", textTransform: "capitalize",
+                                    }} />
+                                </Stack>
+                                <Typography fontSize="0.77rem" sx={{ color: tSec }}>
+                                    {selected.projectTitle ?? "—"}
+                                </Typography>
                             </Box>
-                            <Chip label={selected.risk} size="small"
-                                sx={{ bgcolor: `${RISK_CLR[selected.risk]}18`, color: RISK_CLR[selected.risk], fontWeight: 600, textTransform: "capitalize" }} />
+                            <IconButton size="small" onClick={() => setDetailOpen(false)} sx={{ color: tSec }}>
+                                <CloseIcon sx={{ fontSize: 17 }} />
+                            </IconButton>
                         </Stack>
-                    </DialogTitle>
-                    <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ px: 3, borderBottom: `1px solid ${t.borderLight}` }}>
+                    </Box>
+
+                    {/* tabs */}
+                    <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{
+                        px: 1,
+                        borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)"}`,
+                        "& .MuiTab-root": {
+                            textTransform: "none", fontWeight: 600,
+                            fontSize: "0.82rem", minHeight: 44, color: tSec
+                        },
+                        "& .Mui-selected": { color: PRIMARY },
+                        "& .MuiTabs-indicator": { bgcolor: PRIMARY, height: 2.5, borderRadius: 2 },
+                    }}>
                         <Tab label="Overview" />
                         <Tab label="Members" />
                         <Tab label="Tasks" />
                     </Tabs>
-                    <DialogContent>
+
+                    <DialogContent sx={{ px: 3, py: 2.5 }}>
+
+                        {/* ── Overview ── */}
                         {tab === 0 && (
-                            <Stack spacing={2}>
+                            <Stack spacing={2.5}>
                                 <Box>
-                                    <Typography sx={{ fontSize: "0.75rem", color: t.textTertiary, mb: 0.5 }}>PROGRESS</Typography>
-                                    <Stack direction="row" justifyContent="space-between" mb={0.5}>
-                                        <Typography sx={{ fontSize: "0.875rem", color: t.textSecondary }}>Completion</Typography>
-                                        <Typography sx={{ fontSize: "0.875rem", fontWeight: 700, color: t.textPrimary }}>{selected.progress}%</Typography>
+                                    <Typography fontSize="0.68rem" fontWeight={700} sx={{
+                                        color: tSec, textTransform: "uppercase", letterSpacing: "0.08em", mb: 1,
+                                    }}>Progress</Typography>
+                                    <Stack direction="row" justifyContent="space-between" mb={0.6}>
+                                        <Typography fontSize="0.84rem" sx={{ color: tSec }}>Completion</Typography>
+                                        <Typography fontSize="0.84rem" fontWeight={700} sx={{ color: tPri }}>
+                                            {selected.progress ?? 0}%
+                                        </Typography>
                                     </Stack>
-                                    <LinearProgress variant="determinate" value={selected.progress}
-                                        sx={{ bgcolor: t.borderLight, "& .MuiLinearProgress-bar": { bgcolor: RISK_CLR[selected.risk] } }} />
+                                    <LinearProgress variant="determinate" value={selected.progress ?? 0} sx={{
+                                        height: 6, borderRadius: 3,
+                                        bgcolor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
+                                        "& .MuiLinearProgress-bar": {
+                                            bgcolor: RISK_CLR[selected.risk ?? "low"], borderRadius: 3,
+                                        },
+                                    }} />
                                 </Box>
+
+                                {/* stats grid */}
                                 <Grid container spacing={1.5}>
                                     {[
-                                        { label: "To Do", val: selected.tasks.todo, color: t.textTertiary },
-                                        { label: "In Progress", val: selected.tasks.inProgress, color: t.accentTertiary },
-                                        { label: "Done", val: selected.tasks.done, color: t.success },
-                                        { label: "Files", val: selected.files.total, color: t.accentSecondary },
+                                        { label: "To Do", val: selected.tasks?.todo ?? "—", color: tSec },
+                                        { label: "In Progress", val: selected.tasks?.inProgress ?? "—", color: PRIMARY },
+                                        { label: "Done", val: selected.tasks?.done ?? "—", color: "#3DB97A" },
+                                        { label: "Files", val: selected.files?.total ?? "—", color: "#7E9FC4" },
                                     ].map((item) => (
-                                        <Grid size={{ xs: 6 }} key={item.label}>
-                                            <Box sx={{ p: 1.5, borderRadius: 2, border: `1px solid ${t.borderLight}`, textAlign: "center" }}>
-                                                <Typography sx={{ fontSize: "1.4rem", fontWeight: 700, color: item.color }}>{item.val}</Typography>
-                                                <Typography sx={{ fontSize: "0.72rem", color: t.textTertiary }}>{item.label}</Typography>
+                                        <Grid item xs={6} key={item.label}>
+                                            <Box sx={{
+                                                p: 1.8, borderRadius: 2.5, textAlign: "center",
+                                                border: `1px solid ${border}`,
+                                                bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.015)",
+                                            }}>
+                                                <Typography fontSize="1.5rem" fontWeight={700} sx={{ color: item.color }}>
+                                                    {item.val}
+                                                </Typography>
+                                                <Typography fontSize="0.7rem" sx={{ color: tSec }}>{item.label}</Typography>
                                             </Box>
                                         </Grid>
                                     ))}
                                 </Grid>
+
+                                {/* supervisor info */}
+                                <Box sx={{
+                                    p: 1.8, borderRadius: 2.5, border: `1px solid ${border}`,
+                                    bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.015)"
+                                }}>
+                                    <Typography fontSize="0.68rem" fontWeight={700} sx={{
+                                        color: tSec, textTransform: "uppercase", letterSpacing: "0.08em", mb: 0.8,
+                                    }}>Last Active</Typography>
+                                    <Typography fontSize="0.84rem" fontWeight={600} sx={{ color: tPri }}>
+                                        {selected.lastActive ?? "—"}
+                                    </Typography>
+                                </Box>
                             </Stack>
                         )}
+
+                        {/* ── Members ── */}
                         {tab === 1 && (
-                            <Stack spacing={1} sx={{ mt: 1 }}>
-                                {selected.members.map((m, i) => (
-                                    <Stack key={i} direction="row" alignItems="center" gap={1.5}
-                                        sx={{ p: 1.2, borderRadius: 2, border: `1px solid ${t.borderLight}` }}>
-                                        <Avatar sx={{ width: 34, height: 34, bgcolor: MBR_COLORS[i % MBR_COLORS.length], fontSize: "0.85rem", fontWeight: 700 }}>{m.initials}</Avatar>
-                                        <Box>
-                                            <Typography sx={{ fontSize: "0.875rem", fontWeight: 600, color: t.textPrimary }}>{m.name}</Typography>
-                                            <Typography sx={{ fontSize: "0.72rem", color: t.textTertiary }}>{m.role}</Typography>
-                                        </Box>
-                                    </Stack>
-                                ))}
-                                <Typography sx={{ fontSize: "0.78rem", color: t.textTertiary, textAlign: "center", mt: 1 }}>
-                                    {selected.members.length} / {selected.maxMembers} members
+                            <Stack spacing={1.2} sx={{ mt: 0.5 }}>
+                                {(selected.members ?? []).length === 0 ? (
+                                    <Typography sx={{ color: tSec, fontSize: "0.84rem", textAlign: "center", mt: 3 }}>
+                                        No members yet
+                                    </Typography>
+                                ) : (
+                                    (selected.members ?? []).map((m, i) => (
+                                        <Stack key={i} direction="row" alignItems="center" gap={1.5}
+                                            sx={{
+                                                p: 1.5, borderRadius: 2.5,
+                                                border: `1px solid ${border}`,
+                                                bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.01)",
+                                            }}>
+                                            <Avatar sx={{
+                                                width: 36, height: 36, fontWeight: 700, fontSize: "0.8rem",
+                                                bgcolor: MBR_COLORS[i % MBR_COLORS.length],
+                                            }}>
+                                                {initials(m.fullName ?? m.name ?? "?")}
+                                            </Avatar>
+                                            <Box flex={1} minWidth={0}>
+                                                <Typography fontWeight={600} fontSize="0.86rem" noWrap
+                                                    sx={{ color: tPri }}>
+                                                    {m.fullName ?? m.name ?? "—"}
+                                                </Typography>
+                                                <Typography fontSize="0.72rem" sx={{ color: tSec }}>
+                                                    {m.role ?? m.email ?? ""}
+                                                </Typography>
+                                            </Box>
+                                            {(m.isLeader ?? m.role === "Lead" ?? i === 0) && (
+                                                <Chip label="Leader" size="small" sx={{
+                                                    height: 18, fontSize: "0.6rem", fontWeight: 700,
+                                                    bgcolor: `${PRIMARY}15`, color: PRIMARY,
+                                                }} />
+                                            )}
+                                        </Stack>
+                                    ))
+                                )}
+                                <Typography fontSize="0.75rem" sx={{ color: tSec, textAlign: "center", mt: 0.5 }}>
+                                    {(selected.members ?? []).length} / {selected.maxMembers ?? "?"} members
                                 </Typography>
                             </Stack>
                         )}
+
+                        {/* ── Tasks ── */}
                         {tab === 2 && (
-                            <Stack spacing={1} sx={{ mt: 1 }}>
+                            <Stack spacing={1.2} sx={{ mt: 0.5 }}>
                                 {[
-                                    { label: "To Do", val: selected.tasks.todo, color: t.textTertiary },
-                                    { label: "In Progress", val: selected.tasks.inProgress, color: t.accentTertiary },
-                                    { label: "Done", val: selected.tasks.done, color: t.success },
+                                    { label: "To Do", val: selected.tasks?.todo, color: tSec },
+                                    { label: "In Progress", val: selected.tasks?.inProgress, color: PRIMARY },
+                                    { label: "Done", val: selected.tasks?.done, color: "#3DB97A" },
                                 ].map((item) => (
-                                    <Stack key={item.label} direction="row" justifyContent="space-between" alignItems="center"
-                                        sx={{ p: 1.2, borderRadius: 2, border: `1px solid ${t.borderLight}` }}>
-                                        <Typography sx={{ fontSize: "0.875rem", color: t.textSecondary }}>{item.label}</Typography>
-                                        <Chip label={item.val} size="small" sx={{ bgcolor: `${item.color}18`, color: item.color, fontWeight: 700, height: 22 }} />
+                                    <Stack key={item.label} direction="row" justifyContent="space-between"
+                                        alignItems="center" sx={{
+                                            p: 1.5, borderRadius: 2.5, border: `1px solid ${border}`,
+                                            bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.01)",
+                                        }}>
+                                        <Typography fontSize="0.86rem" sx={{ color: tSec }}>{item.label}</Typography>
+                                        <Chip label={item.val ?? "—"} size="small" sx={{
+                                            bgcolor: `${item.color}18`, color: item.color,
+                                            fontWeight: 700, height: 22, fontSize: "0.75rem",
+                                        }} />
                                     </Stack>
                                 ))}
                             </Stack>
                         )}
                     </DialogContent>
-                    <DialogActions sx={{ px: 3, pb: 2.5 }}>
-                        <Button onClick={() => setDetailOpen(false)} sx={{ color: t.textSecondary }}>Close</Button>
-                    </DialogActions>
+
+                    <Box sx={{ px: 3, py: 2, borderTop: `1px solid ${border}`, display: "flex", justifyContent: "flex-end" }}>
+                        <Button onClick={() => setDetailOpen(false)}
+                            sx={{ color: tSec, textTransform: "none", fontWeight: 500, borderRadius: 2 }}>
+                            Close
+                        </Button>
+                    </Box>
                 </Dialog>
             )}
 
-            {/* ── Team size dialog ── */}
-            {selected && (
-                <Dialog open={sizeOpen} onClose={() => setSizeOpen(false)} maxWidth="xs" fullWidth>
-                    <DialogTitle sx={{ fontWeight: 700, color: t.textPrimary }}>Team Size — {selected?.name}</DialogTitle>
-                    <DialogContent>
-                        <Typography sx={{ fontSize: "0.875rem", color: t.textSecondary, mb: 2 }}>
+            {/* ══ TEAM SIZE DIALOG ═════════════════════════════════════ */}
+            {sizeGroup && (
+                <Dialog open={sizeOpen} onClose={() => setSizeOpen(false)}
+                    maxWidth="xs" fullWidth
+                    PaperProps={{ sx: { borderRadius: 3, border: `1px solid ${border}`, bgcolor: paperBg } }}>
+                    <Box sx={{ px: 3, py: 2.5, borderBottom: `1px solid ${border}` }}>
+                        <Typography fontWeight={700} fontSize="0.95rem" sx={{ color: tPri }}>
+                            Team Size — {sizeGroup.name}
+                        </Typography>
+                    </Box>
+                    <Box sx={{ px: 3, py: 2.5 }}>
+                        <Typography fontSize="0.84rem" sx={{ color: tSec, mb: 2 }}>
                             Set the maximum number of members allowed in this team.
                         </Typography>
                         <TextField label="Max Members" type="number" size="small" fullWidth
-                            value={maxVal} onChange={(e) => setMaxVal(Number(e.target.value))}
-                            inputProps={{ min: selected?.members?.length ?? 1, max: 10 }} />
-                        <Typography sx={{ fontSize: "0.75rem", color: t.textTertiary, mt: 1 }}>
-                            Current: {selected?.members?.length} member(s). Min cannot be below current count.
+                            value={sizeVal} onChange={(e) => setSizeVal(Number(e.target.value))}
+                            inputProps={{ min: (sizeGroup.members?.length ?? 1), max: 10 }}
+                            sx={inputSx} />
+                        <Typography fontSize="0.73rem" sx={{ color: tSec, mt: 1 }}>
+                            Current: {sizeGroup.members?.length ?? 0} member(s).
                         </Typography>
-                    </DialogContent>
-                    <DialogActions sx={{ px: 3, pb: 2.5 }}>
-                        <Button onClick={() => setSizeOpen(false)} sx={{ color: t.textSecondary }}>Cancel</Button>
-                        <Button variant="contained" onClick={saveSize} sx={{ bgcolor: PRIMARY, "&:hover": { bgcolor: "#b06f47" }, borderRadius: 2, textTransform: "none" }}>Save</Button>
-                    </DialogActions>
+                    </Box>
+                    <Box sx={{ px: 3, pb: 3, display: "flex", justifyContent: "flex-end", gap: 1 }}>
+                        <Button onClick={() => setSizeOpen(false)}
+                            sx={{ color: tSec, textTransform: "none", fontWeight: 500, borderRadius: 2 }}>
+                            Cancel
+                        </Button>
+                        <Button variant="contained" onClick={handleSaveSize}
+                            sx={{
+                                bgcolor: PRIMARY, "&:hover": { bgcolor: "#b06f47", boxShadow: "none" },
+                                textTransform: "none", fontWeight: 700, borderRadius: 2, boxShadow: "none",
+                            }}>
+                            Save
+                        </Button>
+                    </Box>
                 </Dialog>
             )}
 
-            {/* ✅ Max groups limit dialog */}
-            <Dialog open={limitOpen} onClose={() => setLimitOpen(false)} maxWidth="xs" fullWidth>
-                <DialogTitle sx={{ fontWeight: 700, color: t.textPrimary }}>Supervision Limit</DialogTitle>
-                <DialogContent>
-                    <Typography sx={{ fontSize: "0.875rem", color: t.textSecondary, mb: 2 }}>
+            {/* ══ SUPERVISION LIMIT DIALOG ════════════════════════════ */}
+            <Dialog open={limitOpen} onClose={() => setLimitOpen(false)}
+                maxWidth="xs" fullWidth
+                PaperProps={{ sx: { borderRadius: 3, border: `1px solid ${border}`, bgcolor: paperBg } }}>
+                <Box sx={{ px: 3, py: 2.5, borderBottom: `1px solid ${border}` }}>
+                    <Typography fontWeight={700} fontSize="0.95rem" sx={{ color: tPri }}>
+                        Supervision Limit
+                    </Typography>
+                </Box>
+                <Box sx={{ px: 3, py: 2.5 }}>
+                    <Typography fontSize="0.84rem" sx={{ color: tSec, mb: 2 }}>
                         Set the maximum number of groups you are willing to supervise this semester.
                     </Typography>
                     <TextField label="Max Groups" type="number" size="small" fullWidth
-                        value={maxGroupsInput} onChange={(e) => setMaxGroupsInput(Number(e.target.value))}
-                        inputProps={{ min: groups.length, max: 20 }} />
-                    <Typography sx={{ fontSize: "0.75rem", color: t.textTertiary, mt: 1 }}>
+                        value={limitInput} onChange={(e) => setLimitInput(Number(e.target.value))}
+                        inputProps={{ min: groups.length, max: 20 }}
+                        sx={inputSx} />
+                    <Typography fontSize="0.73rem" sx={{ color: tSec, mt: 1 }}>
                         You currently supervise {groups.length} group(s). Min cannot be below current count.
                     </Typography>
-                </DialogContent>
-                <DialogActions sx={{ px: 3, pb: 2.5 }}>
-                    <Button onClick={() => setLimitOpen(false)} sx={{ color: t.textSecondary }}>Cancel</Button>
-                    <Button variant="contained" onClick={saveGroupLimit}
-                        sx={{ bgcolor: PRIMARY, "&:hover": { bgcolor: "#b06f47" }, borderRadius: 2, textTransform: "none" }}>
-                        Save
+                </Box>
+                <Box sx={{ px: 3, pb: 3, display: "flex", justifyContent: "flex-end", gap: 1 }}>
+                    <Button onClick={() => setLimitOpen(false)}
+                        sx={{ color: tSec, textTransform: "none", fontWeight: 500, borderRadius: 2 }}>
+                        Cancel
                     </Button>
-                </DialogActions>
+                    <Button variant="contained" disabled={actionBusy} onClick={handleSaveLimit}
+                        sx={{
+                            bgcolor: PRIMARY, "&:hover": { bgcolor: "#b06f47", boxShadow: "none" },
+                            textTransform: "none", fontWeight: 700, borderRadius: 2, boxShadow: "none",
+                        }}>
+                        {actionBusy
+                            ? <CircularProgress size={16} sx={{ color: "#fff" }} />
+                            : "Save"}
+                    </Button>
+                </Box>
             </Dialog>
-        </Box>
+
+            {/* ── SNACKBAR ──────────────────────────────────────────── */}
+            <Snackbar open={snack.open} autoHideDuration={3500}
+                onClose={() => setSnack(s => ({ ...s, open: false }))}
+                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}>
+                <Alert severity={snack.sev} variant="filled" sx={{ borderRadius: 2 }}>
+                    {snack.msg}
+                </Alert>
+            </Snackbar>
+        </>
     );
 }

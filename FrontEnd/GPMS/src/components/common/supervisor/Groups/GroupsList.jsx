@@ -12,8 +12,6 @@ import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
-import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
-import PeopleOutlineIcon from "@mui/icons-material/PeopleOutline";
 import RefreshOutlinedIcon from "@mui/icons-material/RefreshOutlined";
 import HowToRegOutlinedIcon from "@mui/icons-material/HowToRegOutlined";
 import ExitToAppOutlinedIcon from "@mui/icons-material/ExitToAppOutlined";
@@ -25,6 +23,9 @@ import {
     respondToTeamRequest,
     respondToLeaveRequest,
     setMaxTeams,
+    getSupervisorTeams,
+    getSupervisorTeamById,
+    getSupervisorTotalTeams,
 } from "../../../../api/handler/endpoints/supervisorApi";
 
 /* ─── constants ──────────────────────────────────────────────── */
@@ -36,41 +37,71 @@ const initials = (name = "") =>
     (name ?? "?")
         .split(" ").map((w) => w[0] ?? "").join("").toUpperCase().slice(0, 2) || "?";
 
-/* ─── helpers ─────────────────────────────────────────────────── */
-/**
- * Normalise pending-team-requests response.
- * Expected shape (adjust field names if backend differs):
- * [{ teamId, teamName, projectTitle, studentName, studentId, requestedAt, ... }]
+/* ─── normaliseRequests ──────────────────────────────────────────
+ * Normalises GET /api/Supervisor/pending-team-requests response.
+ * Handles both "team" join requests and "leave" requests.
+ * Field fallbacks cover different possible backend naming conventions.
  */
 const normaliseRequests = (raw) =>
     (Array.isArray(raw) ? raw : []).map((r) => ({
         teamId: r.teamId ?? r.id,
         teamName: r.teamName ?? r.name ?? "Unnamed Team",
         projectTitle: r.projectTitle ?? r.project ?? "—",
+        projectDescription: r.projectDescription ?? r.description ?? "",
         studentName: r.studentName ?? r.leadName ?? r.requestedBy ?? "Student",
         studentId: r.studentId ?? r.userId ?? null,
         members: r.members ?? r.students ?? [],
         requestedAt: r.requestedAt ?? r.createdAt ?? null,
-        type: r.type ?? "team",   // "team" | "leave"
-        memberId: r.teamMemberId ?? r.memberId ?? null,  // للـ leave requests
+        type: r.type ?? "team",           // "team" | "leave"
+        memberId: r.teamMemberId ?? r.memberId ?? null,
+    }));
+
+/* ─── normaliseTeams ─────────────────────────────────────────────
+ * Normalises GET /api/Supervisor/my-teams response.
+ * Maps all known backend field variants to a consistent shape.
+ */
+const normaliseTeams = (raw) =>
+    (Array.isArray(raw) ? raw : []).map((t) => ({
+        id: t.teamId ?? t.id,
+        name: t.teamName ?? t.name ?? "Unnamed Team",
+        projectTitle: t.projectTitle ?? t.projectName ?? "—",
+        projectDescription: t.projectDescription ?? t.description ?? "",
+        maxMembers: t.maxMembers ?? t.maxSize ?? 5,
+        progress: t.progress ?? 0,
+        risk: t.risk ?? "low",
+        lastActive: t.lastActive ?? null,
+        members: (t.members ?? t.students ?? []).map((m) => ({
+            userId: m.userId ?? m.id,
+            fullName: m.fullName ?? m.name ?? "—",
+            email: m.email ?? "",
+            isLeader: m.isLeader ?? m.role === "Leader" ?? false,
+        })),
+        tasks: {
+            todo: t.tasks?.todo ?? t.todoCount ?? null,
+            inProgress: t.tasks?.inProgress ?? t.inProgressCount ?? null,
+            done: t.tasks?.done ?? t.doneCount ?? null,
+        },
+        files: {
+            total: t.files?.total ?? t.filesCount ?? null,
+            pending: t.files?.pending ?? t.pendingFiles ?? null,
+        },
     }));
 
 /* ─── Request row (pending) ───────────────────────────────────── */
 function RequestRow({ req, onApprove, onReject, busy }) {
     const theme = useTheme();
     const isDark = theme.palette.mode === "dark";
-    const t = theme.palette.custom ?? {};
     const isLeave = req.type === "leave";
 
     return (
-        <Stack direction="row" alignItems="center" gap={1.5}
+        <Stack direction="row" alignItems="flex-start" gap={1.5}
             sx={{
                 p: 1.8, borderRadius: 2.5,
                 border: `1px solid ${isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)"}`,
                 bgcolor: theme.palette.background.paper,
             }}>
 
-            {/* icon */}
+            {/* type icon */}
             <Box sx={{
                 width: 38, height: 38, borderRadius: 2, flexShrink: 0,
                 bgcolor: isLeave ? "rgba(229,115,115,0.1)" : `${PRIMARY}12`,
@@ -84,6 +115,7 @@ function RequestRow({ req, onApprove, onReject, busy }) {
             </Box>
 
             <Box flex={1} minWidth={0}>
+                {/* title line */}
                 <Typography fontWeight={700} fontSize="0.86rem" noWrap
                     sx={{ color: theme.palette.text.primary }}>
                     {isLeave
@@ -91,7 +123,33 @@ function RequestRow({ req, onApprove, onReject, busy }) {
                         : <><Box component="span" sx={{ color: PRIMARY }}>{req.teamName}</Box>{" — "}{req.studentName}</>
                     }
                 </Typography>
-                <Stack direction="row" alignItems="center" gap={1} mt={0.3}>
+
+                {/* project description */}
+                {req.projectDescription && (
+                    <Typography fontSize="0.75rem"
+                        sx={{ color: theme.palette.text.secondary, mt: 0.3, mb: 0.5 }}>
+                        {req.projectDescription}
+                    </Typography>
+                )}
+
+                {/* members avatars */}
+                {req.members.length > 0 && (
+                    <AvatarGroup max={5} sx={{
+                        justifyContent: "flex-start", mt: 0.5,
+                        "& .MuiAvatar-root": { width: 22, height: 22, fontSize: "0.58rem", fontWeight: 700 },
+                    }}>
+                        {req.members.map((m, i) => (
+                            <Tooltip key={i} title={m.fullName ?? m.name ?? "?"}>
+                                <Avatar sx={{ bgcolor: MBR_COLORS[i % MBR_COLORS.length] }}>
+                                    {initials(m.fullName ?? m.name ?? "?")}
+                                </Avatar>
+                            </Tooltip>
+                        ))}
+                    </AvatarGroup>
+                )}
+
+                {/* meta row */}
+                <Stack direction="row" alignItems="center" gap={1} mt={0.4}>
                     <Typography fontSize="0.73rem" noWrap sx={{ color: theme.palette.text.secondary }}>
                         {req.projectTitle}
                     </Typography>
@@ -103,8 +161,8 @@ function RequestRow({ req, onApprove, onReject, busy }) {
                 </Stack>
             </Box>
 
-            {/* actions */}
-            <Stack direction="row" gap={0.5}>
+            {/* approve / reject */}
+            <Stack direction="row" gap={0.5} flexShrink={0}>
                 <Tooltip title="Approve">
                     <IconButton size="small" disabled={busy}
                         onClick={() => onApprove(req)}
@@ -128,7 +186,6 @@ function RequestRow({ req, onApprove, onReject, busy }) {
 function GroupCard({ g, onOpenDetail, onOpenSize }) {
     const theme = useTheme();
     const isDark = theme.palette.mode === "dark";
-    const t = theme.palette.custom ?? {};
     const risk = g.risk ?? "low";
 
     return (
@@ -140,12 +197,12 @@ function GroupCard({ g, onOpenDetail, onOpenSize }) {
                 transition: "all 0.18s ease",
                 "&:hover": {
                     transform: "translateY(-2px)",
-                    boxShadow: isDark ? "0 8px 24px rgba(0,0,0,0.3)" : "0 8px 24px rgba(0,0,0,0.08)"
+                    boxShadow: isDark ? "0 8px 24px rgba(0,0,0,0.3)" : "0 8px 24px rgba(0,0,0,0.08)",
                 },
             }}>
 
             {/* header */}
-            <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={1.5}>
+            <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={1}>
                 <Box flex={1} minWidth={0} pr={1}>
                     <Stack direction="row" alignItems="center" gap={1} mb={0.3}>
                         <Typography fontSize="0.97rem" fontWeight={700} noWrap
@@ -157,8 +214,19 @@ function GroupCard({ g, onOpenDetail, onOpenSize }) {
                         }} />
                     </Stack>
                     <Typography fontSize="0.77rem" noWrap sx={{ color: theme.palette.text.secondary }}>
-                        {g.projectTitle ?? "—"}
+                        {g.projectTitle}
                     </Typography>
+                    {/* project description */}
+                    {g.projectDescription && (
+                        <Typography fontSize="0.72rem"
+                            sx={{
+                                color: theme.palette.text.secondary, mt: 0.4,
+                                display: "-webkit-box", WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical", overflow: "hidden",
+                            }}>
+                            {g.projectDescription}
+                        </Typography>
+                    )}
                 </Box>
                 <Tooltip title="Edit team size">
                     <Button size="small" startIcon={<SettingsOutlinedIcon sx={{ fontSize: 13 }} />}
@@ -194,9 +262,11 @@ function GroupCard({ g, onOpenDetail, onOpenSize }) {
                     "& .MuiAvatar-root": { width: 26, height: 26, fontSize: "0.62rem", fontWeight: 700 },
                 }}>
                     {g.members.map((m, j) => (
-                        <Avatar key={j} sx={{ bgcolor: MBR_COLORS[j % MBR_COLORS.length] }}>
-                            {initials(m.fullName ?? m.name ?? "?")}
-                        </Avatar>
+                        <Tooltip key={j} title={m.fullName ?? "?"}>
+                            <Avatar sx={{ bgcolor: MBR_COLORS[j % MBR_COLORS.length] }}>
+                                {initials(m.fullName)}
+                            </Avatar>
+                        </Tooltip>
                     ))}
                 </AvatarGroup>
                 <Stack direction="row" gap={0.8}>
@@ -224,11 +294,10 @@ function GroupCard({ g, onOpenDetail, onOpenSize }) {
 export default function GroupsList() {
     const theme = useTheme();
     const isDark = theme.palette.mode === "dark";
-    const t = theme.palette.custom ?? {};
 
     /* ── data ── */
     const [groups, setGroups] = useState([]);
-    const [requests, setRequests] = useState([]);  // pending requests
+    const [requests, setRequests] = useState([]);
     const [maxTeams, setMaxTeamsState] = useState(6);
 
     /* ── loading ── */
@@ -239,6 +308,7 @@ export default function GroupsList() {
     /* ── detail dialog ── */
     const [selected, setSelected] = useState(null);
     const [detailOpen, setDetailOpen] = useState(false);
+    const [detailBusy, setDetailBusy] = useState(false);
     const [tab, setTab] = useState(0);
 
     /* ── size dialog ── */
@@ -254,9 +324,7 @@ export default function GroupsList() {
     const [snack, setSnack] = useState({ open: false, msg: "", sev: "success" });
     const snap = (msg, sev = "success") => setSnack({ open: true, msg, sev });
 
-    /* ─── fetch groups (my-team for supervisor = groups he supervises) ─ */
-    // ملاحظة: إذا في endpoint خاص بالـ supervisor لجلب فرقه، بدّل المسار هون
-    // حالياً بنستخدم pending-team-requests لجلب الطلبات، والـ groups من بياناتهم
+    /* ─── fetch pending requests ──────────────────────────────── */
     const fetchRequests = useCallback(async () => {
         try {
             setLoadingRequests(true);
@@ -269,26 +337,55 @@ export default function GroupsList() {
         }
     }, []);
 
-    // TODO: إذا في endpoint GET /api/Supervisor/my-groups أو مشابه، استبدل هاد
-    // حالياً بنبني الـ groups من البيانات الموجودة
+    /* ─── fetch supervised groups ─────────────────────────────── */
+    // Uses GET /api/Supervisor/my-teams
     const fetchGroups = useCallback(async () => {
         try {
             setLoadingGroups(true);
-            // بدّل المسار إذا عندك endpoint خاص
-            // const data = await getSupervisorGroups();
-            // setGroups(normaliseGroups(data));
-            setLoadingGroups(false);
+            const data = await getSupervisorTeams();
+            setGroups(normaliseTeams(data));
         } catch {
+            setGroups([]);
+        } finally {
             setLoadingGroups(false);
+        }
+    }, []);
+
+    /* ─── fetch total teams count + maxTeams setting ──────────── */
+    // Uses GET /api/Supervisor/total-teams → { totalTeams, maxTeams }
+    const fetchTotals = useCallback(async () => {
+        try {
+            const data = await getSupervisorTotalTeams();
+            if (data?.maxTeams != null) setMaxTeamsState(data.maxTeams);
+        } catch {
+            // silently fail — UI falls back to local state
         }
     }, []);
 
     useEffect(() => {
         fetchRequests();
         fetchGroups();
-    }, [fetchRequests, fetchGroups]);
+        fetchTotals();
+    }, [fetchRequests, fetchGroups, fetchTotals]);
 
-    /* ─── respond to team request ─────────────────────────────── */
+    /* ─── open detail (fetches fresh data for selected team) ───── */
+    // Uses GET /api/Supervisor/team/{teamId}
+    const openDetail = async (g) => {
+        setSelected(g);
+        setTab(0);
+        setDetailOpen(true);
+        try {
+            setDetailBusy(true);
+            const fresh = await getSupervisorTeamById(g.id);
+            setSelected(normaliseTeams([fresh])[0]);
+        } catch {
+            // keep stale data already set above
+        } finally {
+            setDetailBusy(false);
+        }
+    };
+
+    /* ─── respond to team / leave request ────────────────────── */
     const handleRespond = async (req, isApproved) => {
         try {
             setActionBusy(true);
@@ -298,7 +395,10 @@ export default function GroupsList() {
             } else {
                 await respondToTeamRequest({ teamId: req.teamId, isApproved });
                 snap(isApproved ? "Team request approved! ✓" : "Team request rejected.");
-                if (isApproved) fetchGroups(); // refresh groups after approval
+                if (isApproved) {
+                    fetchGroups();   // refresh groups list after a new team is approved
+                    fetchTotals();   // update capacity bar
+                }
             }
             fetchRequests();
         } catch (e) {
@@ -308,7 +408,8 @@ export default function GroupsList() {
         }
     };
 
-    /* ─── set max teams ───────────────────────────────────────── */
+    /* ─── set supervision limit ───────────────────────────────── */
+    // Uses PUT /api/Supervisor/set-max-teams
     const handleSaveLimit = async () => {
         try {
             setActionBusy(true);
@@ -318,14 +419,15 @@ export default function GroupsList() {
             snap("Supervision limit updated.");
         } catch (e) {
             snap(e?.response?.data?.message ?? "Failed to update limit.", "error");
-        } finally { setActionBusy(false); }
+        } finally {
+            setActionBusy(false);
+        }
     };
 
-    /* ─── open detail ─────────────────────────────────────────── */
-    const openDetail = (g) => { setSelected(g); setTab(0); setDetailOpen(true); };
+    /* ─── open size dialog ────────────────────────────────────── */
     const openSize = (g) => { setSizeGroup(g); setSizeVal(g.maxMembers ?? 5); setSizeOpen(true); };
 
-    /* ─── save size (local only — add API call if endpoint exists) */
+    /* ─── save team size (local until backend endpoint exists) ── */
     const handleSaveSize = () => {
         setGroups((prev) =>
             prev.map((g) => g.id === sizeGroup.id ? { ...g, maxMembers: sizeVal } : g)
@@ -352,14 +454,14 @@ export default function GroupsList() {
     const pendingCount = requests.filter((r) => r.type !== "leave").length;
     const leaveCount = requests.filter((r) => r.type === "leave").length;
 
-    /* ═════════════════════════════════════════════════════════════
+    /* ═══════════════════════════════════════════════════════════
        RENDER
-    ═════════════════════════════════════════════════════════════ */
+    ═══════════════════════════════════════════════════════════ */
     return (
         <>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
 
-                {/* ── PAGE HEADER ─────────────────────────────────────── */}
+                {/* ── PAGE HEADER ───────────────────────────────────── */}
                 <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
                     <Box>
                         <Typography variant="h2" sx={{ color: tPri, mb: 0.4 }}>My Groups</Typography>
@@ -370,7 +472,7 @@ export default function GroupsList() {
                     <Stack direction="row" gap={1}>
                         <Tooltip title="Refresh">
                             <IconButton size="small"
-                                onClick={() => { fetchGroups(); fetchRequests(); }}
+                                onClick={() => { fetchGroups(); fetchRequests(); fetchTotals(); }}
                                 sx={{
                                     color: tSec, border: `1px solid ${border}`,
                                     borderRadius: 2, "&:hover": { color: PRIMARY },
@@ -393,7 +495,7 @@ export default function GroupsList() {
                     </Stack>
                 </Stack>
 
-                {/* ── CAPACITY BAR ─────────────────────────────────────── */}
+                {/* ── CAPACITY BAR ──────────────────────────────────── */}
                 <Paper elevation={0} sx={{
                     p: 2.2, borderRadius: 2.5, border: `1px solid ${border}`, bgcolor: paperBg,
                 }}>
@@ -423,18 +525,17 @@ export default function GroupsList() {
                     )}
                 </Paper>
 
-                {/* ── PENDING REQUESTS ─────────────────────────────────── */}
+                {/* ── PENDING REQUESTS ──────────────────────────────── */}
                 {(loadingRequests || requests.length > 0) && (
                     <Paper elevation={0} sx={{
                         borderRadius: 3, border: `1px solid ${border}`,
                         bgcolor: paperBg, overflow: "hidden",
                     }}>
-                        {/* section header */}
                         <Stack direction="row" alignItems="center" justifyContent="space-between"
                             sx={{
                                 px: 2.5, py: 1.8,
                                 borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)"}`,
-                                bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.015)"
+                                bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.015)",
                             }}>
                             <Stack direction="row" alignItems="center" gap={1}>
                                 <Box sx={{ color: PRIMARY }}><HowToRegOutlinedIcon sx={{ fontSize: 18 }} /></Box>
@@ -472,7 +573,7 @@ export default function GroupsList() {
                     </Paper>
                 )}
 
-                {/* ── GROUPS GRID ──────────────────────────────────────── */}
+                {/* ── GROUPS GRID ───────────────────────────────────── */}
                 {loadingGroups ? (
                     <Box display="flex" justifyContent="center" py={6}>
                         <CircularProgress sx={{ color: PRIMARY }} />
@@ -507,7 +608,7 @@ export default function GroupsList() {
                 )}
             </Box>
 
-            {/* ══ DETAIL DIALOG ════════════════════════════════════════ */}
+            {/* ══ DETAIL DIALOG ══════════════════════════════════════ */}
             {selected && (
                 <Dialog open={detailOpen} onClose={() => setDetailOpen(false)}
                     maxWidth="sm" fullWidth
@@ -516,7 +617,7 @@ export default function GroupsList() {
                     {/* header */}
                     <Box sx={{ px: 3, py: 2.5, borderBottom: `1px solid ${border}` }}>
                         <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                            <Box>
+                            <Box flex={1} minWidth={0} pr={1}>
                                 <Stack direction="row" alignItems="center" gap={1} mb={0.3}>
                                     <Typography fontWeight={700} fontSize="1rem" sx={{ color: tPri }}>
                                         {selected.name}
@@ -527,9 +628,14 @@ export default function GroupsList() {
                                         fontWeight: 600, fontSize: "0.62rem", textTransform: "capitalize",
                                     }} />
                                 </Stack>
-                                <Typography fontSize="0.77rem" sx={{ color: tSec }}>
-                                    {selected.projectTitle ?? "—"}
+                                <Typography fontSize="0.77rem" fontWeight={600} sx={{ color: tSec }}>
+                                    {selected.projectTitle}
                                 </Typography>
+                                {selected.projectDescription && (
+                                    <Typography fontSize="0.74rem" sx={{ color: tSec, mt: 0.5 }}>
+                                        {selected.projectDescription}
+                                    </Typography>
+                                )}
                             </Box>
                             <IconButton size="small" onClick={() => setDetailOpen(false)} sx={{ color: tSec }}>
                                 <CloseIcon sx={{ fontSize: 17 }} />
@@ -537,19 +643,27 @@ export default function GroupsList() {
                         </Stack>
                     </Box>
 
+                    {/* loading overlay while fetching fresh detail */}
+                    {detailBusy && (
+                        <Box display="flex" justifyContent="center" py={1.5}
+                            sx={{ borderBottom: `1px solid ${border}` }}>
+                            <CircularProgress size={18} sx={{ color: PRIMARY }} />
+                        </Box>
+                    )}
+
                     {/* tabs */}
                     <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{
                         px: 1,
                         borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)"}`,
                         "& .MuiTab-root": {
                             textTransform: "none", fontWeight: 600,
-                            fontSize: "0.82rem", minHeight: 44, color: tSec
+                            fontSize: "0.82rem", minHeight: 44, color: tSec,
                         },
                         "& .Mui-selected": { color: PRIMARY },
                         "& .MuiTabs-indicator": { bgcolor: PRIMARY, height: 2.5, borderRadius: 2 },
                     }}>
                         <Tab label="Overview" />
-                        <Tab label="Members" />
+                        <Tab label={`Members (${(selected.members ?? []).length})`} />
                         <Tab label="Tasks" />
                     </Tabs>
 
@@ -580,10 +694,10 @@ export default function GroupsList() {
                                 {/* stats grid */}
                                 <Grid container spacing={1.5}>
                                     {[
-                                        { label: "To Do", val: selected.tasks?.todo ?? "—", color: tSec },
-                                        { label: "In Progress", val: selected.tasks?.inProgress ?? "—", color: PRIMARY },
-                                        { label: "Done", val: selected.tasks?.done ?? "—", color: "#3DB97A" },
-                                        { label: "Files", val: selected.files?.total ?? "—", color: "#7E9FC4" },
+                                        { label: "To Do", val: selected.tasks?.todo, color: tSec },
+                                        { label: "In Progress", val: selected.tasks?.inProgress, color: PRIMARY },
+                                        { label: "Done", val: selected.tasks?.done, color: "#3DB97A" },
+                                        { label: "Files", val: selected.files?.total, color: "#7E9FC4" },
                                     ].map((item) => (
                                         <Grid item xs={6} key={item.label}>
                                             <Box sx={{
@@ -592,7 +706,7 @@ export default function GroupsList() {
                                                 bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.015)",
                                             }}>
                                                 <Typography fontSize="1.5rem" fontWeight={700} sx={{ color: item.color }}>
-                                                    {item.val}
+                                                    {item.val ?? "—"}
                                                 </Typography>
                                                 <Typography fontSize="0.7rem" sx={{ color: tSec }}>{item.label}</Typography>
                                             </Box>
@@ -600,10 +714,10 @@ export default function GroupsList() {
                                     ))}
                                 </Grid>
 
-                                {/* supervisor info */}
+                                {/* last active */}
                                 <Box sx={{
                                     p: 1.8, borderRadius: 2.5, border: `1px solid ${border}`,
-                                    bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.015)"
+                                    bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.015)",
                                 }}>
                                     <Typography fontSize="0.68rem" fontWeight={700} sx={{
                                         color: tSec, textTransform: "uppercase", letterSpacing: "0.08em", mb: 0.8,
@@ -634,18 +748,18 @@ export default function GroupsList() {
                                                 width: 36, height: 36, fontWeight: 700, fontSize: "0.8rem",
                                                 bgcolor: MBR_COLORS[i % MBR_COLORS.length],
                                             }}>
-                                                {initials(m.fullName ?? m.name ?? "?")}
+                                                {initials(m.fullName)}
                                             </Avatar>
                                             <Box flex={1} minWidth={0}>
                                                 <Typography fontWeight={600} fontSize="0.86rem" noWrap
                                                     sx={{ color: tPri }}>
-                                                    {m.fullName ?? m.name ?? "—"}
+                                                    {m.fullName ?? "—"}
                                                 </Typography>
                                                 <Typography fontSize="0.72rem" sx={{ color: tSec }}>
-                                                    {m.role ?? m.email ?? ""}
+                                                    {m.email ?? ""}
                                                 </Typography>
                                             </Box>
-                                            {(m.isLeader ?? m.role === "Lead" ?? i === 0) && (
+                                            {m.isLeader && (
                                                 <Chip label="Leader" size="small" sx={{
                                                     height: 18, fontSize: "0.6rem", fontWeight: 700,
                                                     bgcolor: `${PRIMARY}15`, color: PRIMARY,
@@ -693,7 +807,7 @@ export default function GroupsList() {
                 </Dialog>
             )}
 
-            {/* ══ TEAM SIZE DIALOG ═════════════════════════════════════ */}
+            {/* ══ TEAM SIZE DIALOG ═══════════════════════════════════ */}
             {sizeGroup && (
                 <Dialog open={sizeOpen} onClose={() => setSizeOpen(false)}
                     maxWidth="xs" fullWidth
@@ -731,7 +845,7 @@ export default function GroupsList() {
                 </Dialog>
             )}
 
-            {/* ══ SUPERVISION LIMIT DIALOG ════════════════════════════ */}
+            {/* ══ SUPERVISION LIMIT DIALOG ═══════════════════════════ */}
             <Dialog open={limitOpen} onClose={() => setLimitOpen(false)}
                 maxWidth="xs" fullWidth
                 PaperProps={{ sx: { borderRadius: 3, border: `1px solid ${border}`, bgcolor: paperBg } }}>

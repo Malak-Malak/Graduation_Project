@@ -903,7 +903,7 @@ import WorkOutlineIcon from "@mui/icons-material/WorkOutline";   // للسوبر
 import EditProfileModal from "./EditProfileModal";
 import ProfileSetupModal from "./ProfileSetupModal";
 import { useAuth } from "../../../../contexts/AuthContext";
-import StudentApi from "../../../../api/handler/endpoints/StudentApi";
+import studentApi from "../../../../api/handler/endpoints/studentApi";
 
 // ══════════════════════════════════════════════════════════════════════
 // ثوابت خارج الـ component

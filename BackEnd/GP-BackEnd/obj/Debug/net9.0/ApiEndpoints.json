@@ -382,6 +382,16 @@
   },
   {
     "ContainingType": "GP_BackEnd.Controllers.SupervisorController",
+    "Method": "GetMyTeams",
+    "RelativePath": "api/Supervisor/my-teams",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.SupervisorController",
     "Method": "GetPendingTeamRequests",
     "RelativePath": "api/Supervisor/pending-team-requests",
     "HttpMethod": "GET",
@@ -436,6 +446,32 @@
         "IsRequired": true
       }
     ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.SupervisorController",
+    "Method": "GetTeamById",
+    "RelativePath": "api/Supervisor/team/{teamId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "teamId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.SupervisorController",
+    "Method": "GetTotalTeamsCount",
+    "RelativePath": "api/Supervisor/total-teams",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
     "ReturnTypes": []
   },
   {

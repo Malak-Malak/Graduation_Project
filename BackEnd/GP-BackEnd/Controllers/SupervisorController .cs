@@ -65,5 +65,35 @@ namespace GP_BackEnd.Controllers
 
             return Ok("Max teams updated successfully.");
         }
+        // GET api/supervisor/my-teams
+        [HttpGet("my-teams")]
+        public async Task<IActionResult> GetMyTeams()
+        {
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var teams = await _supervisorService.GetMyTeamsAsync(supervisorId);
+            return Ok(teams);
+        }
+
+        // GET api/supervisor/team/{teamId}
+        [HttpGet("team/{teamId}")]
+        public async Task<IActionResult> GetTeamById(int teamId)
+        {
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var team = await _supervisorService.GetTeamByIdAsync(supervisorId, teamId);
+
+            if (team == null)
+                return NotFound("Team not found or you are not the supervisor of this team.");
+
+            return Ok(team);
+        }
+
+        // GET api/supervisor/total-teams
+        [HttpGet("total-teams")]
+        public async Task<IActionResult> GetTotalTeamsCount()
+        {
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var count = await _supervisorService.GetTotalTeamsCountAsync(supervisorId);
+            return Ok(new { totalTeams = count });
+        }
     }
 }

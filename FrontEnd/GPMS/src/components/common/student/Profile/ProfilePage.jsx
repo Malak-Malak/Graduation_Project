@@ -959,7 +959,7 @@ export default function ProfilePage() {
 
     // ── جلب البروفايل ──────────────────────────────────────────────
     useEffect(() => {
-        StudentApi.getProfile()
+        studentApi.getProfile()
             .then((d) => {
                 const normalized = normalizeProfile(d);
                 setProfile(normalized);
@@ -984,7 +984,7 @@ export default function ProfilePage() {
     // ── حفظ التعديلات ──────────────────────────────────────────────
     const handleSave = async (updated) => {
         try {
-            await StudentApi.updateProfile(updated);
+            await studentApi.updateProfile(updated);
             setProfile(normalizeProfile({
                 fullName: updated.fullName,
                 phoneNumber: updated.phoneNumber,

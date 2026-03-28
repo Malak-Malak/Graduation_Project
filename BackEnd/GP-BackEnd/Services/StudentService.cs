@@ -502,5 +502,92 @@ namespace GP_BackEnd.Services
             await _context.SaveChangesAsync();
             return true;
         }
+        // Get my requests to join teams
+        public async Task<List<MyJoinRequestDto>> GetMyJoinRequestsAsync(int studentId)
+        {
+            return await _context.TeamJoinRequests
+                .Include(jr => jr.Team)
+                .Where(jr => jr.StudentId == studentId && jr.RequestType == "Request")
+                .Select(jr => new MyJoinRequestDto
+                {
+                    Id = jr.Id,
+                    TeamId = jr.TeamId,
+                    TeamName = jr.Team.ProjectTitle,
+                    Status = jr.Status,
+                    SentAt = jr.SentAt
+                })
+                .ToListAsync();
+        }
+
+        // Get join requests for my team
+        public async Task<List<TeamJoinRequestDto>> GetTeamJoinRequestsAsync(int studentId)
+        {
+            var teamMember = await _context.TeamMembers
+                .FirstOrDefaultAsync(tm => tm.UserId == studentId);
+
+            if (teamMember == null) return new List<TeamJoinRequestDto>();
+
+            return await _context.TeamJoinRequests
+                .Include(jr => jr.Student)
+                    .ThenInclude(s => s.UserProfile)
+                .Where(jr => jr.TeamId == teamMember.TeamId
+                    && jr.RequestType == "Request"
+                    && jr.Status == "Pending")
+                .Select(jr => new TeamJoinRequestDto
+                {
+                    Id = jr.Id,
+                    StudentId = jr.StudentId,
+                    Username = jr.Student.Username,
+                    FullName = jr.Student.UserProfile != null
+                        ? jr.Student.UserProfile.FullName
+                        : jr.Student.Username,
+                    SentAt = jr.SentAt
+                })
+                .ToListAsync();
+        }
+
+        // Delete my join request
+        public async Task<bool> DeleteMyJoinRequestAsync(int studentId, int requestId)
+        {
+            var request = await _context.TeamJoinRequests
+                .FirstOrDefaultAsync(jr => jr.Id == requestId
+                    && jr.StudentId == studentId
+                    && jr.RequestType == "Request");
+
+            if (request == null) return false;
+
+            _context.TeamJoinRequests.Remove(request);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        // Reject join request
+        public async Task<bool> RejectJoinRequestAsync(int memberId, int requestId)
+        {
+            var joinRequest = await _context.TeamJoinRequests
+                .FirstOrDefaultAsync(jr => jr.Id == requestId
+                    && jr.RequestType == "Request"
+                    && jr.Status == "Pending");
+
+            if (joinRequest == null) return false;
+
+            var isMember = await _context.TeamMembers
+                .AnyAsync(tm => tm.TeamId == joinRequest.TeamId && tm.UserId == memberId);
+
+            if (!isMember) return false;
+
+            joinRequest.Status = "Rejected";
+
+            _context.Notifications.Add(new Notification
+            {
+                Title = "Join Request Rejected",
+                Message = "Your request to join the team has been rejected.",
+                CreatedAt = DateTime.UtcNow,
+                UserId = joinRequest.StudentId
+            });
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 }

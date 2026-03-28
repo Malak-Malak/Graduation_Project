@@ -153,5 +153,48 @@ namespace GP_BackEnd.Controllers
 
             return Ok("Project info updated successfully.");
         }
+        // GET api/student/my-join-requests
+        [HttpGet("my-join-requests")]
+        public async Task<IActionResult> GetMyJoinRequests()
+        {
+            var studentId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var requests = await _studentService.GetMyJoinRequestsAsync(studentId);
+            return Ok(requests);
+        }
+
+        // GET api/student/team-join-requests
+        [HttpGet("team-join-requests")]
+        public async Task<IActionResult> GetTeamJoinRequests()
+        {
+            var studentId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var requests = await _studentService.GetTeamJoinRequestsAsync(studentId);
+            return Ok(requests);
+        }
+
+        // DELETE api/student/delete-join-request/{requestId}
+        [HttpDelete("delete-join-request/{requestId}")]
+        public async Task<IActionResult> DeleteMyJoinRequest(int requestId)
+        {
+            var studentId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var result = await _studentService.DeleteMyJoinRequestAsync(studentId, requestId);
+
+            if (!result)
+                return BadRequest("Request not found or you are not the owner of this request.");
+
+            return Ok("Join request deleted successfully.");
+        }
+
+        // POST api/student/reject-join-request/{requestId}
+        [HttpPost("reject-join-request/{requestId}")]
+        public async Task<IActionResult> RejectJoinRequest(int requestId)
+        {
+            var memberId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var result = await _studentService.RejectJoinRequestAsync(memberId, requestId);
+
+            if (!result)
+                return BadRequest("Request not found or you are not a member of this team.");
+
+            return Ok("Join request rejected.");
+        }
     }
 }

@@ -278,8 +278,34 @@
   },
   {
     "ContainingType": "GP_BackEnd.Controllers.StudentController",
+    "Method": "DeleteMyJoinRequest",
+    "RelativePath": "api/Student/delete-join-request/{requestId}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "requestId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.StudentController",
     "Method": "GetMyInvitations",
     "RelativePath": "api/Student/my-invitations",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.StudentController",
+    "Method": "GetMyJoinRequests",
+    "RelativePath": "api/Student/my-join-requests",
     "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
@@ -294,6 +320,22 @@
     "IsController": true,
     "Order": 0,
     "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.StudentController",
+    "Method": "RejectJoinRequest",
+    "RelativePath": "api/Student/reject-join-request/{requestId}",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "requestId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
     "ReturnTypes": []
   },
   {
@@ -374,6 +416,16 @@
     "ContainingType": "GP_BackEnd.Controllers.StudentController",
     "Method": "GetAllSupervisors",
     "RelativePath": "api/Student/supervisors",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.StudentController",
+    "Method": "GetTeamJoinRequests",
+    "RelativePath": "api/Student/team-join-requests",
     "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,

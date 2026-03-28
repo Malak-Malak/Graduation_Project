@@ -242,6 +242,16 @@
   },
   {
     "ContainingType": "GP_BackEnd.Controllers.StudentController",
+    "Method": "GetAllStudents",
+    "RelativePath": "api/Student/all-students",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.StudentController",
     "Method": "GetAvailableStudents",
     "RelativePath": "api/Student/available-students",
     "HttpMethod": "GET",

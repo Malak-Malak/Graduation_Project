@@ -45,14 +45,16 @@ namespace GP_BackEnd.Services
                 })
                 .ToListAsync();
         }
-
-        // Get all available teams (not full)
+        // GET all available teams with there memebers
         public async Task<List<AvailableTeamDto>> GetAvailableTeamsAsync()
         {
             var teams = await _context.Teams
                 .Include(t => t.TeamMembers)
+                    .ThenInclude(tm => tm.User)
+                        .ThenInclude(u => u.UserProfile)
                 .Include(t => t.Supervisor)
                     .ThenInclude(s => s.UserProfile)
+                .Include(t => t.Project)
                 .Where(t => t.Status == "Pending" || t.Status == "Active")
                 .ToListAsync();
 
@@ -62,14 +64,35 @@ namespace GP_BackEnd.Services
                 {
                     Id = t.Id,
                     ProjectTitle = t.ProjectTitle,
+                    ProjectDescription = t.Project != null ? t.Project.Description : "",
                     SupervisorName = t.Supervisor.UserProfile != null
                         ? t.Supervisor.UserProfile.FullName
                         : t.Supervisor.Username,
                     MembersCount = t.TeamMembers.Count,
-                    RemainingSlots = 4 - t.TeamMembers.Count
+                    RemainingSlots = 4 - t.TeamMembers.Count,
+                    MemberNames = t.TeamMembers
+                        .Select(tm => tm.User.UserProfile != null
+                            ? tm.User.UserProfile.FullName
+                            : tm.User.Username)
+                        .ToList()
                 })
                 .ToList();
         }
+        //GET all the students (either in team or not) 
+        public async Task<List<AvailableStudentDto>> GetAllStudentsAsync()
+        {
+            return await _context.Users
+                .Where(u => u.Role == "Student")
+                .Select(u => new AvailableStudentDto
+                {
+                    UserId = u.Id,
+                    Username = u.Username,
+                    FullName = u.UserProfile != null ? u.UserProfile.FullName : u.Username,
+                    Field = u.UserProfile != null ? u.UserProfile.Field : null
+                })
+                .ToListAsync();
+        }
+
 
         // Get my team
         public async Task<StudentTeamDto?> GetMyTeamAsync(int studentId)

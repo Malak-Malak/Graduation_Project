@@ -196,5 +196,12 @@ namespace GP_BackEnd.Controllers
 
             return Ok("Join request rejected.");
         }
+        // GET api/student/all-students
+        [HttpGet("all-students")]
+        public async Task<IActionResult> GetAllStudents()
+        {
+            var students = await _studentService.GetAllStudentsAsync();
+            return Ok(students);
+        }
     }
 }

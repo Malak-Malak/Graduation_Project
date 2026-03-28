@@ -84,7 +84,7 @@ const NAV_ITEMS = {
     student: [
         { label: "Dashboard", icon: <DashboardOutlinedIcon />, path: "/student" },
         { label: "Profile", icon: <AccountCircleOutlinedIcon />, path: "/student/profile" },
-        { label: "Team Discovery Hub", icon: <SearchOutlinedIcon />, path: "/student/team-finder" },
+        { label: "Discovery Hub", icon: <SearchOutlinedIcon />, path: "/student/team-finder" },
         { label: "Kanban Board", icon: <ViewKanbanOutlinedIcon />, path: "/student/kanban" },
         { label: "Timeline", icon: <TimelineOutlinedIcon />, path: "/student/timeline" },
         { label: "Files", icon: <FolderOutlinedIcon />, path: "/student/files" },

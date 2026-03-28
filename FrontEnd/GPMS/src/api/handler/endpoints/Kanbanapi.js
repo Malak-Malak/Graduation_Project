@@ -7,14 +7,14 @@ import axiosInstance from "../../axiosInstance";
  * GET /api/Kanban/board
  */
 export const getKanbanBoard = () =>
-    axiosInstance.get("/api/Kanban/board");
+    axiosInstance.get("/Kanban/board");
 
 /**
  * Fetch team members available for assignment
  * GET /api/Kanban/team-members
  */
 export const getTeamMembers = () =>
-    axiosInstance.get("/api/Kanban/team-members");
+    axiosInstance.get("/Kanban/team-members");
 
 /**
  * Create a new task
@@ -22,7 +22,7 @@ export const getTeamMembers = () =>
  * @param {{ title, description, status, deadline, assignedUserIds: number[] }} payload
  */
 export const createTask = (payload) =>
-    axiosInstance.post("/api/Kanban/create-task", payload);
+    axiosInstance.post("/Kanban/create-task", payload);
 
 /**
  * Update task details (title / description / deadline / assignees)
@@ -31,7 +31,7 @@ export const createTask = (payload) =>
  * @param {{ title, description, deadline, assignedUserIds: number[] }} payload
  */
 export const updateTask = (taskId, payload) =>
-    axiosInstance.put(`/api/Kanban/update-task/${taskId}`, payload);
+    axiosInstance.put(`/Kanban/update-task/${taskId}`, payload);
 
 /**
  * Move a task to a different status column
@@ -39,7 +39,7 @@ export const updateTask = (taskId, payload) =>
  * @param {{ taskId: number, status: string }} payload
  */
 export const updateTaskStatus = (payload) =>
-    axiosInstance.put("/api/Kanban/update-status", payload);
+    axiosInstance.put("/Kanban/update-status", payload);
 
 /**
  * Delete a task permanently
@@ -47,4 +47,4 @@ export const updateTaskStatus = (payload) =>
  * @param {number} taskId
  */
 export const deleteTask = (taskId) =>
-    axiosInstance.delete(`/api/Kanban/delete-task/${taskId}`);
+    axiosInstance.delete(`/Kanban/delete-task/${taskId}`);

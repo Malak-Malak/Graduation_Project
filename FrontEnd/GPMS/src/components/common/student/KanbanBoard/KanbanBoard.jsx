@@ -1,4 +1,5 @@
-// C:\Users\Dell\Desktop\Graduation_Project\FrontEnd\GPMS\src\components\common\student\KanbanBoard\KanbanBoard.jsx
+// src/components/common/student/KanbanBoard/KanbanBoard.jsx
+// ✅ Fix: normaliseBoardResponse now handles { toDo, inProgress, done } shape from backend
 
 import { useState, useEffect, useCallback } from "react";
 import {
@@ -42,16 +43,10 @@ import {
 /* ── constants ─────────────────────────────────────────────────── */
 const COL_ORDER = ["todo", "inProgress", "done"];
 
-// Map backend status strings → frontend column keys (adjust to match your backend)
-const STATUS_TO_COL = {
-    Todo: "todo",
-    todo: "todo",
-    "To Do": "todo",
-    InProgress: "inProgress",
-    inProgress: "inProgress",
-    "In Progress": "inProgress",
-    Done: "done",
-    done: "done",
+const COL_META = {
+    todo: { label: "To Do", color: "#4F8EF7", headerBg: "rgba(79,142,247,0.08)", dot: "#4F8EF7" },
+    inProgress: { label: "In Progress", color: "#d0895b", headerBg: "rgba(208,137,91,0.08)", dot: "#d0895b" },
+    done: { label: "Done", color: "#3DB97A", headerBg: "rgba(61,185,122,0.08)", dot: "#3DB97A" },
 };
 
 // Map frontend column key → backend status string
@@ -59,12 +54,6 @@ const COL_TO_STATUS = {
     todo: "Todo",
     inProgress: "InProgress",
     done: "Done",
-};
-
-const COL_META = {
-    todo: { label: "To Do", color: "#4F8EF7", headerBg: "rgba(79,142,247,0.08)", dot: "#4F8EF7" },
-    inProgress: { label: "In Progress", color: "#d0895b", headerBg: "rgba(208,137,91,0.08)", dot: "#d0895b" },
-    done: { label: "Done", color: "#3DB97A", headerBg: "rgba(61,185,122,0.08)", dot: "#3DB97A" },
 };
 
 const PRIORITY = {
@@ -75,64 +64,72 @@ const PRIORITY = {
 
 const MBR_CLR = ["#B46F4C", "#6D8A7D", "#C49A6C", "#7E9FC4", "#9B7EC8"];
 
-const EMPTY_FORM = {
-    title: "",
-    description: "",
-    deadline: "",
-    assignedUserIds: [],
-};
+const EMPTY_FORM = { title: "", description: "", deadline: "", assignedUserIds: [] };
 
 const isColId = (id) => COL_ORDER.includes(id);
 
 /* ── helpers ────────────────────────────────────────────────────── */
 
 /**
- * Normalise a raw board response from the backend into:
- * { todo: Task[], inProgress: Task[], done: Task[] }
+ * Convert a single raw task object from the backend into our internal shape.
+ */
+const mapTask = (task) => ({
+    id: String(task.id),
+    backendId: task.id,
+    title: task.title ?? "Untitled",
+    description: task.description ?? "",
+    priority: task.priority ?? "medium",
+    due: task.deadline ? formatDeadline(task.deadline) : null,
+    deadline: task.deadline ?? null,
+    assignees: (task.assignedMembers ?? task.assignedUsers ?? []).map((u) =>
+        (u.fullName ?? u.name ?? "?").charAt(0).toUpperCase()
+    ),
+    assignedUsers: task.assignedMembers ?? task.assignedUsers ?? [],
+    assignedUserIds: (task.assignedMembers ?? task.assignedUsers ?? []).map((u) => u.id),
+    comments: (task.comments ?? []).length,
+    files: (task.files ?? []).length,
+});
+
+/**
+ * ✅ FIXED: Normalise the board response.
  *
- * Expected backend shape (adjust field names if your API differs):
- * {
- *   tasks: [
- *     {
- *       id: 1,
- *       title: "...",
- *       description: "...",
- *       status: "Todo" | "InProgress" | "Done",
- *       deadline: "2026-04-01T00:00:00Z" | null,
- *       assignedUsers: [{ id: 1, fullName: "Alice", ... }],
- *       comments: [...],
- *       files: [...],
- *       priority: "high" | "medium" | "low"   // optional
- *     }
- *   ]
- * }
+ * The backend returns one of these shapes:
+ *   A) { toDo: [...], inProgress: [...], done: [...] }   ← what we actually get
+ *   B) { tasks: [...] }                                  ← flat list fallback
+ *   C) [...]                                             ← plain array fallback
+ *
+ * We map all three into { todo, inProgress, done }.
  */
 const normaliseBoardResponse = (data) => {
+    // ── Shape A: { toDo, inProgress, done } ──────────────────────
+    // The backend uses "toDo" (camelCase with capital D).
+    if (data && (Array.isArray(data.toDo) || Array.isArray(data.inProgress) || Array.isArray(data.done))) {
+        return {
+            todo: (data.toDo ?? []).map(mapTask),
+            inProgress: (data.inProgress ?? []).map(mapTask),
+            done: (data.done ?? []).map(mapTask),
+        };
+    }
+
+    // ── Shape B / C: flat task list ───────────────────────────────
+    // Status strings the backend might use → our column key
+    const STATUS_TO_COL = {
+        Todo: "todo",
+        todo: "todo",
+        "To Do": "todo",
+        InProgress: "inProgress",
+        inProgress: "inProgress",
+        "In Progress": "inProgress",
+        Done: "done",
+        done: "done",
+    };
+
     const columns = { todo: [], inProgress: [], done: [] };
-
-    // Support both { tasks: [] } and plain array responses
-    const raw = Array.isArray(data) ? data : data?.tasks ?? data?.columns ?? [];
-
+    const raw = Array.isArray(data) ? data : data?.tasks ?? [];
     raw.forEach((task) => {
         const colKey = STATUS_TO_COL[task.status] ?? "todo";
-        columns[colKey].push({
-            id: String(task.id),
-            backendId: task.id,
-            title: task.title ?? "Untitled",
-            description: task.description ?? "",
-            priority: task.priority ?? "medium",
-            due: task.deadline ? formatDeadline(task.deadline) : null,
-            deadline: task.deadline ?? null,
-            assignees: (task.assignedUsers ?? []).map((u) =>
-                (u.fullName ?? u.name ?? "?").charAt(0).toUpperCase()
-            ),
-            assignedUsers: task.assignedUsers ?? [],
-            assignedUserIds: (task.assignedUsers ?? []).map((u) => u.id),
-            comments: (task.comments ?? []).length,
-            files: (task.files ?? []).length,
-        });
+        columns[colKey].push(mapTask(task));
     });
-
     return columns;
 };
 
@@ -188,7 +185,7 @@ function CardContent({ task, colId, theme }) {
                 <Stack direction="row" alignItems="center" gap={0.5} mb={1} pl={0.5}>
                     <CalendarTodayOutlinedIcon sx={{
                         fontSize: 11,
-                        color: task.due === "Tomorrow" || task.due === "Today" ? "#d0895b" : textSec,
+                        color: ["Tomorrow", "Today"].includes(task.due) ? "#d0895b" : textSec,
                     }} />
                     <Typography sx={{
                         fontSize: "0.72rem",
@@ -389,7 +386,7 @@ export default function KanbanBoard() {
 
     /* ── state ── */
     const [columns, setColumns] = useState({ todo: [], inProgress: [], done: [] });
-    const [members, setMembers] = useState([]);   // [{ id, fullName, ... }]
+    const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeTask, setActiveTask] = useState(null);
     const [activeCol, setActiveCol] = useState(null);
@@ -450,6 +447,7 @@ export default function KanbanBoard() {
                 getKanbanBoard(),
                 getTeamMembers(),
             ]);
+            // ✅ boardRes.data is { toDo, inProgress, done } — handled inside normaliseBoardResponse
             setColumns(normaliseBoardResponse(boardRes.data));
             setMembers(membersRes.data ?? []);
         } catch (err) {
@@ -462,7 +460,7 @@ export default function KanbanBoard() {
 
     useEffect(() => { fetchBoard(); }, [fetchBoard]);
 
-    /* ── drag ── */
+    /* ── drag handlers ── */
     const handleDragStart = ({ active }) => {
         setActiveTask(findTask(active.id));
         setActiveCol(findColOf(active.id) ?? null);
@@ -511,15 +509,12 @@ export default function KanbanBoard() {
             const task = findTask(active.id);
             if (!task) return;
             try {
-                await updateTaskStatus({
-                    taskId: task.backendId,
-                    status: COL_TO_STATUS[toCol],
-                });
+                await updateTaskStatus({ taskId: task.backendId, status: COL_TO_STATUS[toCol] });
                 showSnack(`Task moved to ${COL_META[toCol].label}`);
             } catch (err) {
                 console.error("Failed to update status:", err);
                 showSnack("Failed to move task. Reverting…", "error");
-                fetchBoard(); // revert optimistic update
+                fetchBoard();
             }
         }
     };
@@ -540,7 +535,7 @@ export default function KanbanBoard() {
                 description: addForm.description,
                 status: COL_TO_STATUS[addCol],
                 deadline: addForm.deadline ? new Date(addForm.deadline).toISOString() : null,
-                assignedUserIds: addForm.assignedUserIds,
+                assignedUserIds: addForm.assignedUserIds.map(Number),
             });
             setAddOpen(false);
             showSnack("Task created successfully!");
@@ -575,7 +570,7 @@ export default function KanbanBoard() {
                 title: editForm.title,
                 description: editForm.description,
                 deadline: editForm.deadline ? new Date(editForm.deadline).toISOString() : null,
-                assignedUserIds: editForm.assignedUserIds,
+                assignedUserIds: editForm.assignedUserIds.map(Number),
             });
             setDetailOpen(false);
             showSnack("Task updated successfully!");
@@ -591,7 +586,7 @@ export default function KanbanBoard() {
     const handleMoveTask = async (toCol) => {
         const fromCol = selectedCol;
         if (!fromCol || fromCol === toCol) return;
-        // optimistic
+        // optimistic update
         setColumns(prev => ({
             ...prev,
             [fromCol]: prev[fromCol].filter(tk => tk.id !== selected.id),
@@ -599,10 +594,7 @@ export default function KanbanBoard() {
         }));
         setDetailOpen(false);
         try {
-            await updateTaskStatus({
-                taskId: selected.backendId,
-                status: COL_TO_STATUS[toCol],
-            });
+            await updateTaskStatus({ taskId: selected.backendId, status: COL_TO_STATUS[toCol] });
             showSnack(`Task moved to ${COL_META[toCol].label}`);
         } catch (err) {
             console.error("Failed to move task:", err);
@@ -612,6 +604,7 @@ export default function KanbanBoard() {
     };
 
     const handleDelete = async () => {
+        if (!selected) return;
         try {
             setSaving(true);
             await deleteTask(selected.backendId);
@@ -765,9 +758,9 @@ export default function KanbanBoard() {
                                             multiple label="Assignees"
                                             value={editForm.assignedUserIds}
                                             onChange={e => setEditForm(p => ({ ...p, assignedUserIds: e.target.value }))}
-                                            renderValue={(selected) => (
+                                            renderValue={(sel) => (
                                                 <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                                                    {selected.map(id => {
+                                                    {sel.map(id => {
                                                         const m = members.find(mb => mb.id === id);
                                                         return <Chip key={id} label={m?.fullName ?? id} size="small" />;
                                                     })}

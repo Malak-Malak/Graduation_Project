@@ -805,6 +805,18 @@
         }
       }
     },
+    "/api/Supervisor/leave-requests": {
+      "get": {
+        "tags": [
+          "Supervisor"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/UserProfile": {
       "get": {
         "tags": [

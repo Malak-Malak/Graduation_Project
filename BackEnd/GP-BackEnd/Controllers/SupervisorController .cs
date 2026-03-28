@@ -95,5 +95,13 @@ namespace GP_BackEnd.Controllers
             var count = await _supervisorService.GetTotalTeamsCountAsync(supervisorId);
             return Ok(new { totalTeams = count });
         }
+        // GET api/supervisor/leave-requests
+        [HttpGet("leave-requests")]
+        public async Task<IActionResult> GetLeaveRequests()
+        {
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var requests = await _supervisorService.GetLeaveRequestsAsync(supervisorId);
+            return Ok(requests);
+        }
     }
 }

@@ -218,5 +218,25 @@ namespace GP_BackEnd.Services
             return await _context.Teams
                 .CountAsync(t => t.SupervisorId == supervisorId);
         }
+        // Get all leave requests for supervisor's teams
+        public async Task<List<LeaveRequestDto>> GetLeaveRequestsAsync(int supervisorId)
+        {
+            return await _context.TeamMembers
+                .Include(tm => tm.User)
+                    .ThenInclude(u => u.UserProfile)
+                .Include(tm => tm.Team)
+                .Where(tm => tm.Team.SupervisorId == supervisorId && tm.HasRequestedLeave)
+                .Select(tm => new LeaveRequestDto
+                {
+                    TeamMemberId = tm.Id,
+                    TeamId = tm.TeamId,
+                    TeamName = tm.Team.ProjectTitle,
+                    UserId = tm.UserId,
+                    Username = tm.User.Username,
+                    FullName = tm.User.UserProfile != null ? tm.User.UserProfile.FullName : tm.User.Username,
+                    LeaveStatus = tm.LeaveStatus
+                })
+                .ToListAsync();
+        }
     }
 }

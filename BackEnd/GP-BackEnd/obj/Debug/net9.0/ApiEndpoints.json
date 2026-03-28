@@ -398,6 +398,16 @@
   },
   {
     "ContainingType": "GP_BackEnd.Controllers.SupervisorController",
+    "Method": "GetLeaveRequests",
+    "RelativePath": "api/Supervisor/leave-requests",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.SupervisorController",
     "Method": "GetMyTeams",
     "RelativePath": "api/Supervisor/my-teams",
     "HttpMethod": "GET",

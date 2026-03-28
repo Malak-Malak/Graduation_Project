@@ -1,4 +1,13 @@
 // src/components/common/supervisor/Pendingrequests/Pendingrequests.jsx
+//
+// Supervisor "Pending Requests" page.
+//
+// Data sources:
+//   getPendingTeamRequests()  → GET /api/Supervisor/pending-team-requests
+//   getPendingLeaveRequests() → GET /api/Supervisor/leave-requests  (⚠ pending backend, falls back to [])
+//   respondToTeamRequest()    → POST /api/Supervisor/respond-to-team-request
+//   respondToLeaveRequest()   → POST /api/Supervisor/respond-to-leave-request
+
 import { useState, useEffect, useCallback } from "react";
 import {
     Box, Paper, Typography, Stack, Avatar, Chip, Button, AvatarGroup,
@@ -10,8 +19,10 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
 import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
 import RefreshOutlinedIcon from "@mui/icons-material/RefreshOutlined";
+
 import {
     getPendingTeamRequests,
+    getPendingLeaveRequests,
     respondToTeamRequest,
     respondToLeaveRequest,
 } from "../../../../api/handler/endpoints/supervisorApi";
@@ -19,20 +30,9 @@ import {
 const DEPT_CLR = { CS: "#B46F4C", IT: "#6D8A7D", CE: "#7E9FC4" };
 const MBR_COLORS = ["#B46F4C", "#6D8A7D", "#C49A6C", "#7E9FC4", "#9B7EC8"];
 
-// ─── helpers to normalize whatever shape the backend returns ─────────────────
-// Backend might return:
-//   - Array of team requests directly
-//   - { teamRequests: [], leaveRequests: [] }
-// We normalise to { teamRequests, leaveRequests }
-const normalise = (data) => {
-    if (Array.isArray(data)) return { teamRequests: data, leaveRequests: [] };
-    return {
-        teamRequests: data.teamRequests ?? data.pendingTeamRequests ?? [],
-        leaveRequests: data.leaveRequests ?? data.pendingLeaveRequests ?? [],
-    };
-};
+// ─── normalisers ─────────────────────────────────────────────────────────────
 
-// Map a single backend request object to the shape the UI expects
+// Map a single backend team-request object to the shape the UI expects
 const mapTeamReq = (r) => ({
     id: r.teamId ?? r.id,
     teamId: r.teamId ?? r.id,
@@ -47,6 +47,7 @@ const mapTeamReq = (r) => ({
     description: r.description ?? "",
 });
 
+// Map a single backend leave-request object to the shape the UI expects
 const mapLeaveReq = (r) => ({
     id: r.teamMemberId ?? r.id,
     teamMemberId: r.teamMemberId ?? r.id,
@@ -70,7 +71,7 @@ export default function PendingRequests() {
     const [fetchLoading, setFetchLoading] = useState(false);
     const [fetchError, setFetchError] = useState(null);
 
-    // "approve-teamId" | "reject-teamId" | null
+    // "approve-<id>" | "reject-<id>" | null
     const [actionLoading, setActionLoading] = useState(null);
 
     // reject dialog
@@ -83,14 +84,27 @@ export default function PendingRequests() {
     const [snack, setSnack] = useState({ open: false, msg: "", severity: "success" });
 
     // ── fetch ──────────────────────────────────────────────────────────────────
+    // Fetches team join requests and leave requests in parallel.
+    // getPendingLeaveRequests() falls back to [] until the backend is ready,
+    // so this will never throw even if that endpoint is missing.
     const fetchRequests = useCallback(async () => {
         setFetchLoading(true);
         setFetchError(null);
         try {
-            const raw = await getPendingTeamRequests();
-            const { teamRequests: tr, leaveRequests: lr } = normalise(raw);
-            setTeamRequests(tr.map(mapTeamReq));
-            setLeaveRequests(lr.map(mapLeaveReq));
+            const [teamData, leaveData] = await Promise.all([
+                getPendingTeamRequests(),
+                getPendingLeaveRequests(), // ⚠ returns [] until backend ships
+            ]);
+
+            // teamData may be a plain array — normalise either way
+            const teamArr = Array.isArray(teamData)
+                ? teamData
+                : (teamData?.teamRequests ?? teamData?.pendingTeamRequests ?? []);
+
+            const leaveArr = Array.isArray(leaveData) ? leaveData : [];
+
+            setTeamRequests(teamArr.map(mapTeamReq));
+            setLeaveRequests(leaveArr.map(mapLeaveReq));
         } catch (err) {
             setFetchError(err?.response?.data?.message || "Failed to load requests.");
         } finally {
@@ -100,7 +114,10 @@ export default function PendingRequests() {
 
     useEffect(() => { fetchRequests(); }, [fetchRequests]);
 
-    // ── approve team request ───────────────────────────────────────────────────
+    // ── approve request ────────────────────────────────────────────────────────
+    // Routes to the correct endpoint based on type:
+    //   "team"  → POST /api/Supervisor/respond-to-team-request
+    //   "leave" → POST /api/Supervisor/respond-to-leave-request
     const handleApprove = async (req, type) => {
         const key = `approve-${req.id}`;
         setActionLoading(key);
@@ -130,6 +147,7 @@ export default function PendingRequests() {
     };
 
     // ── confirm reject ─────────────────────────────────────────────────────────
+    // Routes to the correct endpoint based on rejectType, same as handleApprove.
     const handleReject = async () => {
         const key = `reject-${selected.id}`;
         setActionLoading(key);
@@ -151,7 +169,7 @@ export default function PendingRequests() {
         }
     };
 
-    // ── shared request card (same look as original) ────────────────────────────
+    // ── shared request card ────────────────────────────────────────────────────
     const RequestCard = ({ req, type }) => {
         const isLoading = (k) => actionLoading === k;
         const label = type === "team" ? req.team : req.studentName;
@@ -274,10 +292,13 @@ export default function PendingRequests() {
                 <Box textAlign="center" py={6}><CircularProgress /></Box>
             )}
 
-            {/* Team requests */}
+            {/* Team join requests */}
             {!fetchLoading && teamRequests.length > 0 && (
                 <>
-                    <Typography variant="h5" sx={{ color: t.textSecondary, fontSize: "0.78rem", fontWeight: 600, mb: 1, textTransform: "uppercase", letterSpacing: 1 }}>
+                    <Typography variant="h5" sx={{
+                        color: t.textSecondary, fontSize: "0.78rem", fontWeight: 600,
+                        mb: 1, textTransform: "uppercase", letterSpacing: 1,
+                    }}>
                         Team Join Requests
                     </Typography>
                     <Stack spacing={2} sx={{ mb: 3 }}>
@@ -286,10 +307,13 @@ export default function PendingRequests() {
                 </>
             )}
 
-            {/* Leave requests */}
+            {/* Leave requests — shown when backend returns data */}
             {!fetchLoading && leaveRequests.length > 0 && (
                 <>
-                    <Typography variant="h5" sx={{ color: t.textSecondary, fontSize: "0.78rem", fontWeight: 600, mb: 1, textTransform: "uppercase", letterSpacing: 1 }}>
+                    <Typography variant="h5" sx={{
+                        color: t.textSecondary, fontSize: "0.78rem", fontWeight: 600,
+                        mb: 1, textTransform: "uppercase", letterSpacing: 1,
+                    }}>
                         Leave Requests
                     </Typography>
                     <Stack spacing={2} sx={{ mb: 3 }}>
@@ -300,12 +324,15 @@ export default function PendingRequests() {
 
             {/* Empty state */}
             {!fetchLoading && allRequests.length === 0 && !fetchError && (
-                <Paper elevation={1} sx={{ p: 4, borderRadius: 3, textAlign: "center", bgcolor: theme.palette.background.paper, mb: 4 }}>
+                <Paper elevation={1} sx={{
+                    p: 4, borderRadius: 3, textAlign: "center",
+                    bgcolor: theme.palette.background.paper, mb: 4,
+                }}>
                     <Typography sx={{ color: t.textTertiary }}>No pending requests.</Typography>
                 </Paper>
             )}
 
-            {/* Processed */}
+            {/* Processed history */}
             {processed.length > 0 && (
                 <>
                     <Typography variant="h4" sx={{ color: t.textPrimary, mb: 2 }}>Processed</Typography>

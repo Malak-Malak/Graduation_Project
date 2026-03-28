@@ -1,9 +1,21 @@
-// C:\Users\Dell\Desktop\Graduation_Project\FrontEnd\GPMS\src\components\common\supervisor\Groups\GroupsList.jsx
+// src/components/common/supervisor/Groups/GroupsList.jsx
+//
+// Supervisor "My Groups" page.
+//
+// Data sources:
+//   getPendingTeamRequests()  → GET /api/Supervisor/pending-team-requests
+//   getPendingLeaveRequests() → GET /api/Supervisor/leave-requests  (⚠ pending backend, falls back to [])
+//   getSupervisorTeams()      → GET /api/Supervisor/my-teams
+//   getSupervisorTeamById()   → GET /api/Supervisor/team/{teamId}
+//   getSupervisorTotalTeams() → GET /api/Supervisor/total-teams
+//   respondToTeamRequest()    → POST /api/Supervisor/respond-to-team-request
+//   respondToLeaveRequest()   → POST /api/Supervisor/respond-to-leave-request
+//   setMaxTeams()             → PUT  /api/Supervisor/set-max-teams
 
 import { useState, useEffect, useCallback } from "react";
 import {
     Box, Paper, Typography, Stack, Avatar, Chip, Button, LinearProgress,
-    AvatarGroup, Grid, Dialog, DialogContent, DialogActions,
+    AvatarGroup, Grid, Dialog, DialogContent,
     TextField, Tabs, Tab, IconButton, Tooltip, CircularProgress,
     Snackbar, Alert,
 } from "@mui/material";
@@ -20,6 +32,7 @@ import CloseIcon from "@mui/icons-material/Close";
 
 import {
     getPendingTeamRequests,
+    getPendingLeaveRequests,
     respondToTeamRequest,
     respondToLeaveRequest,
     setMaxTeams,
@@ -38,7 +51,7 @@ const initials = (name = "") =>
         .split(" ").map((w) => w[0] ?? "").join("").toUpperCase().slice(0, 2) || "?";
 
 /* ─── normaliseRequests ──────────────────────────────────────────
- * Normalises GET /api/Supervisor/pending-team-requests response.
+ * Normalises a raw array of request objects to a consistent shape.
  * Handles both "team" join requests and "leave" requests.
  * Field fallbacks cover different possible backend naming conventions.
  */
@@ -216,7 +229,6 @@ function GroupCard({ g, onOpenDetail, onOpenSize }) {
                     <Typography fontSize="0.77rem" noWrap sx={{ color: theme.palette.text.secondary }}>
                         {g.projectTitle}
                     </Typography>
-                    {/* project description */}
                     {g.projectDescription && (
                         <Typography fontSize="0.72rem"
                             sx={{
@@ -324,12 +336,30 @@ export default function GroupsList() {
     const [snack, setSnack] = useState({ open: false, msg: "", sev: "success" });
     const snap = (msg, sev = "success") => setSnack({ open: true, msg, sev });
 
-    /* ─── fetch pending requests ──────────────────────────────── */
+    /* ─── fetch pending requests ──────────────────────────────────────────────
+     * Fetches team join requests and leave requests in parallel.
+     * getPendingLeaveRequests() falls back to [] until the backend is ready,
+     * so this will never throw even if that endpoint is missing.
+     */
     const fetchRequests = useCallback(async () => {
         try {
             setLoadingRequests(true);
-            const data = await getPendingTeamRequests();
-            setRequests(normaliseRequests(data));
+
+            const [teamData, leaveData] = await Promise.all([
+                getPendingTeamRequests(),
+                getPendingLeaveRequests(), // ⚠ returns [] until backend ships
+            ]);
+
+            // Normalise each source and stamp the correct type
+            const teamReqs = normaliseRequests(
+                Array.isArray(teamData) ? teamData : []
+            ).map((r) => ({ ...r, type: "team" }));
+
+            const leaveReqs = normaliseRequests(
+                Array.isArray(leaveData) ? leaveData : []
+            ).map((r) => ({ ...r, type: "leave" }));
+
+            setRequests([...teamReqs, ...leaveReqs]);
         } catch {
             setRequests([]);
         } finally {
@@ -385,7 +415,11 @@ export default function GroupsList() {
         }
     };
 
-    /* ─── respond to team / leave request ────────────────────── */
+    /* ─── respond to team / leave request ────────────────────────
+     * Routes to the correct endpoint based on req.type:
+     *   "team"  → POST /api/Supervisor/respond-to-team-request
+     *   "leave" → POST /api/Supervisor/respond-to-leave-request
+     */
     const handleRespond = async (req, isApproved) => {
         try {
             setActionBusy(true);
@@ -564,7 +598,7 @@ export default function GroupsList() {
                                 </Box>
                             ) : (
                                 requests.map((req, i) => (
-                                    <RequestRow key={req.teamId ?? i} req={req} busy={actionBusy}
+                                    <RequestRow key={`${req.type}-${req.teamId ?? i}`} req={req} busy={actionBusy}
                                         onApprove={(r) => handleRespond(r, true)}
                                         onReject={(r) => handleRespond(r, false)} />
                                 ))

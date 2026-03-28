@@ -21,6 +21,7 @@ import RefreshOutlinedIcon from "@mui/icons-material/RefreshOutlined";
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import HowToRegOutlinedIcon from "@mui/icons-material/HowToRegOutlined";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 
 import studentApi from "../../../../api/handler/endpoints/studentApi";
 import JoinOrCreateModal from "../Onboarding/JoinOrCreateModal";
@@ -33,96 +34,69 @@ const MBR_CLR = ["#B46F4C", "#6D8A7D", "#C49A6C", "#7E9FC4", "#9B7EC8"];
 
 const initials = (name = "") =>
     (name ?? "?")
-        .split(" ")
-        .map((w) => w[0] ?? "")
-        .join("")
-        .toUpperCase()
-        .slice(0, 2) || "?";
-
-/* ─── small reusable pieces ───────────────────────────────────── */
-function InfoRow({ icon, label, value }) {
-    const theme = useTheme();
-    return (
-        <Stack direction="row" alignItems="flex-start" gap={1.4}>
-            <Box sx={{ color: ACCENT, mt: 0.15, flexShrink: 0 }}>{icon}</Box>
-            <Box>
-                <Typography sx={{
-                    fontSize: "0.7rem", color: theme.palette.text.secondary,
-                    fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", mb: 0.2
-                }}>
-                    {label}
-                </Typography>
-                <Typography sx={{ fontSize: "0.87rem", color: theme.palette.text.primary, fontWeight: 600 }}>
-                    {value ?? "—"}
-                </Typography>
-            </Box>
-        </Stack>
-    );
-}
-
-function SectionCard({ title, icon, children, action }) {
-    const theme = useTheme();
-    const isDark = theme.palette.mode === "dark";
-    return (
-        <Paper elevation={0} sx={{
-            borderRadius: 3,
-            border: `1px solid ${isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)"}`,
-            bgcolor: theme.palette.background.paper,
-            overflow: "hidden",
-        }}>
-            <Stack direction="row" alignItems="center" justifyContent="space-between"
-                sx={{
-                    px: 2.5, py: 1.8,
-                    borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)"}`,
-                    bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.015)"
-                }}>
-                <Stack direction="row" alignItems="center" gap={1}>
-                    <Box sx={{ color: ACCENT }}>{icon}</Box>
-                    <Typography fontWeight={700} fontSize="0.88rem"
-                        sx={{ color: theme.palette.text.primary }}>{title}</Typography>
-                </Stack>
-                {action}
-            </Stack>
-            <Box sx={{ p: 2.5 }}>{children}</Box>
-        </Paper>
-    );
-}
+        .split(" ").map((w) => w[0] ?? "").join("").toUpperCase().slice(0, 2) || "?";
 
 /* ─── Invitation row ──────────────────────────────────────────── */
-// API shape: { id, teamName, status, sentAt }
-// هاي الدعوات دايماً incoming (تيم دعاك) — ما في type field
+// API shape:
+// { id, joinRequestId?, teamName, projectTitle, projectDescription?,
+//   sender: { userId, fullName, email }, status, sentAt }
 function InviteRow({ inv, onAccept, onDecline, busy }) {
     const theme = useTheme();
     const isDark = theme.palette.mode === "dark";
 
-    const id = inv.id;
+    const id = inv.joinRequestId ?? inv.id;
     const teamName = inv.teamName ?? "A team";
+    const projectDesc = inv.projectDescription ?? inv.description ?? null;
     const status = inv.status ?? "Pending";
-    const sentAt = inv.sentAt
-        ? new Date(inv.sentAt).toLocaleDateString()
-        : null;
+    const sentAt = inv.sentAt ? new Date(inv.sentAt).toLocaleDateString() : null;
+
+    // sender — backend returns sender object or flat fields
+    const senderName = inv.sender?.fullName ?? inv.senderName ?? inv.sentBy ?? null;
+    const senderEmail = inv.sender?.email ?? inv.senderEmail ?? null;
 
     return (
-        <Stack direction="row" alignItems="center" gap={1.5}
+        <Stack direction="row" alignItems="flex-start" gap={1.5}
             sx={{
                 p: 1.5, borderRadius: 2,
                 border: `1px solid ${isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.07)"}`,
                 bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.01)",
             }}>
+
             {/* team avatar */}
-            <Avatar sx={{ width: 36, height: 36, bgcolor: MBR_CLR[1], fontSize: "0.72rem", fontWeight: 700 }}>
+            <Avatar sx={{ width: 36, height: 36, bgcolor: MBR_CLR[1], fontSize: "0.72rem", fontWeight: 700, flexShrink: 0 }}>
                 {initials(teamName)}
             </Avatar>
 
             <Box flex={1} minWidth={0}>
-                {/* main text */}
+                {/* main line */}
                 <Typography fontWeight={600} fontSize="0.83rem" noWrap
                     sx={{ color: theme.palette.text.primary }}>
                     <Box component="span" sx={{ color: ACCENT }}>{teamName}</Box>
                     {" "}invited you to join
                 </Typography>
-                {/* sub row: status + date */}
-                <Stack direction="row" alignItems="center" gap={0.8} mt={0.4}>
+
+                {/* sender line */}
+                {senderName && (
+                    <Typography fontSize="0.75rem" sx={{ color: theme.palette.text.secondary, mt: 0.2 }}>
+                        From: <Box component="span" sx={{ fontWeight: 600 }}>{senderName}</Box>
+                        {senderEmail && ` · ${senderEmail}`}
+                    </Typography>
+                )}
+
+                {/* project description */}
+                {projectDesc && (
+                    <Typography fontSize="0.75rem"
+                        sx={{
+                            color: theme.palette.text.secondary, mt: 0.4,
+                            display: "-webkit-box", WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical", overflow: "hidden",
+                        }}>
+                        {projectDesc}
+                    </Typography>
+                )}
+
+                {/* status + date */}
+                <Stack direction="row" alignItems="center" gap={0.8} mt={0.5}>
                     <Chip label={status} size="small" sx={{
                         height: 16, fontSize: "0.6rem", fontWeight: 700,
                         bgcolor: status === "Pending" ? `${ACCENT}15` :
@@ -141,17 +115,15 @@ function InviteRow({ inv, onAccept, onDecline, busy }) {
 
             {/* Accept / Decline — only for pending */}
             {status === "Pending" && (
-                <Stack direction="row" gap={0.5}>
+                <Stack direction="row" gap={0.5} flexShrink={0}>
                     <Tooltip title="Accept">
-                        <IconButton size="small" disabled={busy}
-                            onClick={() => onAccept(id)}
+                        <IconButton size="small" disabled={busy} onClick={() => onAccept(id)}
                             sx={{ color: "#3DB97A", "&:hover": { bgcolor: "rgba(61,185,122,0.1)" } }}>
                             <CheckCircleOutlineIcon sx={{ fontSize: 20 }} />
                         </IconButton>
                     </Tooltip>
                     <Tooltip title="Decline">
-                        <IconButton size="small" disabled={busy}
-                            onClick={() => onDecline(id)}
+                        <IconButton size="small" disabled={busy} onClick={() => onDecline(id)}
                             sx={{ color: "#e57373", "&:hover": { bgcolor: "rgba(229,115,115,0.1)" } }}>
                             <CancelOutlinedIcon sx={{ fontSize: 20 }} />
                         </IconButton>
@@ -162,7 +134,7 @@ function InviteRow({ inv, onAccept, onDecline, busy }) {
     );
 }
 
-/* ─── Available student row (for invite) ─────────────────────── */
+/* ─── Available student row ───────────────────────────────────── */
 function StudentRow({ student, onInvite, busy }) {
     const theme = useTheme();
     const isDark = theme.palette.mode === "dark";
@@ -181,15 +153,14 @@ function StudentRow({ student, onInvite, busy }) {
             <Box flex={1} minWidth={0}>
                 <Typography fontWeight={600} fontSize="0.82rem" noWrap
                     sx={{ color: theme.palette.text.primary }}>{name}</Typography>
-                <Typography fontSize="0.72rem" noWrap
-                    sx={{ color: theme.palette.text.secondary }}>
+                <Typography fontSize="0.72rem" noWrap sx={{ color: theme.palette.text.secondary }}>
                     {student.email ?? student.studentId ?? ""}
                 </Typography>
             </Box>
             <Tooltip title="Send invitation">
                 <span>
                     <IconButton size="small" disabled={busy}
-                        onClick={() => onInvite(student.id ?? student.userId)}
+                        onClick={() => onInvite(student.userId ?? student.id)}
                         sx={{ color: ACCENT, "&:hover": { bgcolor: `${ACCENT}14` } }}>
                         <PersonAddOutlinedIcon sx={{ fontSize: 18 }} />
                     </IconButton>
@@ -209,9 +180,9 @@ export default function MyTeamPage() {
     const tSec = theme.palette.text.secondary;
 
     /* ── data ── */
-    const [myTeam, setMyTeam] = useState(null);   // null = no team yet
+    const [myTeam, setMyTeam] = useState(null);
     const [invitations, setInvitations] = useState([]);
-    const [available, setAvailable] = useState([]);     // available students
+    const [available, setAvailable] = useState([]);
 
     /* ── loading ── */
     const [loadingTeam, setLoadingTeam] = useState(true);
@@ -220,7 +191,7 @@ export default function MyTeamPage() {
     const [actionBusy, setActionBusy] = useState(false);
 
     /* ── UI ── */
-    const [tab, setTab] = useState(0);    // 0=Members 1=Invitations 2=Students
+    const [tab, setTab] = useState(0);
     const [searchStr, setSearchStr] = useState("");
 
     /* ── onboarding modals ── */
@@ -231,11 +202,30 @@ export default function MyTeamPage() {
     /* ── leave confirm ── */
     const [leaveOpen, setLeaveOpen] = useState(false);
 
+    /* ── edit project info dialog ── */
+    const [editOpen, setEditOpen] = useState(false);
+    const [editTitle, setEditTitle] = useState("");
+    const [editDesc, setEditDesc] = useState("");
+    const [editBusy, setEditBusy] = useState(false);
+
     /* ── snackbar ── */
     const [snack, setSnack] = useState({ open: false, msg: "", sev: "success" });
     const snap = (msg, sev = "success") => setSnack({ open: true, msg, sev });
 
-    /* ─── fetchers ─────────────────────────────────────────────── */
+    /* ─── style helpers ─────────────────────────────────────────── */
+    const border = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)";
+    const paperBg = theme.palette.background.paper;
+
+    const inputSx = {
+        "& .MuiOutlinedInput-root": {
+            borderRadius: 2, fontSize: "0.875rem",
+            "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: ACCENT },
+        },
+        "& .MuiInputLabel-root.Mui-focused": { color: ACCENT },
+        "& .MuiInputLabel-root": { fontSize: "0.875rem" },
+    };
+
+    /* ─── fetchers ──────────────────────────────────────────────── */
     const fetchTeam = useCallback(async () => {
         try {
             setLoadingTeam(true);
@@ -282,7 +272,37 @@ export default function MyTeamPage() {
         if (tab === 2 && myTeam) fetchAvailable();
     }, [tab, myTeam, fetchAvailable]);
 
-    /* ─── actions ──────────────────────────────────────────────── */
+    /* ─── open edit dialog — pre-fill current values ────────────── */
+    const openEdit = () => {
+        setEditTitle(myTeam?.projectTitle ?? myTeam?.project ?? "");
+        setEditDesc(myTeam?.projectDescription ?? myTeam?.description ?? "");
+        setEditOpen(true);
+    };
+
+    /* ─── save project info ─────────────────────────────────────── */
+    // Uses PUT /api/Student/update-project-info
+    const handleSaveProjectInfo = async () => {
+        if (!editTitle.trim()) {
+            snap("Project title cannot be empty.", "error");
+            return;
+        }
+        try {
+            setEditBusy(true);
+            await studentApi.updateProjectInfo({
+                projectTitle: editTitle.trim(),
+                projectDescription: editDesc.trim(),
+            });
+            snap("Project info updated!");
+            setEditOpen(false);
+            fetchTeam(); // refresh to show new title/description
+        } catch (e) {
+            snap(e?.response?.data?.message ?? "Failed to update project info.", "error");
+        } finally {
+            setEditBusy(false);
+        }
+    };
+
+    /* ─── actions ───────────────────────────────────────────────── */
     const handleAcceptInv = async (joinRequestId) => {
         try {
             setActionBusy(true);
@@ -330,18 +350,16 @@ export default function MyTeamPage() {
         } finally { setActionBusy(false); }
     };
 
-    /* ─── filtered lists ────────────────────────────────────────── */
+    /* ─── derived ───────────────────────────────────────────────── */
     const filteredAvailable = available.filter((s) =>
         (s.fullName ?? s.name ?? "").toLowerCase().includes(searchStr.toLowerCase())
     );
-
-    /* ─── pending invite count badge ───────────────────────────── */
     const pendingCount = invitations.filter(
         (i) => (i.status ?? "Pending") === "Pending"
     ).length;
 
     /* ══════════════════════════════════════════════════════════════
-       LOADING STATE
+       LOADING
     ══════════════════════════════════════════════════════════════ */
     if (loadingTeam) {
         return (
@@ -355,13 +373,12 @@ export default function MyTeamPage() {
     }
 
     /* ══════════════════════════════════════════════════════════════
-       NO TEAM — show join/create options inline (not modal)
+       NO TEAM
     ══════════════════════════════════════════════════════════════ */
     if (!myTeam) {
         return (
             <>
                 <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-                    {/* header */}
                     <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={3}>
                         <Box>
                             <Typography variant="h2" sx={{ color: tPri, mb: 0.4 }}>My Team</Typography>
@@ -371,18 +388,17 @@ export default function MyTeamPage() {
                         </Box>
                     </Stack>
 
-                    {/* pending invitations — يشوفها حتى لو ما عنده تيم */}
+                    {/* pending invitations — visible even without a team */}
                     {invitations.length > 0 && (
                         <Paper elevation={0} sx={{
                             mb: 3, borderRadius: 3, overflow: "hidden",
-                            border: `1px solid ${isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)"}`,
-                            bgcolor: theme.palette.background.paper,
+                            border: `1px solid ${border}`, bgcolor: paperBg,
                         }}>
                             <Stack direction="row" alignItems="center" gap={1}
                                 sx={{
                                     px: 2.5, py: 1.8,
                                     borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)"}`,
-                                    bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.015)"
+                                    bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.015)",
                                 }}>
                                 <Box sx={{ color: ACCENT }}><HowToRegOutlinedIcon sx={{ fontSize: 18 }} /></Box>
                                 <Typography fontWeight={700} fontSize="0.88rem" sx={{ color: tPri }}>
@@ -399,29 +415,28 @@ export default function MyTeamPage() {
                                 {loadingInv
                                     ? <CircularProgress size={22} sx={{ color: ACCENT, mx: "auto" }} />
                                     : invitations.map((inv, i) => (
-                                        <InviteRow key={inv.joinRequestId ?? inv.id ?? i}
+                                        <InviteRow
+                                            key={inv.joinRequestId ?? inv.id ?? i}
                                             inv={inv} busy={actionBusy}
                                             onAccept={handleAcceptInv}
-                                            onDecline={handleDeclineInv} />
+                                            onDecline={handleDeclineInv}
+                                        />
                                     ))
                                 }
                             </Stack>
                         </Paper>
                     )}
 
-                    {/* no-team options */}
+                    {/* no-team CTA */}
                     <Box sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <Stack alignItems="center" gap={3} sx={{ maxWidth: 420, width: "100%", textAlign: "center" }}>
-                            {/* icon */}
                             <Box sx={{
                                 width: 72, height: 72, borderRadius: 4,
-                                bgcolor: `${ACCENT}12`,
-                                border: `1.5px solid ${ACCENT}30`,
+                                bgcolor: `${ACCENT}12`, border: `1.5px solid ${ACCENT}30`,
                                 display: "flex", alignItems: "center", justifyContent: "center",
                             }}>
                                 <GroupsOutlinedIcon sx={{ fontSize: 34, color: ACCENT }} />
                             </Box>
-
                             <Box>
                                 <Typography fontWeight={700} fontSize="1.05rem" sx={{ color: tPri, mb: 0.6 }}>
                                     You're not in a team yet
@@ -430,15 +445,11 @@ export default function MyTeamPage() {
                                     Create a new team with a supervisor, or join an existing one to start your graduation project.
                                 </Typography>
                             </Box>
-
-                            {/* action cards */}
                             <Stack gap={1.5} width="100%">
-                                {/* Create */}
                                 <Paper elevation={0} onClick={() => setShowGate(true)}
                                     sx={{
                                         p: 2.2, borderRadius: 2.5, cursor: "pointer",
-                                        border: `1.5px solid ${ACCENT}`,
-                                        bgcolor: `${ACCENT}08`,
+                                        border: `1.5px solid ${ACCENT}`, bgcolor: `${ACCENT}08`,
                                         transition: "all 0.15s ease",
                                         "&:hover": { bgcolor: `${ACCENT}14`, transform: "translateY(-1px)" },
                                     }}>
@@ -465,7 +476,6 @@ export default function MyTeamPage() {
                     </Box>
                 </Box>
 
-                {/* onboarding modals */}
                 <JoinOrCreateModal
                     open={showGate}
                     onClose={() => setShowGate(false)}
@@ -493,11 +503,12 @@ export default function MyTeamPage() {
     }
 
     /* ══════════════════════════════════════════════════════════════
-       HAS TEAM — full info page
+       HAS TEAM
     ══════════════════════════════════════════════════════════════ */
     const members = myTeam.members ?? myTeam.students ?? [];
     const supervisor = myTeam.supervisor ?? myTeam.supervisorName ?? null;
-    const project = myTeam.projectTitle ?? myTeam.project ?? myTeam.name ?? "—";
+    const project = myTeam.projectTitle ?? myTeam.project ?? "—";
+    const projectDesc = myTeam.projectDescription ?? myTeam.description ?? null;
     const status = myTeam.status ?? myTeam.teamStatus ?? null;
     const teamName = myTeam.teamName ?? myTeam.name ?? null;
 
@@ -518,14 +529,14 @@ export default function MyTeamPage() {
                             <IconButton size="small"
                                 onClick={() => { fetchTeam(); fetchInvitations(); }}
                                 sx={{
-                                    color: tSec, border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
-                                    borderRadius: 2, "&:hover": { color: ACCENT }
+                                    color: tSec, border: `1px solid ${border}`,
+                                    borderRadius: 2, "&:hover": { color: ACCENT },
                                 }}>
                                 <RefreshOutlinedIcon sx={{ fontSize: 17 }} />
                             </IconButton>
                         </Tooltip>
-                        <Button
-                            size="small" variant="outlined" startIcon={<ExitToAppOutlinedIcon />}
+                        <Button size="small" variant="outlined"
+                            startIcon={<ExitToAppOutlinedIcon />}
                             onClick={() => setLeaveOpen(true)}
                             sx={{
                                 borderColor: "#e57373", color: "#e57373", borderRadius: 2,
@@ -537,33 +548,60 @@ export default function MyTeamPage() {
                     </Stack>
                 </Stack>
 
-                {/* ── TOP: project + supervisor cards (side by side) ──── */}
+                {/* ── TOP CARDS: Project + Supervisor ─────────────────── */}
                 <Stack direction={{ xs: "column", sm: "row" }} gap={2}>
 
                     {/* Project card */}
                     <Paper elevation={0} sx={{
                         flex: 1, p: 2.5, borderRadius: 3,
-                        border: `1px solid ${isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)"}`,
-                        bgcolor: theme.palette.background.paper,
+                        border: `1px solid ${border}`, bgcolor: paperBg,
                     }}>
-                        <Stack direction="row" alignItems="center" gap={1.2} mb={1.8}>
-                            <Box sx={{
-                                width: 36, height: 36, borderRadius: 2, flexShrink: 0,
-                                bgcolor: `${ACCENT}12`, border: `1px solid ${ACCENT}28`,
-                                display: "flex", alignItems: "center", justifyContent: "center",
-                            }}>
-                                <FolderOutlinedIcon sx={{ fontSize: 18, color: ACCENT }} />
-                            </Box>
-                            <Typography fontWeight={700} fontSize="0.85rem" sx={{
-                                color: tSec,
-                                textTransform: "uppercase", letterSpacing: "0.07em"
-                            }}>
-                                Project
-                            </Typography>
+                        {/* card header row */}
+                        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1.8}>
+                            <Stack direction="row" alignItems="center" gap={1.2}>
+                                <Box sx={{
+                                    width: 36, height: 36, borderRadius: 2, flexShrink: 0,
+                                    bgcolor: `${ACCENT}12`, border: `1px solid ${ACCENT}28`,
+                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                }}>
+                                    <FolderOutlinedIcon sx={{ fontSize: 18, color: ACCENT }} />
+                                </Box>
+                                <Typography fontWeight={700} fontSize="0.85rem" sx={{
+                                    color: tSec, textTransform: "uppercase", letterSpacing: "0.07em",
+                                }}>
+                                    Project
+                                </Typography>
+                            </Stack>
+
+                            {/* edit button — PUT /api/Student/update-project-info */}
+                            <Tooltip title="Edit project info">
+                                <IconButton size="small" onClick={openEdit}
+                                    sx={{
+                                        color: tSec, borderRadius: 1.5,
+                                        "&:hover": { color: ACCENT, bgcolor: `${ACCENT}10` },
+                                    }}>
+                                    <EditOutlinedIcon sx={{ fontSize: 16 }} />
+                                </IconButton>
+                            </Tooltip>
                         </Stack>
+
+                        {/* project title */}
                         <Typography fontWeight={700} fontSize="1rem" sx={{ color: tPri, mb: 0.5 }}>
                             {project}
                         </Typography>
+
+                        {/* project description */}
+                        {projectDesc && (
+                            <Typography fontSize="0.78rem" sx={{
+                                color: tSec, lineHeight: 1.6, mb: 0.8,
+                                display: "-webkit-box", WebkitLineClamp: 3,
+                                WebkitBoxOrient: "vertical", overflow: "hidden",
+                            }}>
+                                {projectDesc}
+                            </Typography>
+                        )}
+
+                        {/* status chip */}
                         {status && (
                             <Chip label={status} size="small" sx={{
                                 height: 20, fontSize: "0.65rem", fontWeight: 700,
@@ -573,8 +611,7 @@ export default function MyTeamPage() {
                                             `${ACCENT}12`,
                                 color: status.toLowerCase().includes("approved") ? "#3DB97A" :
                                     status.toLowerCase().includes("pending") ? ACCENT :
-                                        status.toLowerCase().includes("rejected") ? "#e57373" :
-                                            ACCENT,
+                                        status.toLowerCase().includes("rejected") ? "#e57373" : ACCENT,
                             }} />
                         )}
                     </Paper>
@@ -582,8 +619,7 @@ export default function MyTeamPage() {
                     {/* Supervisor card */}
                     <Paper elevation={0} sx={{
                         flex: 1, p: 2.5, borderRadius: 3,
-                        border: `1px solid ${isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)"}`,
-                        bgcolor: theme.palette.background.paper,
+                        border: `1px solid ${border}`, bgcolor: paperBg,
                     }}>
                         <Stack direction="row" alignItems="center" gap={1.2} mb={1.8}>
                             <Box sx={{
@@ -594,12 +630,12 @@ export default function MyTeamPage() {
                                 <SchoolOutlinedIcon sx={{ fontSize: 18, color: "#6D8A7D" }} />
                             </Box>
                             <Typography fontWeight={700} fontSize="0.85rem" sx={{
-                                color: tSec,
-                                textTransform: "uppercase", letterSpacing: "0.07em"
+                                color: tSec, textTransform: "uppercase", letterSpacing: "0.07em",
                             }}>
                                 Supervisor
                             </Typography>
                         </Stack>
+
                         {supervisor ? (
                             <Stack direction="row" alignItems="center" gap={1.5}>
                                 <Avatar sx={{ width: 40, height: 40, bgcolor: "#6D8A7D", fontWeight: 700, fontSize: "0.9rem" }}>
@@ -628,27 +664,22 @@ export default function MyTeamPage() {
                     </Paper>
                 </Stack>
 
-                {/* ── TABS: Members / Invitations / Invite Students ───── */}
+                {/* ── TABS ────────────────────────────────────────────── */}
                 <Paper elevation={0} sx={{
                     flex: 1, borderRadius: 3, overflow: "hidden",
-                    border: `1px solid ${isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)"}`,
-                    bgcolor: theme.palette.background.paper,
+                    border: `1px solid ${border}`, bgcolor: paperBg,
                     display: "flex", flexDirection: "column",
                 }}>
-                    <Tabs
-                        value={tab}
-                        onChange={(_, v) => setTab(v)}
-                        sx={{
-                            px: 1, minHeight: 44,
-                            borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)"}`,
-                            "& .MuiTab-root": {
-                                textTransform: "none", fontWeight: 600, fontSize: "0.82rem",
-                                minHeight: 44, color: tSec
-                            },
-                            "& .Mui-selected": { color: ACCENT },
-                            "& .MuiTabs-indicator": { bgcolor: ACCENT, height: 2.5, borderRadius: 2 },
-                        }}
-                    >
+                    <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{
+                        px: 1, minHeight: 44,
+                        borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)"}`,
+                        "& .MuiTab-root": {
+                            textTransform: "none", fontWeight: 600, fontSize: "0.82rem",
+                            minHeight: 44, color: tSec,
+                        },
+                        "& .Mui-selected": { color: ACCENT },
+                        "& .MuiTabs-indicator": { bgcolor: ACCENT, height: 2.5, borderRadius: 2 },
+                    }}>
                         <Tab label={
                             <Stack direction="row" alignItems="center" gap={0.7}>
                                 <PeopleOutlineIcon sx={{ fontSize: 16 }} />
@@ -675,7 +706,7 @@ export default function MyTeamPage() {
                         } />
                     </Tabs>
 
-                    {/* ── TAB 0: Members ─────────────────────────────────── */}
+                    {/* ── TAB 0: Members ──────────────────────────────── */}
                     {tab === 0 && (
                         <Box sx={{ p: 2.5, flex: 1, overflowY: "auto" }}>
                             {members.length === 0 ? (
@@ -688,7 +719,7 @@ export default function MyTeamPage() {
                                         const name = m.fullName ?? m.name ?? "Student";
                                         const isLeader = m.isLeader ?? m.role === "leader" ?? i === 0;
                                         return (
-                                            <Stack key={m.id ?? m.userId ?? i} direction="row" alignItems="center" gap={1.5}
+                                            <Stack key={m.userId ?? m.id ?? i} direction="row" alignItems="center" gap={1.5}
                                                 sx={{
                                                     p: 1.5, borderRadius: 2.5,
                                                     border: `1px solid ${isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.07)"}`,
@@ -723,7 +754,7 @@ export default function MyTeamPage() {
                         </Box>
                     )}
 
-                    {/* ── TAB 1: Invitations ─────────────────────────────── */}
+                    {/* ── TAB 1: Invitations ──────────────────────────── */}
                     {tab === 1 && (
                         <Box sx={{ p: 2.5, flex: 1, overflowY: "auto" }}>
                             {loadingInv ? (
@@ -739,8 +770,7 @@ export default function MyTeamPage() {
                                     {invitations.map((inv, i) => (
                                         <InviteRow
                                             key={inv.joinRequestId ?? inv.id ?? i}
-                                            inv={inv}
-                                            busy={actionBusy}
+                                            inv={inv} busy={actionBusy}
                                             onAccept={handleAcceptInv}
                                             onDecline={handleDeclineInv}
                                         />
@@ -750,16 +780,14 @@ export default function MyTeamPage() {
                         </Box>
                     )}
 
-                    {/* ── TAB 2: Invite Students ─────────────────────────── */}
+                    {/* ── TAB 2: Invite Students ──────────────────────── */}
                     {tab === 2 && (
                         <Box sx={{ p: 2.5, flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-                            {/* search */}
-                            <TextField
-                                size="small" fullWidth
-                                placeholder="Search students…"
-                                value={searchStr}
-                                onChange={(e) => setSearchStr(e.target.value)}
-                                InputProps={{ startAdornment: <SearchOutlinedIcon sx={{ fontSize: 17, color: tSec, mr: 0.8 }} /> }}
+                            <TextField size="small" fullWidth placeholder="Search students…"
+                                value={searchStr} onChange={(e) => setSearchStr(e.target.value)}
+                                InputProps={{
+                                    startAdornment: <SearchOutlinedIcon sx={{ fontSize: 17, color: tSec, mr: 0.8 }} />,
+                                }}
                                 sx={{
                                     mb: 2,
                                     "& .MuiOutlinedInput-root": {
@@ -781,9 +809,8 @@ export default function MyTeamPage() {
                                     <Stack gap={1.2}>
                                         {filteredAvailable.map((s, i) => (
                                             <StudentRow
-                                                key={s.id ?? s.userId ?? i}
-                                                student={s}
-                                                busy={actionBusy}
+                                                key={s.userId ?? s.id ?? i}
+                                                student={s} busy={actionBusy}
                                                 onInvite={handleInviteStudent}
                                             />
                                         ))}
@@ -795,15 +822,52 @@ export default function MyTeamPage() {
                 </Paper>
             </Box>
 
-            {/* ── LEAVE CONFIRM DIALOG ──────────────────────────────── */}
+            {/* ══ EDIT PROJECT INFO DIALOG ═══════════════════════════ */}
+            {/* PUT /api/Student/update-project-info */}
+            <Dialog open={editOpen} onClose={() => !editBusy && setEditOpen(false)}
+                maxWidth="xs" fullWidth
+                PaperProps={{ sx: { borderRadius: 3, border: `1px solid ${border}`, bgcolor: paperBg } }}>
+                <Box sx={{ px: 3, py: 2.5, borderBottom: `1px solid ${border}` }}>
+                    <Typography fontWeight={700} fontSize="0.95rem" sx={{ color: tPri }}>
+                        Edit Project Info
+                    </Typography>
+                </Box>
+                <Box sx={{ px: 3, py: 2.5 }}>
+                    <Stack gap={2}>
+                        <TextField
+                            label="Project Title" size="small" fullWidth required
+                            value={editTitle}
+                            onChange={(e) => setEditTitle(e.target.value)}
+                            sx={inputSx}
+                        />
+                        <TextField
+                            label="Project Description" size="small" fullWidth multiline rows={3}
+                            value={editDesc}
+                            onChange={(e) => setEditDesc(e.target.value)}
+                            sx={inputSx}
+                        />
+                    </Stack>
+                </Box>
+                <Box sx={{ px: 3, pb: 3, display: "flex", justifyContent: "flex-end", gap: 1 }}>
+                    <Button disabled={editBusy} onClick={() => setEditOpen(false)}
+                        sx={{ color: tSec, textTransform: "none", fontWeight: 500, borderRadius: 2 }}>
+                        Cancel
+                    </Button>
+                    <Button variant="contained" disabled={editBusy} onClick={handleSaveProjectInfo}
+                        sx={{
+                            bgcolor: ACCENT, "&:hover": { bgcolor: "#b06f47", boxShadow: "none" },
+                            textTransform: "none", fontWeight: 700, borderRadius: 2, boxShadow: "none",
+                        }}>
+                        {editBusy
+                            ? <CircularProgress size={16} sx={{ color: "#fff" }} />
+                            : "Save"}
+                    </Button>
+                </Box>
+            </Dialog>
+
+            {/* ══ LEAVE CONFIRM DIALOG ═══════════════════════════════ */}
             <Dialog open={leaveOpen} onClose={() => setLeaveOpen(false)} maxWidth="xs" fullWidth
-                PaperProps={{
-                    sx: {
-                        borderRadius: 3,
-                        border: `1px solid ${isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)"}`,
-                        bgcolor: theme.palette.background.paper
-                    }
-                }}>
+                PaperProps={{ sx: { borderRadius: 3, border: `1px solid ${border}`, bgcolor: paperBg } }}>
                 <Box sx={{ p: 3 }}>
                     <Typography fontWeight={700} fontSize="0.95rem" sx={{ color: tPri, mb: 0.8 }}>
                         Leave Team?

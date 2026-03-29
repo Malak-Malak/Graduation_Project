@@ -216,6 +216,8 @@ const studentApi = {
     getProfile: () =>
         axiosInstance.get("/UserProfile").then((r) => r.data),
 
+    getAllStudents: () =>
+        axiosInstance.get("/Student/all-students").then((r) => r.data),
     /**
      * POST /api/UserProfile — create profile for the first time
      * data.skills[]  →  joined as comma string  →  field

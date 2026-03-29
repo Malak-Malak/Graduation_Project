@@ -4,7 +4,6 @@ import { Snackbar, Alert, Box, CircularProgress } from "@mui/material";
 
 import MainLayout from "../../layout/MainLayout";
 import StudentDashboard from "../../components/common/student/StudentDashboard/StudentDashboard";
-import TeamFinder from "../../components/common/student/TeamFinder/TeamFinder";
 import KanbanBoard from "../../components/common/student/KanbanBoard/KanbanBoard";
 import FileRepository from "../../components/common/student/FileRepository/FileRepository";
 import StudentMeetings from "../../components/common/student/Meetings/StudentMeetings";
@@ -21,6 +20,7 @@ import MyTeamPage from "../../components/common/student/MyTeam/MyTeamPage";
 import { useAuth } from "../../contexts/AuthContext";
 import UserProfilePage from "../UserProfile/UserProfilePage";
 import studentApi from "../../api/handler/endpoints/studentApi";
+import DiscoveryHub from "../../components/common/student/DiscoveryHub/DiscoveryHub";
 
 const profileDoneKey = (uid) => `gpms_profile_done_${uid}`;
 const teamCheckedKey = (uid) => `gpms_team_checked_${uid}`;
@@ -100,7 +100,7 @@ export default function StudentPage() {
             <Routes>
                 <Route index element={<StudentDashboard />} />
                 <Route path="profile" element={<ProfilePage />} />
-                <Route path="team-finder" element={<TeamFinder />} />
+                <Route path="team-finder" element={<DiscoveryHub />} />
                 <Route path="kanban" element={<KanbanBoard />} />
                 <Route path="files" element={<FileRepository />} />
                 <Route path="meetings" element={<StudentMeetings />} />

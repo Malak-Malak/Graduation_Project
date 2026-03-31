@@ -42,8 +42,8 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
         width: '20ch',
     },
 }));
-
-const PRIMARY = "#C47E7E";
+//"#C47E7E"
+const PRIMARY = "#B46F4C";
 
 const TopBar = ({ onMenuClick, isMobile }) => {
     const theme = useTheme();

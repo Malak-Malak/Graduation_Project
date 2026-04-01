@@ -18,6 +18,7 @@ import { useTheme } from "@mui/material/styles";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
 import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
+import ExitToAppOutlinedIcon from "@mui/icons-material/ExitToAppOutlined";
 import RefreshOutlinedIcon from "@mui/icons-material/RefreshOutlined";
 
 import {
@@ -32,13 +33,28 @@ const MBR_COLORS = ["#B46F4C", "#6D8A7D", "#C49A6C", "#7E9FC4", "#9B7EC8"];
 
 // ─── normalisers ─────────────────────────────────────────────────────────────
 
-// Map a single backend team-request object to the shape the UI expects
+// Map a single backend team-request object to the shape the UI expects.
+// FIX #15: teamName no longer falls back to "Unnamed Team" — uses labelled ID instead.
+// FIX #15: leader no longer falls back to "Student" — uses labelled ID instead.
 const mapTeamReq = (r) => ({
     id: r.teamId ?? r.id,
     teamId: r.teamId ?? r.id,
-    team: r.teamName ?? r.team ?? `Team #${r.teamId ?? r.id}`,
+    // FIX #15: prefer explicit name fields, fall back to a labelled ID
+    team:
+        r.teamName ??
+        r.team ??
+        r.name ??
+        (r.teamId ? `Team #${r.teamId}` : r.id ? `Team #${r.id}` : "New Team"),
     project: r.projectTitle ?? r.project ?? "N/A",
-    leader: r.leaderName ?? r.leader ?? "—",
+    // FIX #15: cover all known leader/student name fields
+    leader:
+        r.leaderName ??
+        r.leader ??
+        r.studentName ??
+        r.requestedBy ??
+        r.fullName ??
+        r.memberName ??
+        (r.leaderId ? `Student #${r.leaderId}` : "—"),
     members: r.members ?? r.memberInitials ?? [],
     dept: r.department ?? r.dept ?? "",
     submitted: r.requestedAt
@@ -47,12 +63,33 @@ const mapTeamReq = (r) => ({
     description: r.description ?? "",
 });
 
-// Map a single backend leave-request object to the shape the UI expects
+// Map a single backend leave-request object to the shape the UI expects.
+// FIX #10: studentName now covers all known backend field variants so the
+//          actual member name is always shown instead of "Member #id".
 const mapLeaveReq = (r) => ({
     id: r.teamMemberId ?? r.id,
     teamMemberId: r.teamMemberId ?? r.id,
-    team: r.teamName ?? r.team ?? "—",
-    studentName: r.studentName ?? r.memberName ?? `Member #${r.teamMemberId ?? r.id}`,
+    // FIX #15: same team name fallback as mapTeamReq
+    team:
+        r.teamName ??
+        r.team ??
+        r.name ??
+        (r.teamId ? `Team #${r.teamId}` : "—"),
+    // FIX #10: try every possible field the backend might use for the member's name
+    studentName:
+        r.studentName ??
+        r.memberName ??
+        r.fullName ??
+        r.name ??
+        r.requestedBy ??
+        r.leaderName ??
+        (r.teamMemberId
+            ? `Member #${r.teamMemberId}`
+            : r.memberId
+                ? `Member #${r.memberId}`
+                : r.studentId
+                    ? `Student #${r.studentId}`
+                    : "Unknown Member"),
     submitted: r.requestedAt
         ? new Date(r.requestedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })
         : r.submitted ?? "",
@@ -84,19 +121,15 @@ export default function PendingRequests() {
     const [snack, setSnack] = useState({ open: false, msg: "", severity: "success" });
 
     // ── fetch ──────────────────────────────────────────────────────────────────
-    // Fetches team join requests and leave requests in parallel.
-    // getPendingLeaveRequests() falls back to [] until the backend is ready,
-    // so this will never throw even if that endpoint is missing.
     const fetchRequests = useCallback(async () => {
         setFetchLoading(true);
         setFetchError(null);
         try {
             const [teamData, leaveData] = await Promise.all([
                 getPendingTeamRequests(),
-                getPendingLeaveRequests(), // ⚠ returns [] until backend ships
+                getPendingLeaveRequests(),
             ]);
 
-            // teamData may be a plain array — normalise either way
             const teamArr = Array.isArray(teamData)
                 ? teamData
                 : (teamData?.teamRequests ?? teamData?.pendingTeamRequests ?? []);
@@ -115,9 +148,6 @@ export default function PendingRequests() {
     useEffect(() => { fetchRequests(); }, [fetchRequests]);
 
     // ── approve request ────────────────────────────────────────────────────────
-    // Routes to the correct endpoint based on type:
-    //   "team"  → POST /api/Supervisor/respond-to-team-request
-    //   "leave" → POST /api/Supervisor/respond-to-leave-request
     const handleApprove = async (req, type) => {
         const key = `approve-${req.id}`;
         setActionLoading(key);
@@ -147,7 +177,6 @@ export default function PendingRequests() {
     };
 
     // ── confirm reject ─────────────────────────────────────────────────────────
-    // Routes to the correct endpoint based on rejectType, same as handleApprove.
     const handleReject = async () => {
         const key = `reject-${selected.id}`;
         setActionLoading(key);
@@ -172,23 +201,36 @@ export default function PendingRequests() {
     // ── shared request card ────────────────────────────────────────────────────
     const RequestCard = ({ req, type }) => {
         const isLoading = (k) => actionLoading === k;
-        const label = type === "team" ? req.team : req.studentName;
-        const sub = type === "team" ? req.project : `Leave from: ${req.team}`;
+        const isLeave = type === "leave";
+
+        // FIX #10 & #15:
+        //   - team requests: label = team name, sub = project
+        //   - leave requests: label = member name (who wants to leave), sub = which team they're leaving
+        const label = isLeave ? req.studentName : req.team;
+        const sub = isLeave ? `Wants to leave: ${req.team}` : req.project;
 
         return (
             <Paper key={req.id} elevation={1} sx={{
                 p: 2.5, borderRadius: 3, bgcolor: theme.palette.background.paper,
-                borderLeft: `4px solid ${t.accentTertiary}`,
+                borderLeft: `4px solid ${isLeave ? "#e57373" : t.accentTertiary}`,
             }}>
                 <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between"
                     alignItems={{ sm: "flex-start" }} gap={2}>
                     <Box sx={{ flex: 1 }}>
                         <Stack direction="row" alignItems="center" gap={1.5} mb={0.5}>
-                            <Box sx={{ p: 0.8, borderRadius: 2, bgcolor: `${t.accentPrimary}15` }}>
-                                <GroupsOutlinedIcon sx={{ fontSize: 18, color: t.accentPrimary }} />
+                            <Box sx={{
+                                p: 0.8, borderRadius: 2,
+                                bgcolor: isLeave ? "rgba(229,115,115,0.1)" : `${t.accentPrimary}15`,
+                            }}>
+                                {isLeave
+                                    ? <ExitToAppOutlinedIcon sx={{ fontSize: 18, color: "#e57373" }} />
+                                    : <GroupsOutlinedIcon sx={{ fontSize: 18, color: t.accentPrimary }} />
+                                }
                             </Box>
                             <Box>
-                                <Typography sx={{ fontWeight: 700, fontSize: "1rem", color: t.textPrimary }}>{label}</Typography>
+                                <Typography sx={{ fontWeight: 700, fontSize: "1rem", color: t.textPrimary }}>
+                                    {label}
+                                </Typography>
                                 <Typography sx={{ fontSize: "0.78rem", color: t.textSecondary }}>{sub}</Typography>
                             </Box>
                             {req.dept && (
@@ -207,10 +249,13 @@ export default function PendingRequests() {
                         )}
 
                         <Stack direction="row" alignItems="center" gap={2}>
-                            {req.leader && (
+                            {/* For team requests, show the leader name */}
+                            {!isLeave && req.leader && (
                                 <Stack direction="row" alignItems="center" gap={1}>
                                     <Typography sx={{ fontSize: "0.78rem", color: t.textTertiary }}>Leader:</Typography>
-                                    <Typography sx={{ fontSize: "0.78rem", fontWeight: 600, color: t.textPrimary }}>{req.leader}</Typography>
+                                    <Typography sx={{ fontSize: "0.78rem", fontWeight: 600, color: t.textPrimary }}>
+                                        {req.leader}
+                                    </Typography>
                                 </Stack>
                             )}
                             {req.members?.length > 0 && (
@@ -344,11 +389,14 @@ export default function PendingRequests() {
                             }}>
                                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                                     <Box>
+                                        {/* FIX #10: for leave requests show student name, for team show team name */}
                                         <Typography sx={{ fontWeight: 600, color: t.textPrimary }}>
-                                            {r.team ?? r.studentName}
+                                            {r.kind === "leave" ? r.studentName : r.team}
                                         </Typography>
                                         <Typography sx={{ fontSize: "0.78rem", color: t.textSecondary }}>
-                                            {r.project ?? `Leave from: ${r.team}`}
+                                            {r.kind === "leave"
+                                                ? `Leave from: ${r.team}`
+                                                : r.project}
                                         </Typography>
                                         {r.note && (
                                             <Typography sx={{ fontSize: "0.75rem", color: t.textTertiary, mt: 0.3 }}>
@@ -377,7 +425,15 @@ export default function PendingRequests() {
                 <DialogTitle sx={{ fontWeight: 700, color: t.error }}>Reject Request</DialogTitle>
                 <DialogContent>
                     <Typography sx={{ fontSize: "0.875rem", color: t.textSecondary, mb: 2 }}>
-                        Rejecting <strong style={{ color: t.textPrimary }}>{selected?.team ?? selected?.studentName}</strong>. Optionally add a reason:
+                        {/* FIX #10: show correct entity name in reject dialog */}
+                        Rejecting{" "}
+                        <strong style={{ color: t.textPrimary }}>
+                            {rejectType === "leave" ? selected?.studentName : selected?.team}
+                        </strong>
+                        {rejectType === "leave" && selected?.team && (
+                            <> from <strong style={{ color: t.textPrimary }}>{selected.team}</strong></>
+                        )}
+                        . Optionally add a reason:
                     </Typography>
                     <TextField
                         label="Reason (optional)" multiline rows={3} fullWidth size="small"

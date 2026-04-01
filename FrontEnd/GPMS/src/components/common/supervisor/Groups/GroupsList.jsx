@@ -53,15 +53,38 @@ const initials = (name = "") =>
 /* ─── normaliseRequests ──────────────────────────────────────────
  * Normalises a raw array of request objects to a consistent shape.
  * Handles both "team" join requests and "leave" requests.
- * Field fallbacks cover different possible backend naming conventions.
+ *
+ * FIX #15: teamName now falls back to a labelled ID instead of "Unnamed Team"
+ * FIX #10: studentName now covers all known backend field variants so
+ *          leave requests always show the actual member name, not "Student"
  */
 const normaliseRequests = (raw) =>
     (Array.isArray(raw) ? raw : []).map((r) => ({
         teamId: r.teamId ?? r.id,
-        teamName: r.teamName ?? r.name ?? "Unnamed Team",
+        // FIX #15: prefer explicit name fields, fall back to labelled ID
+        teamName:
+            r.teamName ??
+            r.name ??
+            r.team ??
+            (r.teamId ? `Team #${r.teamId}` : r.id ? `Team #${r.id}` : "New Team"),
         projectTitle: r.projectTitle ?? r.project ?? "—",
         projectDescription: r.projectDescription ?? r.description ?? "",
-        studentName: r.studentName ?? r.leadName ?? r.requestedBy ?? "Student",
+        // FIX #10 & #15: cover every possible field the backend might use for the member/student name
+        studentName:
+            r.studentName ??
+            r.memberName ??
+            r.fullName ??
+            r.leaderName ??
+            r.leadName ??
+            r.requestedBy ??
+            r.name ??
+            (r.teamMemberId
+                ? `Member #${r.teamMemberId}`
+                : r.memberId
+                    ? `Member #${r.memberId}`
+                    : r.studentId
+                        ? `Student #${r.studentId}`
+                        : "Unknown Student"),
         studentId: r.studentId ?? r.userId ?? null,
         members: r.members ?? r.students ?? [],
         requestedAt: r.requestedAt ?? r.createdAt ?? null,
@@ -128,13 +151,25 @@ function RequestRow({ req, onApprove, onReject, busy }) {
             </Box>
 
             <Box flex={1} minWidth={0}>
-                {/* title line */}
+                {/* title line
+                    FIX #10: leave requests now show actual studentName (resolved in normaliseRequests)
+                    FIX #15: teamName no longer shows "Unnamed Team" or "student"
+                */}
                 <Typography fontWeight={700} fontSize="0.86rem" noWrap
                     sx={{ color: theme.palette.text.primary }}>
-                    {isLeave
-                        ? `${req.studentName} wants to leave`
-                        : <><Box component="span" sx={{ color: PRIMARY }}>{req.teamName}</Box>{" — "}{req.studentName}</>
-                    }
+                    {isLeave ? (
+                        <>
+                            <Box component="span" sx={{ color: "#e57373" }}>{req.studentName}</Box>
+                            {" wants to leave "}
+                            <Box component="span" sx={{ color: PRIMARY }}>{req.teamName}</Box>
+                        </>
+                    ) : (
+                        <>
+                            <Box component="span" sx={{ color: PRIMARY }}>{req.teamName}</Box>
+                            {" — "}
+                            <Box component="span">{req.studentName}</Box>
+                        </>
+                    )}
                 </Typography>
 
                 {/* project description */}
@@ -368,7 +403,6 @@ export default function GroupsList() {
     }, []);
 
     /* ─── fetch supervised groups ─────────────────────────────── */
-    // Uses GET /api/Supervisor/my-teams
     const fetchGroups = useCallback(async () => {
         try {
             setLoadingGroups(true);
@@ -382,7 +416,6 @@ export default function GroupsList() {
     }, []);
 
     /* ─── fetch total teams count + maxTeams setting ──────────── */
-    // Uses GET /api/Supervisor/total-teams → { totalTeams, maxTeams }
     const fetchTotals = useCallback(async () => {
         try {
             const data = await getSupervisorTotalTeams();
@@ -399,7 +432,6 @@ export default function GroupsList() {
     }, [fetchRequests, fetchGroups, fetchTotals]);
 
     /* ─── open detail (fetches fresh data for selected team) ───── */
-    // Uses GET /api/Supervisor/team/{teamId}
     const openDetail = async (g) => {
         setSelected(g);
         setTab(0);
@@ -430,8 +462,8 @@ export default function GroupsList() {
                 await respondToTeamRequest({ teamId: req.teamId, isApproved });
                 snap(isApproved ? "Team request approved! ✓" : "Team request rejected.");
                 if (isApproved) {
-                    fetchGroups();   // refresh groups list after a new team is approved
-                    fetchTotals();   // update capacity bar
+                    fetchGroups();
+                    fetchTotals();
                 }
             }
             fetchRequests();
@@ -443,7 +475,6 @@ export default function GroupsList() {
     };
 
     /* ─── set supervision limit ───────────────────────────────── */
-    // Uses PUT /api/Supervisor/set-max-teams
     const handleSaveLimit = async () => {
         try {
             setActionBusy(true);

@@ -178,7 +178,7 @@ export default function JoinTeamFlow({ open, onClose, onSuccess }) {
                 onSuccess?.("Join request sent! Waiting for team leader approval.");
                 onClose();
             } else {
-                setError(res?.message ?? "Something went wrong");
+                setError(res?.message ?? "request already sent , please wait for response");
             }
         } catch (e) {
             setError(e?.response?.data?.message ?? "Unable to connect to server");

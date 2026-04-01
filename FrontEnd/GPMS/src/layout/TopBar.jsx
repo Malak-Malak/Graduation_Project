@@ -72,6 +72,7 @@ const TopBar = ({ onMenuClick, isMobile }) => {
     const displayName = user?.name ?? user?.fullName ?? user?.username ?? "User";
     const avatarLetter = displayName.charAt(0).toUpperCase();
 
+
     return (
         <AppBar
             position="static"

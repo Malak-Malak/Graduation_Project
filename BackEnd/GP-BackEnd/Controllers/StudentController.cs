@@ -1,4 +1,5 @@
-﻿using GP_BackEnd.DTOs.Student;
+﻿using GP_BackEnd.DTOs.Appointment;
+using GP_BackEnd.DTOs.Student;
 using GP_BackEnd.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,9 +14,12 @@ namespace GP_BackEnd.Controllers
     {
         private readonly StudentService _studentService;
 
-        public StudentController(StudentService studentService)
+        private readonly AppointmentService _appointmentService;
+
+        public StudentController(StudentService studentService, AppointmentService appointmentService)
         {
             _studentService = studentService;
+            _appointmentService = appointmentService;
         }
 
         // GET api/student/available-students
@@ -203,5 +207,27 @@ namespace GP_BackEnd.Controllers
             var students = await _studentService.GetAllStudentsAsync();
             return Ok(students);
         }
+        // POST api/student/request-appointment
+        [HttpPost("request-appointment")]
+        public async Task<IActionResult> RequestAppointment([FromBody] RequestAppointmentDto dto)
+        {
+            var studentId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var result = await _appointmentService.RequestAppointmentAsync(studentId, dto);
+
+            if (!result)
+                return BadRequest("Could not request appointment. You may not be in a team or have a pending appointment.");
+
+            return Ok("Appointment request sent successfully.");
+        }
+
+        // GET api/student/my-appointments
+        [HttpGet("my-appointments")]
+        public async Task<IActionResult> GetMyAppointments()
+        {
+            var studentId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var appointments = await _appointmentService.GetMyAppointmentsAsync(studentId);
+            return Ok(appointments);
+        }
+
     }
 }

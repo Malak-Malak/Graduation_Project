@@ -1,4 +1,5 @@
-﻿using GP_BackEnd.DTOs.Supervisor;
+﻿using GP_BackEnd.DTOs.Appointment;
+using GP_BackEnd.DTOs.Supervisor;
 using GP_BackEnd.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,10 +13,12 @@ namespace GP_BackEnd.Controllers
     public class SupervisorController : ControllerBase
     {
         private readonly SupervisorService _supervisorService;
+        private readonly AppointmentService _appointmentService;  
 
-        public SupervisorController(SupervisorService supervisorService)
+        public SupervisorController(SupervisorService supervisorService, AppointmentService appointmentService)  // 👈 update constructor
         {
             _supervisorService = supervisorService;
+            _appointmentService = appointmentService;  
         }
 
         // GET api/supervisor/pending-team-requests
@@ -102,6 +105,26 @@ namespace GP_BackEnd.Controllers
             var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
             var requests = await _supervisorService.GetLeaveRequestsAsync(supervisorId);
             return Ok(requests);
+        }
+        // GET api/supervisor/pending-appointments
+        [HttpGet("pending-appointments")]
+        public async Task<IActionResult> GetPendingAppointments()
+        {
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var appointments = await _appointmentService.GetPendingAppointmentsAsync(supervisorId);
+            return Ok(appointments);
+        }
+        // POST api/supervisor/respond-to-appointment
+        [HttpPost("respond-to-appointment")]
+        public async Task<IActionResult> RespondToAppointment([FromBody] RespondToAppointmentDto dto)
+        {
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var result = await _appointmentService.RespondToAppointmentAsync(supervisorId, dto);
+
+            if (!result)
+                return BadRequest("Appointment not found or already responded to.");
+
+            return Ok(dto.IsApproved ? "Appointment approved." : "Appointment rejected.");
         }
     }
 }

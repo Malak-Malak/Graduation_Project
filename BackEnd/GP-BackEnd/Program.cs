@@ -87,6 +87,7 @@ builder.Services.AddScoped<StudentService>();
 builder.Services.AddScoped<SupervisorService>();
 builder.Services.AddScoped<UserProfileService>();
 builder.Services.AddScoped<KanbanService>();
+builder.Services.AddScoped<AppointmentService>();
 
 
 var app = builder.Build();

@@ -304,6 +304,16 @@
   },
   {
     "ContainingType": "GP_BackEnd.Controllers.StudentController",
+    "Method": "GetMyAppointments",
+    "RelativePath": "api/Student/my-appointments",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.StudentController",
     "Method": "GetMyInvitations",
     "RelativePath": "api/Student/my-invitations",
     "HttpMethod": "GET",
@@ -343,6 +353,22 @@
       {
         "Name": "requestId",
         "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.StudentController",
+    "Method": "RequestAppointment",
+    "RelativePath": "api/Student/request-appointment",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "GP_BackEnd.DTOs.Appointment.RequestAppointmentDto",
         "IsRequired": true
       }
     ],
@@ -480,12 +506,38 @@
   },
   {
     "ContainingType": "GP_BackEnd.Controllers.SupervisorController",
+    "Method": "GetPendingAppointments",
+    "RelativePath": "api/Supervisor/pending-appointments",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.SupervisorController",
     "Method": "GetPendingTeamRequests",
     "RelativePath": "api/Supervisor/pending-team-requests",
     "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
     "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.SupervisorController",
+    "Method": "RespondToAppointment",
+    "RelativePath": "api/Supervisor/respond-to-appointment",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "GP_BackEnd.DTOs.Appointment.RespondToAppointmentDto",
+        "IsRequired": true
+      }
+    ],
     "ReturnTypes": []
   },
   {

@@ -72,6 +72,8 @@ namespace GP_BackEnd.Services
                         UserId = member.UserId
                     });
                 }
+                _context.TeamMembers.RemoveRange(team.TeamMembers);
+
             }
 
             await _context.SaveChangesAsync();

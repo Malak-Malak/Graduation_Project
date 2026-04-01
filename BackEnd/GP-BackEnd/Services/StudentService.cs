@@ -170,6 +170,12 @@ namespace GP_BackEnd.Services
                 UserId = studentId
             });
 
+            // Clean up any pending join requests this student sent
+            var pendingRequests = await _context.TeamJoinRequests
+                .Where(jr => jr.StudentId == studentId && jr.Status == "Pending" && jr.RequestType == "Request")
+                .ToListAsync();
+            _context.TeamJoinRequests.RemoveRange(pendingRequests);
+
             // Send invitations to optional students
             if (dto.StudentIds != null && dto.StudentIds.Any())
             {
@@ -358,6 +364,12 @@ namespace GP_BackEnd.Services
                     UserId = studentId
                 });
 
+                // Clean up any pending join requests this student sent
+                var pendingRequests = await _context.TeamJoinRequests
+                    .Where(jr => jr.StudentId == studentId && jr.Status == "Pending" && jr.RequestType == "Request")
+                    .ToListAsync();
+                _context.TeamJoinRequests.RemoveRange(pendingRequests);
+
                 // Notify team members
                 var teamMembers = await _context.TeamMembers
                     .Where(tm => tm.TeamId == invitation.TeamId)
@@ -412,6 +424,12 @@ namespace GP_BackEnd.Services
                     TeamId = joinRequest.TeamId,
                     UserId = joinRequest.StudentId
                 });
+
+                // Clean up any pending join requests this student sent
+                var pendingRequests = await _context.TeamJoinRequests
+                    .Where(jr => jr.StudentId == joinRequest.StudentId && jr.Status == "Pending" && jr.RequestType == "Request")
+                    .ToListAsync();
+                _context.TeamJoinRequests.RemoveRange(pendingRequests);
 
                 _context.Notifications.Add(new Notification
                 {
@@ -611,6 +629,6 @@ namespace GP_BackEnd.Services
 
             await _context.SaveChangesAsync();
             return true;
-        }
+        } 
     }
 }

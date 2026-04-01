@@ -34,6 +34,7 @@ import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
 import AutoStoriesOutlinedIcon from "@mui/icons-material/AutoStoriesOutlined";
 import HourglassEmptyOutlinedIcon from "@mui/icons-material/HourglassEmptyOutlined";
 import MarkEmailReadOutlinedIcon from "@mui/icons-material/MarkEmailReadOutlined";
+import BlockOutlinedIcon from "@mui/icons-material/BlockOutlined";
 
 import studentApi from "../../../../api/handler/endpoints/studentApi";
 import UserProfileApi from "../../../../api/handler/endpoints/UserProfileApi";
@@ -72,10 +73,6 @@ const statusMeta = (s) => {
     return { bg: `${ACCENT}18`, fg: ACCENT };
 };
 
-/**
- * Extract the most meaningful error message from an axios error.
- * Priority: backend message field → backend error field → backend title → JS message → fallback
- */
 const extractErrorMsg = (err, fallback = "Something went wrong. Please try again.") =>
     err?.response?.data?.message ||
     err?.response?.data?.error ||
@@ -85,24 +82,17 @@ const extractErrorMsg = (err, fallback = "Something went wrong. Please try again
 
 /* ════════════════════════════════════════════════════════════════
    TEAM STATUS LOGIC
-   Possible statuses returned by /my-team:
-     - null / 404          → student has NO team
-     - "Pending"           → create-team request sent, awaiting supervisor
-     - "Rejected"          → supervisor rejected the request
-     - "Active" / any other accepted value → fully in a team
 ════════════════════════════════════════════════════════════════ */
 const TEAM_STATE = {
-    NONE: "NONE",    // no team (includes rejected requests — student can try again)
-    PENDING: "PENDING", // waiting for supervisor approval
-    ACTIVE: "ACTIVE",  // fully active team member
+    NONE: "NONE",
+    PENDING: "PENDING",
+    ACTIVE: "ACTIVE",
 };
 
 const resolveTeamState = (team) => {
     if (!team) return TEAM_STATE.NONE;
     const s = (team.status ?? team.teamStatus ?? "").toLowerCase();
     if (s === "pending") return TEAM_STATE.PENDING;
-    // "rejected" → treat as NONE so student can freely try again
-    // The caller can check team.status === "Rejected" to show a banner
     if (s === "rejected") return TEAM_STATE.NONE;
     return TEAM_STATE.ACTIVE;
 };
@@ -166,7 +156,6 @@ function StudentProfileModal({ open, onClose, student, onInvite, isInviting, sen
                     boxShadow: isDark ? "0 32px 80px rgba(0,0,0,0.65)" : "0 32px 80px rgba(0,0,0,0.13)",
                 }
             }}>
-            {/* banner */}
             <Box sx={{
                 height: 110,
                 background: isDark
@@ -202,9 +191,11 @@ function StudentProfileModal({ open, onClose, student, onInvite, isInviting, sen
                         <Tooltip title="LinkedIn">
                             <IconButton component="a" href={profile.linkedin} target="_blank" size="small"
                                 sx={{
-                                    width: 34, height: 34, bgcolor: isDark ? "rgba(0,119,181,0.14)" : "rgba(0,119,181,0.08)",
+                                    width: 34, height: 34,
+                                    bgcolor: isDark ? "rgba(0,119,181,0.14)" : "rgba(0,119,181,0.08)",
                                     border: `1px solid ${isDark ? "rgba(0,119,181,0.28)" : "rgba(0,119,181,0.18)"}`,
-                                    "&:hover": { bgcolor: "#0077B5", color: "#fff", transform: "translateY(-2px)" }, transition: "all 0.18s",
+                                    "&:hover": { bgcolor: "#0077B5", color: "#fff", transform: "translateY(-2px)" },
+                                    transition: "all 0.18s",
                                 }}>
                                 <LinkedInIcon sx={{ fontSize: 17 }} />
                             </IconButton>
@@ -214,7 +205,8 @@ function StudentProfileModal({ open, onClose, student, onInvite, isInviting, sen
                         <Tooltip title="GitHub">
                             <IconButton component="a" href={profile.github} target="_blank" size="small"
                                 sx={{
-                                    width: 34, height: 34, bgcolor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.04)",
+                                    width: 34, height: 34,
+                                    bgcolor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.04)",
                                     border: `1px solid ${brd}`,
                                     "&:hover": { bgcolor: isDark ? "#fff" : "#000", color: isDark ? "#000" : "#fff", transform: "translateY(-2px)" },
                                     transition: "all 0.18s",
@@ -245,10 +237,12 @@ function StudentProfileModal({ open, onClose, student, onInvite, isInviting, sen
                     )}
                 </Stack>
                 {displayDept && (
-                    <Chip icon={<SchoolOutlinedIcon sx={{ fontSize: "12px !important", color: `${accent} !important` }} />}
+                    <Chip
+                        icon={<SchoolOutlinedIcon sx={{ fontSize: "12px !important", color: `${accent} !important` }} />}
                         label={displayDept} size="small"
                         sx={{
-                            mb: 1.5, height: 24, borderRadius: "8px", bgcolor: `${ACCENT}12`, color: accent,
+                            mb: 1.5, height: 24, borderRadius: "8px",
+                            bgcolor: `${ACCENT}12`, color: accent,
                             fontWeight: 700, fontSize: "0.7rem", border: `1px solid ${ACCENT}28`
                         }}
                     />
@@ -384,7 +378,6 @@ function StudentCard({ student, onInvite, onViewProfile, busyId, colorIndex, alr
             },
         }}>
             <Box sx={{ height: 4, background: `linear-gradient(90deg,${barColor} 0%,${barColor}70 100%)` }} />
-
             <Box sx={{ p: 2, flex: 1, display: "flex", flexDirection: "column", gap: 1.4 }}>
                 <Stack direction="row" alignItems="center" gap={1.4}>
                     <Box sx={{
@@ -411,7 +404,8 @@ function StudentCard({ student, onInvite, onViewProfile, busyId, colorIndex, alr
                     <Chip icon={<SchoolOutlinedIcon sx={{ fontSize: "11px !important", color: `${accent} !important` }} />}
                         label={dept} size="small"
                         sx={{
-                            height: 22, width: "fit-content", borderRadius: "7px", bgcolor: `${ACCENT}0D`, color: accent,
+                            height: 22, width: "fit-content", borderRadius: "7px",
+                            bgcolor: `${ACCENT}0D`, color: accent,
                             fontWeight: 600, fontSize: "0.66rem", border: `1px solid ${ACCENT}20`
                         }}
                     />
@@ -419,10 +413,7 @@ function StudentCard({ student, onInvite, onViewProfile, busyId, colorIndex, alr
 
                 {skills.length > 0 && (
                     <Box>
-                        <Typography sx={{
-                            fontSize: "0.62rem", fontWeight: 700, textTransform: "uppercase",
-                            letterSpacing: "0.5px", color: tSec, mb: 0.8
-                        }}>Skills</Typography>
+                        <Typography sx={{ fontSize: "0.62rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", color: tSec, mb: 0.8 }}>Skills</Typography>
                         <Stack direction="row" flexWrap="wrap" gap={0.7}>
                             {skills.slice(0, 4).map((sk, j) => {
                                 const c = skillClr(j);
@@ -435,11 +426,7 @@ function StudentCard({ student, onInvite, onViewProfile, busyId, colorIndex, alr
                                 );
                             })}
                             {skills.length > 4 && (
-                                <Box sx={{
-                                    px: 1.1, py: 0.32, borderRadius: "6px",
-                                    bgcolor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
-                                    border: `1px solid ${brd}`
-                                }}>
+                                <Box sx={{ px: 1.1, py: 0.32, borderRadius: "6px", bgcolor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)", border: `1px solid ${brd}` }}>
                                     <Typography fontSize="0.63rem" fontWeight={600} sx={{ color: tSec }}>+{skills.length - 4}</Typography>
                                 </Box>
                             )}
@@ -465,14 +452,10 @@ function StudentCard({ student, onInvite, onViewProfile, busyId, colorIndex, alr
                         }}>
                         View Profile
                     </Button>
-
                     {alreadyInvited ? (
                         <Button size="small" variant="outlined" disabled
                             startIcon={<MarkEmailReadOutlinedIcon sx={{ fontSize: 13 }} />}
-                            sx={{
-                                flex: 1, borderColor: `${GREEN}40`, color: GREEN, borderRadius: "9px",
-                                textTransform: "none", fontWeight: 700, fontSize: "0.7rem", py: 0.6
-                            }}>
+                            sx={{ flex: 1, borderColor: `${GREEN}40`, color: GREEN, borderRadius: "9px", textTransform: "none", fontWeight: 700, fontSize: "0.7rem", py: 0.6 }}>
                             Invited
                         </Button>
                     ) : (
@@ -497,7 +480,11 @@ function StudentCard({ student, onInvite, onViewProfile, busyId, colorIndex, alr
 /* ════════════════════════════════════════════════════════════════
    ROW COMPONENTS
 ════════════════════════════════════════════════════════════════ */
-function InviteRow({ inv, onAccept, onDecline, busy }) {
+
+/* ── InviteRow ───────────────────────────────────────────────────
+   teamState prop: إذا كان ACTIVE → زر القبول معلق مع tooltip
+──────────────────────────────────────────────────────────────── */
+function InviteRow({ inv, onAccept, onDecline, busy, teamState }) {
     const theme = useTheme();
     const isDark = theme.palette.mode === "dark";
     const tPri = theme.palette.text.primary;
@@ -513,6 +500,9 @@ function InviteRow({ inv, onAccept, onDecline, busy }) {
     const senderName = inv.sender?.fullName ?? inv.senderName ?? null;
     const senderEmail = inv.sender?.email ?? inv.senderEmail ?? null;
     const clr = statusMeta(status);
+
+    // الطالب في فريق active → ممنوع يقبل دعوة ثانية
+    const isInActiveTeam = teamState === TEAM_STATE.ACTIVE;
 
     return (
         <Stack direction="row" alignItems="flex-start" gap={1.5}
@@ -552,16 +542,42 @@ function InviteRow({ inv, onAccept, onDecline, busy }) {
                     }} />
                     {sentAt && <Typography fontSize="0.68rem" sx={{ color: tSec }}>{sentAt}</Typography>}
                 </Stack>
+
+                {/* ── تحذير: الطالب في فريق active ── */}
+                {status === "Pending" && isInActiveTeam && (
+                    <Stack direction="row" alignItems="center" gap={0.6} mt={0.8}
+                        sx={{
+                            px: 1.2, py: 0.6, borderRadius: "8px",
+                            bgcolor: `${RED}0C`, border: `1px solid ${RED}22`,
+                        }}>
+                        <BlockOutlinedIcon sx={{ fontSize: 12, color: RED, flexShrink: 0 }} />
+                        <Typography fontSize="0.67rem" fontWeight={600} sx={{ color: RED, lineHeight: 1.4 }}>
+                            You are already in an active team. Leave your current team first to accept this invitation.
+                        </Typography>
+                    </Stack>
+                )}
             </Box>
 
             {status === "Pending" && (
                 <Stack direction="row" gap={0.5} flexShrink={0}>
-                    <Tooltip title="Accept">
-                        <IconButton size="small" disabled={busy} onClick={() => onAccept(id)}
-                            sx={{ color: GREEN, "&:hover": { bgcolor: `${GREEN}12` } }}>
-                            <CheckCircleOutlineIcon sx={{ fontSize: 20 }} />
-                        </IconButton>
+                    {/* زر القبول — معلق إذا الطالب في فريق */}
+                    <Tooltip title={isInActiveTeam ? "Leave your current team first" : "Accept"}>
+                        {/* span لازمة عشان Tooltip تشتغل مع disabled button */}
+                        <span>
+                            <IconButton
+                                size="small"
+                                disabled={busy || isInActiveTeam}
+                                onClick={() => onAccept(id)}
+                                sx={{
+                                    color: isInActiveTeam ? "text.disabled" : GREEN,
+                                    "&:hover": { bgcolor: isInActiveTeam ? "transparent" : `${GREEN}12` },
+                                }}>
+                                <CheckCircleOutlineIcon sx={{ fontSize: 20 }} />
+                            </IconButton>
+                        </span>
                     </Tooltip>
+
+                    {/* زر الرفض — دايماً متاح */}
                     <Tooltip title="Decline">
                         <IconButton size="small" disabled={busy} onClick={() => onDecline(id)}
                             sx={{ color: RED, "&:hover": { bgcolor: `${RED}12` } }}>
@@ -590,17 +606,13 @@ function SentInvitationRow({ inv }) {
 
     return (
         <Stack direction="row" alignItems="flex-start" gap={1.5}
-            sx={{
-                p: 1.6, borderRadius: "12px", border: `1px solid ${brd}`,
-                bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.01)"
-            }}>
+            sx={{ p: 1.6, borderRadius: "12px", border: `1px solid ${brd}`, bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.01)" }}>
             <Box sx={{
                 width: 36, height: 36, borderRadius: "10px", flexShrink: 0,
                 bgcolor: `${ACCENT}12`, border: `1px solid ${ACCENT}28`,
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: "0.72rem", fontWeight: 800, color: accent,
             }}>{initials(studentName)}</Box>
-
             <Box flex={1} minWidth={0}>
                 <Typography fontWeight={600} fontSize="0.83rem" noWrap sx={{ color: tPri }}>
                     Invited{" "}<Box component="span" sx={{ color: accent }}>{studentName}</Box>{" "}to join your team
@@ -612,10 +624,7 @@ function SentInvitationRow({ inv }) {
                     </Stack>
                 )}
                 <Stack direction="row" alignItems="center" gap={0.8} mt={0.5}>
-                    <Chip label={status} size="small" sx={{
-                        height: 16, fontSize: "0.6rem", fontWeight: 700,
-                        bgcolor: clr.bg, color: clr.fg, borderRadius: "5px"
-                    }} />
+                    <Chip label={status} size="small" sx={{ height: 16, fontSize: "0.6rem", fontWeight: 700, bgcolor: clr.bg, color: clr.fg, borderRadius: "5px" }} />
                     {sentAt && <Typography fontSize="0.68rem" sx={{ color: tSec }}>{sentAt}</Typography>}
                 </Stack>
             </Box>
@@ -640,10 +649,7 @@ function MyJoinRequestRow({ req, onCancel, busy }) {
 
     return (
         <Stack direction="row" alignItems="flex-start" gap={1.5}
-            sx={{
-                p: 1.6, borderRadius: "12px", border: `1px solid ${brd}`,
-                bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.01)"
-            }}>
+            sx={{ p: 1.6, borderRadius: "12px", border: `1px solid ${brd}`, bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.01)" }}>
             <Box sx={{
                 width: 36, height: 36, borderRadius: "10px", flexShrink: 0,
                 bgcolor: `${ACCENT}12`, border: `1px solid ${ACCENT}28`,
@@ -651,28 +657,20 @@ function MyJoinRequestRow({ req, onCancel, busy }) {
             }}>
                 <SendOutlinedIcon sx={{ fontSize: 16, color: accent }} />
             </Box>
-
             <Box flex={1} minWidth={0}>
                 <Typography fontWeight={600} fontSize="0.83rem" noWrap sx={{ color: tPri }}>
                     Request to join{" "}<Box component="span" sx={{ color: accent }}>{teamName}</Box>
                 </Typography>
                 {projectDesc && (
-                    <Typography fontSize="0.74rem" sx={{
-                        color: tSec, mt: 0.35,
-                        display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden"
-                    }}>
+                    <Typography fontSize="0.74rem" sx={{ color: tSec, mt: 0.35, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                         {projectDesc}
                     </Typography>
                 )}
                 <Stack direction="row" alignItems="center" gap={0.8} mt={0.5}>
-                    <Chip label={status} size="small" sx={{
-                        height: 16, fontSize: "0.6rem", fontWeight: 700,
-                        bgcolor: clr.bg, color: clr.fg, borderRadius: "5px"
-                    }} />
+                    <Chip label={status} size="small" sx={{ height: 16, fontSize: "0.6rem", fontWeight: 700, bgcolor: clr.bg, color: clr.fg, borderRadius: "5px" }} />
                     {sentAt && <Typography fontSize="0.68rem" sx={{ color: tSec }}>{sentAt}</Typography>}
                 </Stack>
             </Box>
-
             {status === "Pending" && (
                 <Tooltip title="Cancel request">
                     <IconButton size="small" disabled={busy} onClick={() => onCancel(id)}
@@ -702,33 +700,20 @@ function TeamJoinRequestRow({ req, onAccept, onReject, busy }) {
 
     return (
         <Stack direction="row" alignItems="flex-start" gap={1.5}
-            sx={{
-                p: 1.6, borderRadius: "12px", border: `1px solid ${brd}`,
-                bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.01)"
-            }}>
-            <Avatar sx={{
-                width: 36, height: 36, bgcolor: MBR_COLORS[3], fontSize: "0.72rem",
-                fontWeight: 700, borderRadius: "10px", flexShrink: 0
-            }}>
+            sx={{ p: 1.6, borderRadius: "12px", border: `1px solid ${brd}`, bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.01)" }}>
+            <Avatar sx={{ width: 36, height: 36, bgcolor: MBR_COLORS[3], fontSize: "0.72rem", fontWeight: 700, borderRadius: "10px", flexShrink: 0 }}>
                 {initials(studentName)}
             </Avatar>
-
             <Box flex={1} minWidth={0}>
                 <Typography fontWeight={600} fontSize="0.83rem" noWrap sx={{ color: tPri }}>
                     <Box component="span" sx={{ color: accent }}>{studentName}</Box>{" "}wants to join
                 </Typography>
-                {studentEmail && (
-                    <Typography fontSize="0.74rem" sx={{ color: tSec, mt: 0.2 }}>{studentEmail}</Typography>
-                )}
+                {studentEmail && <Typography fontSize="0.74rem" sx={{ color: tSec, mt: 0.2 }}>{studentEmail}</Typography>}
                 <Stack direction="row" alignItems="center" gap={0.8} mt={0.5}>
-                    <Chip label={status} size="small" sx={{
-                        height: 16, fontSize: "0.6rem", fontWeight: 700,
-                        bgcolor: clr.bg, color: clr.fg, borderRadius: "5px"
-                    }} />
+                    <Chip label={status} size="small" sx={{ height: 16, fontSize: "0.6rem", fontWeight: 700, bgcolor: clr.bg, color: clr.fg, borderRadius: "5px" }} />
                     {sentAt && <Typography fontSize="0.68rem" sx={{ color: tSec }}>{sentAt}</Typography>}
                 </Stack>
             </Box>
-
             {status === "Pending" && (
                 <Stack direction="row" gap={0.5} flexShrink={0}>
                     <Tooltip title="Accept">
@@ -750,9 +735,7 @@ function TeamJoinRequestRow({ req, onAccept, onReject, busy }) {
 }
 
 /* ════════════════════════════════════════════════════════════════
-   PENDING STATE VIEW — shown when team status is "Pending"
-   Just shows the request summary and a refresh button.
-   The backend enforces all restrictions; the UI just informs.
+   PENDING STATE VIEW
 ════════════════════════════════════════════════════════════════ */
 function PendingApprovalView({ team, onRefresh, loading }) {
     const theme = useTheme();
@@ -766,33 +749,23 @@ function PendingApprovalView({ team, onRefresh, loading }) {
     const project = team?.projectTitle ?? team?.project ?? "—";
     const projectDesc = team?.projectDescription ?? team?.description ?? null;
     const supervisor = team?.supervisor ?? team?.supervisorName ?? null;
-    const supName = typeof supervisor === "string" ? supervisor
-        : supervisor?.fullName ?? supervisor?.name ?? "—";
+    const supName = typeof supervisor === "string" ? supervisor : supervisor?.fullName ?? supervisor?.name ?? "—";
 
     return (
         <Box sx={{ height: "100%", display: "flex", flexDirection: "column", gap: 2.5 }}>
-            {/* Header */}
             <Stack direction="row" justifyContent="space-between" alignItems="center">
                 <Box>
                     <Typography variant="h2" sx={{ color: tPri, mb: 0.3 }}>My Team</Typography>
-                    <Typography sx={{ color: tSec, fontSize: "0.84rem" }}>
-                        Waiting for supervisor approval
-                    </Typography>
+                    <Typography sx={{ color: tSec, fontSize: "0.84rem" }}>Waiting for supervisor approval</Typography>
                 </Box>
                 <Tooltip title="Refresh">
                     <IconButton size="small" onClick={onRefresh}
-                        sx={{
-                            color: tSec, border: `1px solid ${brd}`, borderRadius: "10px",
-                            "&:hover": { color: accent }
-                        }}>
-                        {loading
-                            ? <CircularProgress size={16} sx={{ color: accent }} />
-                            : <RefreshOutlinedIcon sx={{ fontSize: 17 }} />}
+                        sx={{ color: tSec, border: `1px solid ${brd}`, borderRadius: "10px", "&:hover": { color: accent } }}>
+                        {loading ? <CircularProgress size={16} sx={{ color: accent }} /> : <RefreshOutlinedIcon sx={{ fontSize: 17 }} />}
                     </IconButton>
                 </Tooltip>
             </Stack>
 
-            {/* Pending banner */}
             <Box sx={{
                 px: 2.5, py: 2, borderRadius: "14px",
                 background: isDark
@@ -801,11 +774,7 @@ function PendingApprovalView({ team, onRefresh, loading }) {
                 border: `1px solid ${ACCENT}35`,
                 display: "flex", alignItems: "flex-start", gap: 1.5,
             }}>
-                <Box sx={{
-                    width: 38, height: 38, borderRadius: "11px", flexShrink: 0,
-                    bgcolor: `${ACCENT}18`, border: `1px solid ${ACCENT}30`,
-                    display: "flex", alignItems: "center", justifyContent: "center"
-                }}>
+                <Box sx={{ width: 38, height: 38, borderRadius: "11px", flexShrink: 0, bgcolor: `${ACCENT}18`, border: `1px solid ${ACCENT}30`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <HourglassEmptyOutlinedIcon sx={{ fontSize: 20, color: accent }} />
                 </Box>
                 <Box>
@@ -813,49 +782,32 @@ function PendingApprovalView({ team, onRefresh, loading }) {
                         Team request submitted — awaiting supervisor approval
                     </Typography>
                     <Typography fontSize="0.78rem" sx={{ color: tSec, lineHeight: 1.7 }}>
-                        Your request has been sent. Once the supervisor approves it, you'll be able
-                        to invite members and start working on your project.
+                        Your request has been sent. Once the supervisor approves it, you'll be able to invite members and start working on your project.
                     </Typography>
                 </Box>
             </Box>
 
-            {/* Request summary */}
             <Paper elevation={0} sx={{ p: 2.5, borderRadius: "18px", border: `1px solid ${brd}`, bgcolor: paperBg }}>
-                <Typography fontSize="0.72rem" fontWeight={700} sx={{
-                    color: tSec,
-                    textTransform: "uppercase", letterSpacing: "0.08em", mb: 2
-                }}>
+                <Typography fontSize="0.72rem" fontWeight={700} sx={{ color: tSec, textTransform: "uppercase", letterSpacing: "0.08em", mb: 2 }}>
                     Request Summary
                 </Typography>
                 <Stack spacing={2}>
                     <Stack direction="row" alignItems="center" gap={1.5}>
-                        <Box sx={{
-                            width: 34, height: 34, borderRadius: "10px", bgcolor: `${ACCENT}12`,
-                            border: `1px solid ${ACCENT}22`, display: "flex", alignItems: "center",
-                            justifyContent: "center", flexShrink: 0
-                        }}>
+                        <Box sx={{ width: 34, height: 34, borderRadius: "10px", bgcolor: `${ACCENT}12`, border: `1px solid ${ACCENT}22`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                             <FolderOutlinedIcon sx={{ fontSize: 17, color: accent }} />
                         </Box>
                         <Box>
                             <Typography fontSize="0.72rem" sx={{ color: tSec }}>Project Title</Typography>
                             <Typography fontSize="0.88rem" fontWeight={700} sx={{ color: tPri }}>{project}</Typography>
                             {projectDesc && (
-                                <Typography fontSize="0.74rem" sx={{
-                                    color: tSec, mt: 0.3,
-                                    display: "-webkit-box", WebkitLineClamp: 2,
-                                    WebkitBoxOrient: "vertical", overflow: "hidden"
-                                }}>
+                                <Typography fontSize="0.74rem" sx={{ color: tSec, mt: 0.3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                                     {projectDesc}
                                 </Typography>
                             )}
                         </Box>
                     </Stack>
                     <Stack direction="row" alignItems="center" gap={1.5}>
-                        <Box sx={{
-                            width: 34, height: 34, borderRadius: "10px",
-                            bgcolor: "rgba(109,138,125,0.12)", border: "1px solid rgba(109,138,125,0.22)",
-                            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
-                        }}>
+                        <Box sx={{ width: 34, height: 34, borderRadius: "10px", bgcolor: "rgba(109,138,125,0.12)", border: "1px solid rgba(109,138,125,0.22)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                             <SchoolOutlinedIcon sx={{ fontSize: 17, color: "#6D8A7D" }} />
                         </Box>
                         <Box>
@@ -870,11 +822,7 @@ function PendingApprovalView({ team, onRefresh, loading }) {
 }
 
 /* ════════════════════════════════════════════════════════════════
-   REJECTED STATE VIEW — supervisor rejected the request
-   Treated identically to NONE: student can try again freely.
-   resolveTeamState maps "rejected" → TEAM_STATE.NONE so this
-   component is only used as an informational banner inside
-   the NO TEAM view when the last request was rejected.
+   REJECTED BANNER
 ════════════════════════════════════════════════════════════════ */
 function RejectedBanner({ team }) {
     const theme = useTheme();
@@ -887,15 +835,10 @@ function RejectedBanner({ team }) {
     })();
 
     return (
-        <Box sx={{
-            px: 2, py: 1.5, borderRadius: "12px",
-            bgcolor: `${RED}0C`, border: `1px solid ${RED}28`,
-            display: "flex", alignItems: "center", gap: 1.2, mb: 2
-        }}>
+        <Box sx={{ px: 2, py: 1.5, borderRadius: "12px", bgcolor: `${RED}0C`, border: `1px solid ${RED}28`, display: "flex", alignItems: "center", gap: 1.2, mb: 2 }}>
             <CancelOutlinedIcon sx={{ fontSize: 16, color: RED, flexShrink: 0 }} />
             <Typography fontSize="0.78rem" sx={{ color: tSec, lineHeight: 1.6 }}>
-                Your previous team request was rejected
-                {supName ? ` by ${supName}` : ""}.{" "}
+                Your previous team request was rejected{supName ? ` by ${supName}` : ""}.{" "}
                 You can submit a new request below.
             </Typography>
         </Box>
@@ -973,7 +916,6 @@ export default function MyTeamPage() {
             setMyTeam(team);
             const state = resolveTeamState(team);
             setTeamState(state);
-            // Check pending leave only when fully in a team
             if (state === TEAM_STATE.ACTIVE) {
                 setLeaveRequestPending(
                     team?.leaveRequestStatus?.toLowerCase() === "pending" ||
@@ -1090,7 +1032,15 @@ export default function MyTeamPage() {
         finally { setEditBusy(false); }
     };
 
+    /* ── GUARD: الطالب في فريق active → ممنوع يقبل دعوة ── */
     const handleAcceptInv = async (id) => {
+        if (teamState === TEAM_STATE.ACTIVE) {
+            snap(
+                "You are already in an active team. You must leave your current team before accepting another invitation.",
+                "error"
+            );
+            return;
+        }
         try {
             setActionBusy(true);
             await studentApi.respondToInvitation(id, true);
@@ -1198,8 +1148,7 @@ export default function MyTeamPage() {
         </>
     );
 
-
-    /* ══ NO TEAM (includes previously-rejected requests) ═══════ */
+    /* ══ NO TEAM ════════════════════════════════════════════════ */
     if (teamState === TEAM_STATE.NONE) return (
         <>
             <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
@@ -1210,12 +1159,10 @@ export default function MyTeamPage() {
                     </Box>
                 </Stack>
 
-                {/* Show rejection banner if last request was rejected */}
                 {myTeam && (myTeam.status ?? myTeam.teamStatus ?? "").toLowerCase() === "rejected" && (
                     <RejectedBanner team={myTeam} />
                 )}
 
-                {/* Pending invitations */}
                 {invitations.length > 0 && (
                     <Paper elevation={0} sx={{ mb: 3, borderRadius: "16px", overflow: "hidden", border: `1px solid ${brd}`, bgcolor: paperBg }}>
                         <Stack direction="row" alignItems="center" gap={1} sx={{
@@ -1225,26 +1172,27 @@ export default function MyTeamPage() {
                             <HowToRegOutlinedIcon sx={{ fontSize: 18, color: accent }} />
                             <Typography fontWeight={700} fontSize="0.88rem" sx={{ color: tPri }}>Pending Invitations</Typography>
                             {pendingInvCount > 0 && (
-                                <Chip label={pendingInvCount} size="small" sx={{
-                                    height: 18, fontSize: "0.65rem",
-                                    fontWeight: 700, bgcolor: `${ACCENT}18`, color: accent, borderRadius: "6px"
-                                }} />
+                                <Chip label={pendingInvCount} size="small" sx={{ height: 18, fontSize: "0.65rem", fontWeight: 700, bgcolor: `${ACCENT}18`, color: accent, borderRadius: "6px" }} />
                             )}
                         </Stack>
                         <Stack gap={1} sx={{ p: 2.5 }}>
                             {loadingInv
                                 ? <CircularProgress size={22} sx={{ color: accent, mx: "auto" }} />
                                 : invitations.map((inv, i) => (
-                                    <InviteRow key={inv.joinRequestId ?? inv.id ?? i} inv={inv}
+                                    <InviteRow
+                                        key={inv.joinRequestId ?? inv.id ?? i}
+                                        inv={inv}
                                         busy={actionBusy}
-                                        onAccept={handleAcceptInv} onDecline={handleDeclineInv} />
+                                        teamState={teamState}
+                                        onAccept={handleAcceptInv}
+                                        onDecline={handleDeclineInv}
+                                    />
                                 ))
                             }
                         </Stack>
                     </Paper>
                 )}
 
-                {/* My pending join requests */}
                 {visibleMyJoinRequests.length > 0 && (
                     <Paper elevation={0} sx={{ mb: 3, borderRadius: "16px", overflow: "hidden", border: `1px solid ${brd}`, bgcolor: paperBg }}>
                         <Stack direction="row" alignItems="center" gap={1} sx={{
@@ -1254,10 +1202,7 @@ export default function MyTeamPage() {
                             <SendOutlinedIcon sx={{ fontSize: 18, color: accent }} />
                             <Typography fontWeight={700} fontSize="0.88rem" sx={{ color: tPri }}>My Join Requests</Typography>
                             {pendingMyJoinCount > 0 && (
-                                <Chip label={pendingMyJoinCount} size="small" sx={{
-                                    height: 18, fontSize: "0.65rem",
-                                    fontWeight: 700, bgcolor: `${ACCENT}18`, color: accent, borderRadius: "6px"
-                                }} />
+                                <Chip label={pendingMyJoinCount} size="small" sx={{ height: 18, fontSize: "0.65rem", fontWeight: 700, bgcolor: `${ACCENT}18`, color: accent, borderRadius: "6px" }} />
                             )}
                         </Stack>
                         <Stack gap={1} sx={{ p: 2.5 }}>
@@ -1274,10 +1219,7 @@ export default function MyTeamPage() {
 
                 <Box sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <Stack alignItems="center" gap={3} sx={{ maxWidth: 400, width: "100%", textAlign: "center" }}>
-                        <Box sx={{
-                            width: 68, height: 68, borderRadius: "18px", bgcolor: `${ACCENT}12`,
-                            border: `1.5px solid ${ACCENT}28`, display: "flex", alignItems: "center", justifyContent: "center"
-                        }}>
+                        <Box sx={{ width: 68, height: 68, borderRadius: "18px", bgcolor: `${ACCENT}12`, border: `1.5px solid ${ACCENT}28`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                             <GroupsOutlinedIcon sx={{ fontSize: 32, color: accent }} />
                         </Box>
                         <Box>
@@ -1293,11 +1235,7 @@ export default function MyTeamPage() {
                             "&:hover": { bgcolor: `${ACCENT}12`, transform: "translateY(-2px)", boxShadow: `0 6px 20px ${ACCENT}18` },
                         }}>
                             <Stack direction="row" alignItems="center" gap={2}>
-                                <Box sx={{
-                                    width: 40, height: 40, borderRadius: "12px", flexShrink: 0,
-                                    bgcolor: `${ACCENT}18`, border: `1px solid ${ACCENT}28`,
-                                    display: "flex", alignItems: "center", justifyContent: "center"
-                                }}>
+                                <Box sx={{ width: 40, height: 40, borderRadius: "12px", flexShrink: 0, bgcolor: `${ACCENT}18`, border: `1px solid ${ACCENT}28`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                                     <AddCircleOutlineIcon sx={{ fontSize: 22, color: accent }} />
                                 </Box>
                                 <Box textAlign="left">
@@ -1355,16 +1293,12 @@ export default function MyTeamPage() {
                                 <RefreshOutlinedIcon sx={{ fontSize: 17 }} />
                             </IconButton>
                         </Tooltip>
-
                         {leaveRequestPending ? (
                             <Tooltip title="Your leave request is awaiting supervisor approval">
                                 <Box>
                                     <Button size="small" variant="outlined" disabled
                                         startIcon={<HourglassEmptyOutlinedIcon sx={{ fontSize: 15 }} />}
-                                        sx={{
-                                            borderColor: `${ORANGE}55`, color: ORANGE, borderRadius: "10px",
-                                            textTransform: "none", fontWeight: 600, fontSize: "0.78rem", opacity: 0.85
-                                        }}>
+                                        sx={{ borderColor: `${ORANGE}55`, color: ORANGE, borderRadius: "10px", textTransform: "none", fontWeight: 600, fontSize: "0.78rem", opacity: 0.85 }}>
                                         Leave Pending…
                                     </Button>
                                 </Box>
@@ -1373,11 +1307,7 @@ export default function MyTeamPage() {
                             <Button size="small" variant="outlined"
                                 startIcon={<ExitToAppOutlinedIcon />}
                                 onClick={() => setLeaveOpen(true)}
-                                sx={{
-                                    borderColor: `${RED}55`, color: RED, borderRadius: "10px", textTransform: "none",
-                                    fontWeight: 600, fontSize: "0.78rem",
-                                    "&:hover": { bgcolor: `${RED}08`, borderColor: RED }
-                                }}>
+                                sx={{ borderColor: `${RED}55`, color: RED, borderRadius: "10px", textTransform: "none", fontWeight: 600, fontSize: "0.78rem", "&:hover": { bgcolor: `${RED}08`, borderColor: RED } }}>
                                 Leave Team
                             </Button>
                         )}
@@ -1386,10 +1316,7 @@ export default function MyTeamPage() {
 
                 {/* ── Pending Leave Banner ── */}
                 {leaveRequestPending && (
-                    <Box sx={{
-                        px: 2, py: 1.4, borderRadius: "12px", bgcolor: `${ORANGE}10`, border: `1px solid ${ORANGE}35`,
-                        display: "flex", alignItems: "center", gap: 1.2
-                    }}>
+                    <Box sx={{ px: 2, py: 1.4, borderRadius: "12px", bgcolor: `${ORANGE}10`, border: `1px solid ${ORANGE}35`, display: "flex", alignItems: "center", gap: 1.2 }}>
                         <HourglassEmptyOutlinedIcon sx={{ fontSize: 16, color: ORANGE, flexShrink: 0 }} />
                         <Box>
                             <Typography fontSize="0.8rem" fontWeight={700} sx={{ color: ORANGE }}>Leave Request Pending</Typography>
@@ -1405,10 +1332,7 @@ export default function MyTeamPage() {
                     <Paper elevation={0} sx={{ flex: 1, p: 2.5, borderRadius: "18px", border: `1px solid ${brd}`, bgcolor: paperBg }}>
                         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1.8}>
                             <Stack direction="row" alignItems="center" gap={1.2}>
-                                <Box sx={{
-                                    width: 36, height: 36, borderRadius: "11px", flexShrink: 0, bgcolor: `${ACCENT}12`,
-                                    border: `1px solid ${ACCENT}25`, display: "flex", alignItems: "center", justifyContent: "center"
-                                }}>
+                                <Box sx={{ width: 36, height: 36, borderRadius: "11px", flexShrink: 0, bgcolor: `${ACCENT}12`, border: `1px solid ${ACCENT}25`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                                     <FolderOutlinedIcon sx={{ fontSize: 18, color: accent }} />
                                 </Box>
                                 <Typography fontWeight={700} fontSize="0.78rem" sx={{ color: tSec, textTransform: "uppercase", letterSpacing: "0.08em" }}>Project</Typography>
@@ -1422,10 +1346,7 @@ export default function MyTeamPage() {
                         </Stack>
                         <Typography fontWeight={700} fontSize="1rem" sx={{ color: tPri, mb: 0.5 }}>{project}</Typography>
                         {projectDesc && (
-                            <Typography fontSize="0.78rem" sx={{
-                                color: tSec, lineHeight: 1.65, mb: 0.8,
-                                display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden"
-                            }}>
+                            <Typography fontSize="0.78rem" sx={{ color: tSec, lineHeight: 1.65, mb: 0.8, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                                 {projectDesc}
                             </Typography>
                         )}
@@ -1437,11 +1358,7 @@ export default function MyTeamPage() {
 
                     <Paper elevation={0} sx={{ flex: 1, p: 2.5, borderRadius: "18px", border: `1px solid ${brd}`, bgcolor: paperBg }}>
                         <Stack direction="row" alignItems="center" gap={1.2} mb={1.8}>
-                            <Box sx={{
-                                width: 36, height: 36, borderRadius: "11px", flexShrink: 0,
-                                bgcolor: "rgba(109,138,125,0.12)", border: "1px solid rgba(109,138,125,0.22)",
-                                display: "flex", alignItems: "center", justifyContent: "center"
-                            }}>
+                            <Box sx={{ width: 36, height: 36, borderRadius: "11px", flexShrink: 0, bgcolor: "rgba(109,138,125,0.12)", border: "1px solid rgba(109,138,125,0.22)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                                 <SchoolOutlinedIcon sx={{ fontSize: 18, color: "#6D8A7D" }} />
                             </Box>
                             <Typography fontWeight={700} fontSize="0.78rem" sx={{ color: tSec, textTransform: "uppercase", letterSpacing: "0.08em" }}>Supervisor</Typography>
@@ -1467,10 +1384,7 @@ export default function MyTeamPage() {
                 </Stack>
 
                 {/* ── TABS ── */}
-                <Paper elevation={0} sx={{
-                    flex: 1, borderRadius: "18px", overflow: "hidden",
-                    border: `1px solid ${brd}`, bgcolor: paperBg, display: "flex", flexDirection: "column"
-                }}>
+                <Paper elevation={0} sx={{ flex: 1, borderRadius: "18px", overflow: "hidden", border: `1px solid ${brd}`, bgcolor: paperBg, display: "flex", flexDirection: "column" }}>
                     <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{
                         px: 1.5, minHeight: 46,
                         borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)"}`,
@@ -1524,16 +1438,8 @@ export default function MyTeamPage() {
                                         const c = MBR_COLORS[i % MBR_COLORS.length];
                                         return (
                                             <Stack key={m.userId ?? m.id ?? i} direction="row" alignItems="center" gap={1.5}
-                                                sx={{
-                                                    p: 1.5, borderRadius: "12px",
-                                                    border: `1px solid ${isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.07)"}`,
-                                                    bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.01)"
-                                                }}>
-                                                <Box sx={{
-                                                    width: 40, height: 40, borderRadius: "12px", bgcolor: `${c}18`,
-                                                    border: `1.5px solid ${c}28`, display: "flex", alignItems: "center", justifyContent: "center",
-                                                    fontSize: "0.85rem", fontWeight: 800, color: c
-                                                }}>
+                                                sx={{ p: 1.5, borderRadius: "12px", border: `1px solid ${isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.07)"}`, bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.01)" }}>
+                                                <Box sx={{ width: 40, height: 40, borderRadius: "12px", bgcolor: `${c}18`, border: `1.5px solid ${c}28`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.85rem", fontWeight: 800, color: c }}>
                                                     {initials(mName)}
                                                 </Box>
                                                 <Box flex={1} minWidth={0}>
@@ -1555,23 +1461,13 @@ export default function MyTeamPage() {
                     {tab === 1 && (
                         <Box sx={{ p: 2.5, flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
                             {isTeamFull && (
-                                <Box sx={{
-                                    mb: 2, px: 2, py: 1.4, borderRadius: "12px", bgcolor: `${RED}10`, border: `1px solid ${RED}30`,
-                                    display: "flex", alignItems: "center", gap: 1
-                                }}>
-                                    <Box sx={{
-                                        width: 28, height: 28, borderRadius: "8px", bgcolor: `${RED}18`, border: `1px solid ${RED}30`,
-                                        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
-                                    }}>
+                                <Box sx={{ mb: 2, px: 2, py: 1.4, borderRadius: "12px", bgcolor: `${RED}10`, border: `1px solid ${RED}30`, display: "flex", alignItems: "center", gap: 1 }}>
+                                    <Box sx={{ width: 28, height: 28, borderRadius: "8px", bgcolor: `${RED}18`, border: `1px solid ${RED}30`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                                         <GroupsOutlinedIcon sx={{ fontSize: 15, color: RED }} />
                                     </Box>
                                     <Box>
-                                        <Typography fontSize="0.78rem" fontWeight={700} sx={{ color: RED }}>
-                                            Team is full ({members.length}/{MAX_TEAM_SIZE} members)
-                                        </Typography>
-                                        <Typography fontSize="0.71rem" sx={{ color: tSec }}>
-                                            You cannot invite more students until a member leaves.
-                                        </Typography>
+                                        <Typography fontSize="0.78rem" fontWeight={700} sx={{ color: RED }}>Team is full ({members.length}/{MAX_TEAM_SIZE} members)</Typography>
+                                        <Typography fontSize="0.71rem" sx={{ color: tSec }}>You cannot invite more students until a member leaves.</Typography>
                                     </Box>
                                 </Box>
                             )}
@@ -1581,12 +1477,7 @@ export default function MyTeamPage() {
                                     placeholder="Search by name, email or department…"
                                     value={search} onChange={e => setSearch(e.target.value)}
                                     InputProps={{ startAdornment: <SearchOutlinedIcon sx={{ fontSize: 17, color: tSec, mr: 0.8 }} /> }}
-                                    sx={{
-                                        "& .MuiOutlinedInput-root": {
-                                            borderRadius: "12px", fontSize: "0.85rem",
-                                            "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: accent }
-                                        }
-                                    }}
+                                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "12px", fontSize: "0.85rem", "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: accent } } }}
                                 />
                                 {!loadingAvail && filtered.length > 0 && (
                                     <Typography fontSize="0.76rem" sx={{ color: tSec, whiteSpace: "nowrap" }}>
@@ -1597,15 +1488,10 @@ export default function MyTeamPage() {
 
                             <Box sx={{ flex: 1, overflowY: "auto" }}>
                                 {loadingAvail ? (
-                                    <Box display="flex" justifyContent="center" pt={5}>
-                                        <CircularProgress size={28} sx={{ color: accent }} />
-                                    </Box>
+                                    <Box display="flex" justifyContent="center" pt={5}><CircularProgress size={28} sx={{ color: accent }} /></Box>
                                 ) : paginatedList.length === 0 ? (
                                     <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", pt: 7, gap: 1.5 }}>
-                                        <Box sx={{
-                                            width: 56, height: 56, borderRadius: "16px", bgcolor: `${ACCENT}0D`, border: `1px solid ${ACCENT}1E`,
-                                            display: "flex", alignItems: "center", justifyContent: "center"
-                                        }}>
+                                        <Box sx={{ width: 56, height: 56, borderRadius: "16px", bgcolor: `${ACCENT}0D`, border: `1px solid ${ACCENT}1E`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                                             <PersonAddOutlinedIcon sx={{ fontSize: 26, color: accent, opacity: 0.55 }} />
                                         </Box>
                                         <Typography fontSize="0.84rem" sx={{ color: tSec }}>
@@ -1654,10 +1540,7 @@ export default function MyTeamPage() {
                                 ? <Box display="flex" justifyContent="center" pt={4}><CircularProgress size={24} sx={{ color: accent }} /></Box>
                                 : teamJoinRequests.length === 0
                                     ? <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", pt: 7, gap: 1.5 }}>
-                                        <Box sx={{
-                                            width: 56, height: 56, borderRadius: "16px", bgcolor: `${ACCENT}0D`, border: `1px solid ${ACCENT}1E`,
-                                            display: "flex", alignItems: "center", justifyContent: "center"
-                                        }}>
+                                        <Box sx={{ width: 56, height: 56, borderRadius: "16px", bgcolor: `${ACCENT}0D`, border: `1px solid ${ACCENT}1E`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                                             <HowToRegOutlinedIcon sx={{ fontSize: 26, color: accent, opacity: 0.55 }} />
                                         </Box>
                                         <Typography fontSize="0.84rem" sx={{ color: tSec }}>No join requests yet</Typography>
@@ -1679,10 +1562,7 @@ export default function MyTeamPage() {
                                 <Box display="flex" justifyContent="center" pt={4}><CircularProgress size={24} sx={{ color: accent }} /></Box>
                             ) : (visibleMyJoinRequests.length === 0 && sentInvitations.length === 0) ? (
                                 <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", pt: 7, gap: 1.5 }}>
-                                    <Box sx={{
-                                        width: 56, height: 56, borderRadius: "16px", bgcolor: `${ACCENT}0D`, border: `1px solid ${ACCENT}1E`,
-                                        display: "flex", alignItems: "center", justifyContent: "center"
-                                    }}>
+                                    <Box sx={{ width: 56, height: 56, borderRadius: "16px", bgcolor: `${ACCENT}0D`, border: `1px solid ${ACCENT}1E`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                                         <SendOutlinedIcon sx={{ fontSize: 26, color: accent, opacity: 0.55 }} />
                                     </Box>
                                     <Typography fontSize="0.84rem" sx={{ color: tSec }}>You haven't sent any requests or invitations yet</Typography>
@@ -1693,8 +1573,7 @@ export default function MyTeamPage() {
                                         <Box>
                                             <Stack direction="row" alignItems="center" gap={0.8} mb={1.5}>
                                                 <MarkEmailReadOutlinedIcon sx={{ fontSize: 15, color: accent }} />
-                                                <Typography fontSize="0.72rem" fontWeight={700}
-                                                    sx={{ color: tSec, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                                                <Typography fontSize="0.72rem" fontWeight={700} sx={{ color: tSec, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                                                     Invitations Sent to Students ({sentInvitations.length})
                                                 </Typography>
                                             </Stack>
@@ -1707,8 +1586,7 @@ export default function MyTeamPage() {
                                         <Box>
                                             <Stack direction="row" alignItems="center" gap={0.8} mb={1.5}>
                                                 <SendOutlinedIcon sx={{ fontSize: 15, color: accent }} />
-                                                <Typography fontSize="0.72rem" fontWeight={700}
-                                                    sx={{ color: tSec, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                                                <Typography fontSize="0.72rem" fontWeight={700} sx={{ color: tSec, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                                                     My Join Requests ({visibleMyJoinRequests.length})
                                                 </Typography>
                                             </Stack>
@@ -1725,17 +1603,28 @@ export default function MyTeamPage() {
                         </Box>
                     )}
 
-                    {/* TAB 4 — My Invitations (received) */}
+                    {/* TAB 4 — My Invitations (received) — زر القبول معلق إذا في فريق active */}
                     {tab === 4 && (
                         <Box sx={{ p: 2.5, flex: 1, overflowY: "auto" }}>
+                            {/* ── تحذير عام إذا الطالب في فريق ── */}
+                            {teamState === TEAM_STATE.ACTIVE && invitations.some(i => (i.status ?? "Pending") === "Pending") && (
+                                <Box sx={{
+                                    mb: 2, px: 2, py: 1.4, borderRadius: "12px",
+                                    bgcolor: `${RED}08`, border: `1px solid ${RED}22`,
+                                    display: "flex", alignItems: "center", gap: 1.2
+                                }}>
+                                    <BlockOutlinedIcon sx={{ fontSize: 16, color: RED, flexShrink: 0 }} />
+                                    <Typography fontSize="0.78rem" sx={{ color: RED, fontWeight: 600, lineHeight: 1.5 }}>
+                                        You are already in an active team. You must leave your current team before accepting any invitation.
+                                    </Typography>
+                                </Box>
+                            )}
+
                             {loadingInv ? (
                                 <Box display="flex" justifyContent="center" pt={4}><CircularProgress size={24} sx={{ color: accent }} /></Box>
                             ) : invitations.length === 0 ? (
                                 <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", pt: 7, gap: 1.5 }}>
-                                    <Box sx={{
-                                        width: 56, height: 56, borderRadius: "16px", bgcolor: `${ACCENT}0D`, border: `1px solid ${ACCENT}1E`,
-                                        display: "flex", alignItems: "center", justifyContent: "center"
-                                    }}>
+                                    <Box sx={{ width: 56, height: 56, borderRadius: "16px", bgcolor: `${ACCENT}0D`, border: `1px solid ${ACCENT}1E`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                                         <HowToRegOutlinedIcon sx={{ fontSize: 26, color: accent, opacity: 0.55 }} />
                                     </Box>
                                     <Typography fontSize="0.84rem" sx={{ color: tSec }}>No invitations yet</Typography>
@@ -1743,9 +1632,14 @@ export default function MyTeamPage() {
                             ) : (
                                 <Stack gap={1.2}>
                                     {invitations.map((inv, i) => (
-                                        <InviteRow key={inv.joinRequestId ?? inv.id ?? i} inv={inv}
+                                        <InviteRow
+                                            key={inv.joinRequestId ?? inv.id ?? i}
+                                            inv={inv}
                                             busy={actionBusy}
-                                            onAccept={handleAcceptInv} onDecline={handleDeclineInv} />
+                                            teamState={teamState}
+                                            onAccept={handleAcceptInv}
+                                            onDecline={handleDeclineInv}
+                                        />
                                     ))}
                                 </Stack>
                             )}
@@ -1761,28 +1655,21 @@ export default function MyTeamPage() {
                 isInviting={!!invitingId} sentInviteIds={sentInviteIds} />
 
             {/* ══ EDIT PROJECT DIALOG ══ */}
-            <Dialog open={editOpen} onClose={() => !editBusy && setEditOpen(false)}
-                maxWidth="xs" fullWidth
+            <Dialog open={editOpen} onClose={() => !editBusy && setEditOpen(false)} maxWidth="xs" fullWidth
                 PaperProps={{ sx: { borderRadius: "18px", border: `1px solid ${brd}`, bgcolor: paperBg } }}>
                 <Box sx={{ px: 3, py: 2.5, borderBottom: `1px solid ${brd}` }}>
                     <Typography fontWeight={700} fontSize="0.95rem" sx={{ color: tPri }}>Edit Project Info</Typography>
                 </Box>
                 <Box sx={{ px: 3, py: 2.5 }}>
                     <Stack gap={2}>
-                        <TextField label="Project Title" size="small" fullWidth required
-                            value={editTitle} onChange={e => setEditTitle(e.target.value)} sx={inputSx} />
-                        <TextField label="Project Description" size="small" fullWidth multiline rows={3}
-                            value={editDesc} onChange={e => setEditDesc(e.target.value)} sx={inputSx} />
+                        <TextField label="Project Title" size="small" fullWidth required value={editTitle} onChange={e => setEditTitle(e.target.value)} sx={inputSx} />
+                        <TextField label="Project Description" size="small" fullWidth multiline rows={3} value={editDesc} onChange={e => setEditDesc(e.target.value)} sx={inputSx} />
                     </Stack>
                 </Box>
                 <Box sx={{ px: 3, pb: 3, display: "flex", justifyContent: "flex-end", gap: 1 }}>
-                    <Button disabled={editBusy} onClick={() => setEditOpen(false)}
-                        sx={{ color: tSec, textTransform: "none", fontWeight: 500, borderRadius: "10px" }}>Cancel</Button>
+                    <Button disabled={editBusy} onClick={() => setEditOpen(false)} sx={{ color: tSec, textTransform: "none", fontWeight: 500, borderRadius: "10px" }}>Cancel</Button>
                     <Button variant="contained" disabled={editBusy} onClick={handleSaveProject}
-                        sx={{
-                            bgcolor: accent, "&:hover": { bgcolor: isDark ? ACCENT : "#a8622e", boxShadow: "none" },
-                            textTransform: "none", fontWeight: 700, borderRadius: "10px", boxShadow: "none"
-                        }}>
+                        sx={{ bgcolor: accent, "&:hover": { bgcolor: isDark ? ACCENT : "#a8622e", boxShadow: "none" }, textTransform: "none", fontWeight: 700, borderRadius: "10px", boxShadow: "none" }}>
                         {editBusy ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : "Save"}
                     </Button>
                 </Box>
@@ -1798,13 +1685,9 @@ export default function MyTeamPage() {
                         You cannot submit another leave request while one is pending.
                     </Typography>
                     <Stack direction="row" gap={1} justifyContent="flex-end">
-                        <Button onClick={() => setLeaveOpen(false)} disabled={actionBusy}
-                            sx={{ textTransform: "none", color: tSec, borderRadius: "10px", fontWeight: 500 }}>Cancel</Button>
+                        <Button onClick={() => setLeaveOpen(false)} disabled={actionBusy} sx={{ textTransform: "none", color: tSec, borderRadius: "10px", fontWeight: 500 }}>Cancel</Button>
                         <Button variant="contained" disabled={actionBusy} onClick={handleLeave}
-                            sx={{
-                                bgcolor: RED, "&:hover": { bgcolor: "#b83f3f", boxShadow: "none" },
-                                textTransform: "none", fontWeight: 700, borderRadius: "10px", boxShadow: "none", px: 3
-                            }}>
+                            sx={{ bgcolor: RED, "&:hover": { bgcolor: "#b83f3f", boxShadow: "none" }, textTransform: "none", fontWeight: 700, borderRadius: "10px", boxShadow: "none", px: 3 }}>
                             {actionBusy ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : "Confirm Leave"}
                         </Button>
                     </Stack>

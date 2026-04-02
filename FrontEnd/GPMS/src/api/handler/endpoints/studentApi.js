@@ -24,6 +24,8 @@
 //   POST /api/Student/request-leave
 //   PUT  /api/Student/update-project-info
 //   DELETE /api/Student/delete-join-request/{requestId}
+//   POST /api/Student/request-appointment     ← NEW
+//   GET  /api/Student/my-appointments         ← NEW
 
 import axiosInstance from "./../../axiosInstance";
 
@@ -86,27 +88,16 @@ const studentApi = {
     /**
      * GET /api/Student/my-join-requests
      * Requests the student sent TO teams (request-to-join).
-     * Lets the student track the status of their outgoing join requests.
-     *
-     * Expected response shape:
-     * [{
-     *   id, joinRequestId?,
-     *   teamId, teamName, projectTitle, projectDescription?,
-     *   status: "Pending" | "Accepted" | "Rejected",
-     *   sentAt
-     * }]
      *
      * ⚠  NOTE: This endpoint is not yet implemented on the backend.
      *    Until it is ready the function silently returns [] so existing
      *    UI keeps working without errors.
-     *    Once the backend ships, remove the try/catch wrapper.
      */
     getMyJoinRequests: async () => {
         try {
             const res = await axiosInstance.get("/Student/my-join-requests");
             return res.data;
         } catch {
-            // Graceful fallback — endpoint not available yet
             return [];
         }
     },
@@ -114,8 +105,6 @@ const studentApi = {
     /**
      * GET /api/Student/team-join-requests
      * Join requests received by the student's team (visible to team leader).
-     * Used so the leader can accept/reject students who requested to join.
-     *
      * Expected response shape:
      * [{
      *   id, joinRequestId,
@@ -143,7 +132,6 @@ const studentApi = {
 
     /**
      * POST /api/Student/send-invitation
-     * Send an invitation FROM the team TO a student.
      * @param {number} studentId
      */
     sendInvitation: (studentId) =>
@@ -151,7 +139,6 @@ const studentApi = {
 
     /**
      * POST /api/Student/request-to-join
-     * Student requests to join an existing team.
      * @param {number} teamId
      */
     requestToJoin: (teamId) =>
@@ -159,7 +146,6 @@ const studentApi = {
 
     /**
      * POST /api/Student/respond-to-invitation
-     * Student accepts or declines an invitation sent to them by a team.
      * @param {number} joinRequestId
      * @param {boolean} isAccepted
      */
@@ -168,7 +154,6 @@ const studentApi = {
 
     /**
      * POST /api/Student/respond-to-join-request
-     * Team leader accepts or declines a student's request-to-join.
      * @param {number} joinRequestId
      * @param {boolean} isAccepted
      */
@@ -177,7 +162,6 @@ const studentApi = {
 
     /**
      * POST /api/Student/reject-join-request/{requestId}
-     * Explicit reject endpoint for a join request (alternative to respond-to-join-request).
      * @param {number} requestId
      */
     rejectJoinRequest: (requestId) =>
@@ -185,15 +169,12 @@ const studentApi = {
 
     /**
      * POST /api/Student/request-leave
-     * Student submits a request to leave their current team.
-     * Requires supervisor approval before the student is removed.
      */
     requestLeave: () =>
         axiosInstance.post("/Student/request-leave").then((r) => r.data),
 
     /**
      * PUT /api/Student/update-project-info
-     * Allows the team leader to update the project title and description.
      * @param {{ projectTitle: string, projectDescription: string }} body
      */
     updateProjectInfo: (body) =>
@@ -204,7 +185,6 @@ const studentApi = {
 
     /**
      * DELETE /api/Student/delete-join-request/{requestId}
-     * Student cancels a pending join request they previously sent to a team.
      * @param {number} requestId
      */
     deleteJoinRequest: (requestId) =>
@@ -218,9 +198,9 @@ const studentApi = {
 
     getAllStudents: () =>
         axiosInstance.get("/Student/all-students").then((r) => r.data),
+
     /**
      * POST /api/UserProfile — create profile for the first time
-     * data.skills[]  →  joined as comma string  →  field
      */
     createProfile: (data) =>
         axiosInstance.post("/UserProfile", {
@@ -249,6 +229,37 @@ const studentApi = {
             personalEmail: data.email ?? "",
             bio: data.bio ?? "",
         }).then((r) => r.data),
+
+    // ── Appointments ──────────────────────────────────────────────────────────
+
+    /**
+     * POST /api/Student/request-appointment
+     * Student requests a meeting appointment with their supervisor.
+     *
+     * @param {string} dateTime  — ISO 8601 string, e.g. "2026-04-10T10:00:00.000Z"
+     *
+     * Request body: { dateTime: string }
+     */
+    requestAppointment: (dateTime) =>
+        axiosInstance
+            .post("/Student/request-appointment", { dateTime })
+            .then((r) => r.data),
+
+    /**
+     * GET /api/Student/my-appointments
+     * Returns all appointments for the logged-in student.
+     *
+     * Expected response shape per item:
+     * {
+     *   appointmentId : number,
+     *   dateTime      : string (ISO),
+     *   status        : "Pending" | "Approved" | "Rejected",
+     *   link?         : string,   // filled by supervisor on approval
+     *   supervisorName: string,
+     * }
+     */
+    getMyAppointments: () =>
+        axiosInstance.get("/Student/my-appointments").then((r) => r.data),
 };
 
 export default studentApi;

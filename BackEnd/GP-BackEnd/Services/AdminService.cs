@@ -71,6 +71,9 @@ namespace GP_BackEnd.Services
         // Add university record (for testing)
         public async Task<bool> AddUniversityRecordAsync(AddUniversityRecordDto dto)
         {
+            if (!dto.UniversityEmail.EndsWith("@students.ptuk.edu.ps"))
+                return false;
+
             var existing = await _context.UniversityRecords
                 .FirstOrDefaultAsync(u => u.UniversityEmail == dto.UniversityEmail);
 

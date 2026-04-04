@@ -1,3 +1,5 @@
+// src/layout/MainLayout.jsx
+
 import { useState } from "react";
 import { Box, useMediaQuery } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
@@ -8,7 +10,7 @@ const SIDEBAR_WIDTH = 260;
 const SIDEBAR_COLLAPSED_WIDTH = 68;
 const TOPBAR_HEIGHT = 64;
 
-export default function MainLayout({ children }) {
+export default function MainLayout({ children, onPhaseSwitch }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -34,6 +36,7 @@ export default function MainLayout({ children }) {
         onMobileClose={() => setMobileOpen(false)}
         onCollapse={handleCollapse}
         isMobile={isMobile}
+        onPhaseSwitch={onPhaseSwitch}   // ← pass down to Sidebar
       />
 
       {/* ── Main area ── */}

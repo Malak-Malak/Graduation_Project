@@ -26,6 +26,8 @@
 //   DELETE /api/Student/delete-join-request/{requestId}
 //   POST /api/Student/request-appointment     ← NEW
 //   GET  /api/Student/my-appointments         ← NEW
+//   POST /api/Student/switch-version          ← NEW (Phase switching)
+//   GET  /api/Student/current-version         ← NEW (Get current phase)
 
 import axiosInstance from "./../../axiosInstance";
 
@@ -260,6 +262,29 @@ const studentApi = {
      */
     getMyAppointments: () =>
         axiosInstance.get("/Student/my-appointments").then((r) => r.data),
+
+    // ── Phase / Version Switching ─────────────────────────────────────────────
+
+    /**
+     * POST /api/Student/switch-version
+     * Switches the student between Phase 1 (Proposal) and Phase 2 (Project).
+     * No request body needed — backend toggles automatically.
+     *
+     * Expected response shape:
+     * { version: "Phase1" | "Phase2" }
+     */
+    switchVersion: () =>
+        axiosInstance.post("/Student/switch-version").then((r) => r.data),
+
+    /**
+     * GET /api/Student/current-version
+     * Returns the student's current active phase.
+     *
+     * Expected response shape:
+     * { version: "Phase1" | "Phase2" }
+     */
+    getCurrentVersion: () =>
+        axiosInstance.get("/Student/current-version").then((r) => r.data),
 };
 
 export default studentApi;

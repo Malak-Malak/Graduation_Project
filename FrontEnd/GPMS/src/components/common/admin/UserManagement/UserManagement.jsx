@@ -31,6 +31,9 @@ const STATUS_CLR = { active: "#6D8A7D", pending: "#C49A6C", inactive: "#9AA9B9" 
 const STATUS_LBL = { active: "Active", pending: "Pending", inactive: "Inactive" };
 const PER_PAGE = 8;
 
+const STUDENT_DOMAIN = "@students.ptuk.edu.ps";
+const SUPERVISOR_DOMAIN = "@supervisors.ptuk.edu.ps";
+
 const EMPTY_FORM = {
     fullName: "",
     universityEmail: "",
@@ -41,11 +44,24 @@ const EMPTY_FORM = {
     isGraduate: true,
 };
 
+// ── Email Validator ───────────────────────────────────────────────────────────
+const getEmailError = (email, role) => {
+    if (!email?.trim()) return null;
+    const lower = email.trim().toLowerCase();
+    if (role === "student" && !lower.endsWith(STUDENT_DOMAIN))
+        return `Student email must end with ${STUDENT_DOMAIN}`;
+    if (role === "supervisor" && !lower.endsWith(SUPERVISOR_DOMAIN))
+        return `Supervisor email must end with ${SUPERVISOR_DOMAIN}`;
+    return null;
+};
+
 // ── Add User Form ─────────────────────────────────────────────────────────────
 function AddUserForm({ form, setForm, error }) {
     const theme = useTheme();
     const t = theme.palette.custom;
     const fieldSx = { "& .MuiOutlinedInput-root": { borderRadius: 2 } };
+
+    const emailError = getEmailError(form.universityEmail, form.role);
 
     return (
         <Box sx={{ mt: 1 }}>
@@ -55,14 +71,34 @@ function AddUserForm({ form, setForm, error }) {
                     label="Full Name" size="small" fullWidth sx={fieldSx}
                     value={form.fullName}
                     onChange={(e) => setForm((p) => ({ ...p, fullName: e.target.value }))}
-                    InputProps={{ startAdornment: <InputAdornment position="start"><BadgeOutlinedIcon sx={{ fontSize: 18, color: t.textTertiary }} /></InputAdornment> }}
+                    InputProps={{
+                        startAdornment: (
+                            <InputAdornment position="start">
+                                <BadgeOutlinedIcon sx={{ fontSize: 18, color: t.textTertiary }} />
+                            </InputAdornment>
+                        ),
+                    }}
                 />
                 <TextField
                     label="University Email" size="small" fullWidth sx={fieldSx}
-                    placeholder="e.g. h.n.awad@students.ptuk.edu.ps"
+                    placeholder={
+                        form.role === "student"
+                            ? "e.g. h.n.awad@students.ptuk.edu.ps"
+                            : form.role === "supervisor"
+                                ? "e.g. t.sammar@supervisors.ptuk.edu.ps"
+                                : "e.g. admin@ptuk.edu.ps"
+                    }
                     value={form.universityEmail}
                     onChange={(e) => setForm((p) => ({ ...p, universityEmail: e.target.value }))}
-                    InputProps={{ startAdornment: <InputAdornment position="start"><EmailOutlinedIcon sx={{ fontSize: 18, color: t.textTertiary }} /></InputAdornment> }}
+                    error={!!emailError}
+                    helperText={emailError ?? " "}
+                    InputProps={{
+                        startAdornment: (
+                            <InputAdornment position="start">
+                                <EmailOutlinedIcon sx={{ fontSize: 18, color: t.textTertiary }} />
+                            </InputAdornment>
+                        ),
+                    }}
                 />
                 <Stack direction="row" spacing={2}>
                     <TextField
@@ -70,13 +106,25 @@ function AddUserForm({ form, setForm, error }) {
                         placeholder="e.g. h.n.awad"
                         value={form.username}
                         onChange={(e) => setForm((p) => ({ ...p, username: e.target.value }))}
-                        InputProps={{ startAdornment: <InputAdornment position="start"><PersonAddOutlinedIcon sx={{ fontSize: 18, color: t.textTertiary }} /></InputAdornment> }}
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <PersonAddOutlinedIcon sx={{ fontSize: 18, color: t.textTertiary }} />
+                                </InputAdornment>
+                            ),
+                        }}
                     />
                     <TextField
                         label="Password" size="small" fullWidth sx={fieldSx} type="password"
                         value={form.password}
                         onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
-                        InputProps={{ startAdornment: <InputAdornment position="start"><LockOutlinedIcon sx={{ fontSize: 18, color: t.textTertiary }} /></InputAdornment> }}
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <LockOutlinedIcon sx={{ fontSize: 18, color: t.textTertiary }} />
+                                </InputAdornment>
+                            ),
+                        }}
                     />
                 </Stack>
                 <Stack direction="row" spacing={2}>
@@ -94,7 +142,13 @@ function AddUserForm({ form, setForm, error }) {
                         placeholder="e.g. CS"
                         value={form.department}
                         onChange={(e) => setForm((p) => ({ ...p, department: e.target.value }))}
-                        InputProps={{ startAdornment: <InputAdornment position="start"><BusinessOutlinedIcon sx={{ fontSize: 18, color: t.textTertiary }} /></InputAdornment> }}
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <BusinessOutlinedIcon sx={{ fontSize: 18, color: t.textTertiary }} />
+                                </InputAdornment>
+                            ),
+                        }}
                     />
                 </Stack>
                 <Box sx={{ px: 1.5, py: 1.2, borderRadius: 2, border: `1px solid ${alpha(PRIMARY, 0.2)}`, bgcolor: alpha(PRIMARY, 0.04) }}>
@@ -139,31 +193,26 @@ export default function UserManagement() {
     const [roleFilter, setRoleFilter] = useState("all");
     const [page, setPage] = useState(1);
 
-    // Add dialog
     const [addOpen, setAddOpen] = useState(false);
     const [addLoading, setAddLoading] = useState(false);
     const [addError, setAddError] = useState(null);
     const [form, setForm] = useState(EMPTY_FORM);
 
-    // Delete dialog
     const [delOpen, setDelOpen] = useState(false);
     const [delLoading, setDelLoading] = useState(false);
     const [delError, setDelError] = useState(null);
     const [selected, setSelected] = useState(null);
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
-    // الـ API بيرجع: id, username, email, role, createdAt — مافي fullName
+    // ── Helpers ───────────────────────────────────────────────────────────────
     const getName = (u) => u.fullName ?? u.name ?? u.username ?? "—";
     const getEmail = (u) => u.universityEmail ?? u.email ?? "—";
     const getRole = (u) => (u.role ?? "").toLowerCase();
     const getDept = (u) => u.department ?? u.dept ?? "—";
     const getStatus = (u) => (u.status ?? "active").toLowerCase();
     const getId = (u) => u.id ?? u.userId;
-
-    // هل هاد اليوزر هو الأدمن الحالي؟
     const isSelf = (u) => (u.email ?? "") === (currentUser?.email ?? "");
 
-    // ── Fetch users ──────────────────────────────────────────────────────────
+    // ── Fetch ─────────────────────────────────────────────────────────────────
     const fetchUsers = async () => {
         setLoading(true);
         setFetchError(null);
@@ -180,7 +229,7 @@ export default function UserManagement() {
 
     useEffect(() => { fetchUsers(); }, []);
 
-    // ── Filter + paginate ────────────────────────────────────────────────────
+    // ── Filter + Paginate ─────────────────────────────────────────────────────
     const filtered = users.filter((u) => {
         const name = (u.fullName ?? u.name ?? u.username ?? "").toLowerCase();
         const email = (u.email ?? u.universityEmail ?? "").toLowerCase();
@@ -194,10 +243,15 @@ export default function UserManagement() {
     const pageCount = Math.ceil(filtered.length / PER_PAGE);
     const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
-    // ── Add user ─────────────────────────────────────────────────────────────
+    // ── Add User ──────────────────────────────────────────────────────────────
     const handleAdd = async () => {
         if (!form.fullName || !form.universityEmail || !form.username || !form.password) {
             setAddError("Please fill in all required fields.");
+            return;
+        }
+        const emailErr = getEmailError(form.universityEmail, form.role);
+        if (emailErr) {
+            setAddError(emailErr);
             return;
         }
         setAddLoading(true);
@@ -216,7 +270,7 @@ export default function UserManagement() {
         }
     };
 
-    // ── Delete user ──────────────────────────────────────────────────────────
+    // ── Delete User ───────────────────────────────────────────────────────────
     const handleDelete = async () => {
         if (!selected) return;
         setDelLoading(true);
@@ -262,10 +316,18 @@ export default function UserManagement() {
                     <Stack direction="row" gap={1.5} flexWrap="wrap">
                         <TextField placeholder="Search…" size="small" sx={{ width: 200 }} value={search}
                             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                            InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 16, color: t.textTertiary }} /></InputAdornment> }} />
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <SearchIcon sx={{ fontSize: 16, color: t.textTertiary }} />
+                                    </InputAdornment>
+                                ),
+                            }}
+                        />
                         <FormControl size="small" sx={{ minWidth: 130 }}>
                             <InputLabel>Role</InputLabel>
-                            <Select label="Role" value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}>
+                            <Select label="Role" value={roleFilter}
+                                onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}>
                                 <MenuItem value="all">All Roles</MenuItem>
                                 <MenuItem value="student">Students</MenuItem>
                                 <MenuItem value="supervisor">Supervisors</MenuItem>
@@ -304,8 +366,6 @@ export default function UserManagement() {
                                     const self = isSelf(u);
                                     return (
                                         <TableRow key={getId(u)} sx={{ "&:hover": { bgcolor: alpha(PRIMARY, 0.03) } }}>
-
-                                            {/* User — email تحت */}
                                             <TableCell>
                                                 <Stack direction="row" alignItems="center" gap={1.5}>
                                                     <Avatar sx={{ width: 34, height: 34, bgcolor: ROLE_CLR[role] ?? "#9AA9B9", fontSize: "0.8rem", fontWeight: 600 }}>
@@ -328,33 +388,28 @@ export default function UserManagement() {
                                                 </Stack>
                                             </TableCell>
 
-                                            {/* Username */}
                                             <TableCell>
                                                 <Typography sx={{ fontSize: "0.85rem", color: t.textSecondary, fontFamily: "monospace" }}>
                                                     {u.username ?? "—"}
                                                 </Typography>
                                             </TableCell>
 
-                                            {/* Role */}
                                             <TableCell>
                                                 <Chip label={role} size="small"
                                                     sx={{ bgcolor: `${ROLE_CLR[role] ?? "#9AA9B9"}15`, color: ROLE_CLR[role] ?? "#9AA9B9", fontWeight: 600, fontSize: "0.7rem", textTransform: "capitalize", height: 22 }} />
                                             </TableCell>
 
-                                            {/* Department */}
                                             <TableCell>
                                                 <Typography sx={{ fontSize: "0.875rem", color: t.textSecondary }}>
                                                     {getDept(u)}
                                                 </Typography>
                                             </TableCell>
 
-                                            {/* Status */}
                                             <TableCell>
                                                 <Chip label={STATUS_LBL[status] ?? status} size="small"
                                                     sx={{ bgcolor: `${STATUS_CLR[status] ?? "#9AA9B9"}18`, color: STATUS_CLR[status] ?? "#9AA9B9", fontWeight: 600, fontSize: "0.7rem", height: 22 }} />
                                             </TableCell>
 
-                                            {/* Actions */}
                                             <TableCell>
                                                 <Tooltip title={self ? "You cannot delete your own account" : "Delete user"}>
                                                     <span>

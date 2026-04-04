@@ -8,6 +8,7 @@ namespace GP_BackEnd.Models
     {
         [Key]
         public int Id { get; set; }
+        public int Version { get; set; } = 0;
         public double CompletionRate { get; set; }
         public string RiskLevel { get; set; }
         public string Suggestions { get; set; }

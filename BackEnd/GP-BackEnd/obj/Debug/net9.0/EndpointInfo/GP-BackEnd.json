@@ -778,6 +778,30 @@
         }
       }
     },
+    "/api/Student/switch-version": {
+      "post": {
+        "tags": [
+          "Student"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Student/current-version": {
+      "get": {
+        "tags": [
+          "Student"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Supervisor/pending-team-requests": {
       "get": {
         "tags": [

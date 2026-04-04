@@ -288,6 +288,16 @@
   },
   {
     "ContainingType": "GP_BackEnd.Controllers.StudentController",
+    "Method": "GetCurrentVersion",
+    "RelativePath": "api/Student/current-version",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.StudentController",
     "Method": "DeleteMyJoinRequest",
     "RelativePath": "api/Student/delete-join-request/{requestId}",
     "HttpMethod": "DELETE",
@@ -453,6 +463,16 @@
     "Method": "GetAllSupervisors",
     "RelativePath": "api/Student/supervisors",
     "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.StudentController",
+    "Method": "SwitchVersion",
+    "RelativePath": "api/Student/switch-version",
+    "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,
     "Parameters": [],

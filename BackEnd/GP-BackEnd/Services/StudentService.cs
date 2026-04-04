@@ -629,6 +629,24 @@ namespace GP_BackEnd.Services
 
             await _context.SaveChangesAsync();
             return true;
-        } 
+        }
+
+        // version determinig and switching 
+        public async Task<int> SwitchVersionAsync(int studentId)
+        {
+            var user = await _context.Users.FindAsync(studentId);
+            if (user == null) return -1;
+
+            user.CurrentVersion = user.CurrentVersion == 0 ? 1 : 0;
+            await _context.SaveChangesAsync();
+            return user.CurrentVersion;
+        }
+
+        public async Task<int> GetCurrentVersionAsync(int studentId)
+        {
+            var user = await _context.Users.FindAsync(studentId);
+            if (user == null) return -1;
+            return user.CurrentVersion;
+        }
     }
 }

@@ -202,7 +202,13 @@ namespace GP_BackEnd.Data
                 .WithOne(p => p.Team)
                 .HasForeignKey<Team>(t => t.ProjectId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Username must be unique
+            modelBuilder.Entity<User>()
+                .HasIndex(u => u.Username)
+                .IsUnique();
         }
+
 
     }
 }

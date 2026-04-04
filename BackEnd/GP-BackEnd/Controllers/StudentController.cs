@@ -229,5 +229,30 @@ namespace GP_BackEnd.Controllers
             return Ok(appointments);
         }
 
+        // POST api/student/switch-version
+        [HttpPost("switch-version")]
+        public async Task<IActionResult> SwitchVersion()
+        {
+            var studentId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var newVersion = await _studentService.SwitchVersionAsync(studentId);
+
+            if (newVersion == -1)
+                return NotFound("User not found.");
+
+            return Ok(new { currentVersion = newVersion, message = $"Switched to version {newVersion}" });
+        }
+
+        // GET api/student/current-version
+        [HttpGet("current-version")]
+        public async Task<IActionResult> GetCurrentVersion()
+        {
+            var studentId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var version = await _studentService.GetCurrentVersionAsync(studentId);
+
+            if (version == -1)
+                return NotFound("User not found.");
+
+            return Ok(new { currentVersion = version });
+        }
     }
 }

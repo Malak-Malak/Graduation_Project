@@ -1,7 +1,6 @@
 // ── Domains ───────────────────────────────────────────────────────────────────
 const STUDENT_DOMAIN = "@students.ptuk.edu.ps";
 const SUPERVISOR_DOMAIN = "@supervisors.ptuk.edu.ps";
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 export const isValidEmailFormat = (email) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());

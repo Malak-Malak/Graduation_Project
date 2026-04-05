@@ -19,7 +19,7 @@ import JoinTeamFlow from "../../components/common/student/Onboarding/JoinTeamFlo
 import ProfileSetupModal from "../../components/common/student/Profile/ProfileSetupModal";
 import MyTeamPage from "../../components/common/student/MyTeam/MyTeamPage";
 import DiscoveryHub from "../../components/common/student/DiscoveryHub/DiscoveryHub";
-
+import Feedback from "../../components/common/student/Feedback/Feedback";
 // ← NEW: Phase overlay
 import PhaseTransitionOverlay from "../../components/common/shared/PhaseTransitionOverlay";
 
@@ -224,6 +224,7 @@ export default function StudentPage() {
                     <Route path="profile" element={<UserProfilePage />} />
                     <Route path="my-team" element={<MyTeamPage />} />
                     <Route path="*" element={<Navigate to="/student" replace />} />
+                    <Route path="feedback" element={<Feedback />} />
                 </Routes>
 
                 {/* Snackbar */}

@@ -1,2 +1,6 @@
 BackEnd/GP-BackEnd/obj/
 BackEnd/GP-BackEnd/.vs/
+.vs/
+*.sqlite
+*.user
+VSWorkspaceState.json

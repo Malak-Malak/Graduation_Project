@@ -243,26 +243,26 @@ Tokens are issued on login and expire after 1 day. To switch versions, call the 
 ### Entry & Authentication
 | | |
 |---|---|
-| ![Entry](screenshots/entry.png) | ![Login](screenshots/login.png) |
-| ![Register](screenshots/register.png) | ![Moving To Phases](screenshots/movingToPhases.png) |
+| ![Entry](Screenshots/entry.png) | ![Login](Screenshots/login.png) |
+| ![Register](Screenshots/register.png) | ![Moving To Phases](Screenshots/movingToPhases.png) |
 
 ### Admin
 | | |
 |---|---|
-| ![Admin Dashboard](screenshots/AdminDashboard.png) | ![Admin Users Management](screenshots/adminUsersManagement.png) |
+| ![Admin Dashboard](Screenshots/AdminDashboard.png) | ![Admin Users Management](Screenshots/adminUsersManagement.png) |
 
 ### Student
 | | |
 |---|---|
-| ![Student Dashboard](screenshots/studentDashboard.png) | ![My Team](screenshots/myTeam.png) |
-| ![Kanban Board](screenshots/kanbanboard.png) | ![Files Page](screenshots/filesPage.png) |
-| ![Meetings Page](screenshots/meetingsPage.png) | ![Analytics](screenshots/analytics.png) |
-| ![Discovery Hub Students](screenshots/discoveryhub-students.png) | ![Discovery Hub Teams](screenshots/discoveryhub-teams.png) |
-| ![User Profile](screenshots/userProfile.png) | |
+| ![Student Dashboard](Screenshots/studentDashboard.png) | ![My Team](Screenshots/myTeam.png) |
+| ![Kanban Board](Screenshots/kanbanboard.png) | ![Files Page](Screenshots/filesPage.png) |
+| ![Meetings Page](Screenshots/meetingsPage.png) | ![Analytics](Screenshots/analytics.png) |
+| ![Discovery Hub Students](Screenshots/discoveryhub-students.png) | ![Discovery Hub Teams](Screenshots/discoveryhub-teams.png) |
+| ![User Profile](Screenshots/userProfile.png) | |
 
 ### Supervisor
 | | |
 |---|---|
-| ![Supervisor Dashboard](screenshots/supervisorDashboard.png) | ![Supervisor Pending Requests](screenshots/supervisor-pending-requests.png) |
-| ![Supervisor Groups](screenshots/supervisor-groups.png) | ![Supervisor Files](screenshots/supervisor-files.png) |
-| ![Supervisor AI Reports](screenshots/supervisorAiReports.png) | |
+| ![Supervisor Dashboard](Screenshots/supervisorDashboard.png) | ![Supervisor Pending Requests](Screenshots/supervisor-pending-requests.png) |
+| ![Supervisor Groups](Screenshots/supervisor-groups.png) | ![Supervisor Files](Screenshots/supervisor-files.png) |
+| ![Supervisor AI Reports](Screenshots/supervisorAiReports.png) | |

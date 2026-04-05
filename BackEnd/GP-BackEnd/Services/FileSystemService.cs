@@ -32,16 +32,33 @@ namespace GP_BackEnd.Services
         }
 
         // Get all attachments for a task
-        public async Task<List<AttachmentDto>> GetTaskAttachmentsAsync(int userId, int taskItemId)
+        public async Task<List<AttachmentDto>> GetAttachmentsAsync(int userId)
         {
-            if (!await HasAccessAsync(userId, taskItemId))
-                return new List<AttachmentDto>();
+            // Check if user is a team member or supervisor
+            var teamMember = await _context.TeamMembers
+                .FirstOrDefaultAsync(tm => tm.UserId == userId);
+
+            int? teamId = null;
+
+            if (teamMember != null)
+            {
+                teamId = teamMember.TeamId;
+            }
+            else
+            {
+                // Check if supervisor
+                var supervisorTeam = await _context.Teams
+                    .FirstOrDefaultAsync(t => t.SupervisorId == userId);
+                teamId = supervisorTeam?.Id;
+            }
+
+            if (teamId == null) return new List<AttachmentDto>();
 
             return await _context.TaskAttachments
                 .Include(ta => ta.TaskItem)
                 .Include(ta => ta.User)
                     .ThenInclude(u => u.UserProfile)
-                .Where(ta => ta.TaskItemId == taskItemId)
+                .Where(ta => ta.TaskItem.TeamId == teamId)
                 .Select(ta => new AttachmentDto
                 {
                     Id = ta.Id,

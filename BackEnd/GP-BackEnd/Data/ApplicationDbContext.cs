@@ -25,6 +25,7 @@ namespace GP_BackEnd.Data
         public DbSet<UniversityRecord> UniversityRecords { get; set; }
         public DbSet<TeamJoinRequest> TeamJoinRequests { get; set; }
         public DbSet<TaskAssignment> TaskAssignments { get; set; }
+        public DbSet<Requirement> Requirements { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -201,6 +202,19 @@ namespace GP_BackEnd.Data
                 .HasOne(t => t.Project)
                 .WithOne(p => p.Team)
                 .HasForeignKey<Team>(t => t.ProjectId)
+                .OnDelete(DeleteBehavior.Restrict);
+            // Requirement -> Project
+            modelBuilder.Entity<Requirement>()
+                .HasOne(r => r.Project)
+                .WithMany(p => p.Requirements)
+                .HasForeignKey(r => r.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Requirement -> CreatedBy (User)
+            modelBuilder.Entity<Requirement>()
+                .HasOne(r => r.CreatedBy)
+                .WithMany()
+                .HasForeignKey(r => r.CreatedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             // Username must be unique

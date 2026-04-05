@@ -459,21 +459,10 @@
         }
       }
     },
-    "/api/FileSystem/task/{taskItemId}": {
+    "/api/FileSystem": {
       "get": {
         "tags": [
           "FileSystem"
-        ],
-        "parameters": [
-          {
-            "name": "taskItemId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
         ],
         "responses": {
           "200": {
@@ -780,6 +769,114 @@
       "put": {
         "tags": [
           "Notification"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Requirement": {
+      "get": {
+        "tags": [
+          "Requirement"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Requirement/add": {
+      "post": {
+        "tags": [
+          "Requirement"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddRequirementDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddRequirementDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddRequirementDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Requirement/update/{requirementId}": {
+      "put": {
+        "tags": [
+          "Requirement"
+        ],
+        "parameters": [
+          {
+            "name": "requirementId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRequirementDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRequirementDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRequirementDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Requirement/delete/{requirementId}": {
+      "delete": {
+        "tags": [
+          "Requirement"
+        ],
+        "parameters": [
+          {
+            "name": "requirementId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
         ],
         "responses": {
           "200": {
@@ -1530,6 +1627,16 @@
         },
         "additionalProperties": false
       },
+      "AddRequirementDto": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "AddUniversityRecordDto": {
         "type": "object",
         "properties": {
@@ -1906,6 +2013,16 @@
             "nullable": true
           },
           "projectDescription": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateRequirementDto": {
+        "type": "object",
+        "properties": {
+          "description": {
             "type": "string",
             "nullable": true
           }

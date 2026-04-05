@@ -92,6 +92,7 @@ builder.Services.AddScoped<AppointmentService>();
 builder.Services.AddScoped<FeedbackService>();
 builder.Services.AddScoped<FileSystemService>();
 builder.Services.AddScoped<NotificationService>();
+builder.Services.AddScoped<RequirementService>();
 
 var app = builder.Build();
 

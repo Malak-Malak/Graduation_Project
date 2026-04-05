@@ -18,12 +18,12 @@ namespace GP_BackEnd.Controllers
             _fileSystemService = fileSystemService;
         }
 
-        // GET api/filesystem/task/{taskItemId}
-        [HttpGet("task/{taskItemId}")]
-        public async Task<IActionResult> GetTaskAttachments(int taskItemId)
+        // GET api/filesystem
+        [HttpGet]
+        public async Task<IActionResult> GetAttachments()
         {
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-            var attachments = await _fileSystemService.GetTaskAttachmentsAsync(userId, taskItemId);
+            var attachments = await _fileSystemService.GetAttachmentsAsync(userId);
             return Ok(attachments);
         }
 

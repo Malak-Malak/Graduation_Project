@@ -14,16 +14,16 @@ namespace GP_BackEnd.Migrations
         {
             migrationBuilder.DropForeignKey(
                 name: "FK_TaskAttachments_TaskItems_TaskItemId",
-                table: "TaskAttachments");
+                table: "ProjectFiles");
 
             migrationBuilder.RenameColumn(
                 name: "TaskItemId",
-                table: "TaskAttachments",
+                table: "ProjectFiles",
                 newName: "TeamId");
 
             migrationBuilder.RenameIndex(
                 name: "IX_TaskAttachments_TaskItemId",
-                table: "TaskAttachments",
+                table: "ProjectFiles",
                 newName: "IX_TaskAttachments_TeamId");
 
             migrationBuilder.CreateTable(
@@ -66,7 +66,7 @@ namespace GP_BackEnd.Migrations
 
             migrationBuilder.AddForeignKey(
                 name: "FK_TaskAttachments_Teams_TeamId",
-                table: "TaskAttachments",
+                table: "ProjectFiles",
                 column: "TeamId",
                 principalTable: "Teams",
                 principalColumn: "Id",
@@ -78,24 +78,24 @@ namespace GP_BackEnd.Migrations
         {
             migrationBuilder.DropForeignKey(
                 name: "FK_TaskAttachments_Teams_TeamId",
-                table: "TaskAttachments");
+                table: "ProjectFiles");
 
             migrationBuilder.DropTable(
                 name: "Requirements");
 
             migrationBuilder.RenameColumn(
                 name: "TeamId",
-                table: "TaskAttachments",
+                table: "ProjectFiles",
                 newName: "TaskItemId");
 
             migrationBuilder.RenameIndex(
                 name: "IX_TaskAttachments_TeamId",
-                table: "TaskAttachments",
+                table: "ProjectFiles",
                 newName: "IX_TaskAttachments_TaskItemId");
 
             migrationBuilder.AddForeignKey(
                 name: "FK_TaskAttachments_TaskItems_TaskItemId",
-                table: "TaskAttachments",
+                table: "ProjectFiles",
                 column: "TaskItemId",
                 principalTable: "TaskItems",
                 principalColumn: "Id",

@@ -183,7 +183,7 @@ namespace GP_BackEnd.Services
             _context.TeamMembers.RemoveRange(_context.TeamMembers);
             _context.Notifications.RemoveRange(_context.Notifications);
             _context.Feedbacks.RemoveRange(_context.Feedbacks);
-            _context.TaskAttachments.RemoveRange(_context.TaskAttachments);
+            _context.ProjectFiles.RemoveRange(_context.ProjectFiles);
             _context.TaskItems.RemoveRange(_context.TaskItems);
             _context.Appointments.RemoveRange(_context.Appointments);
             _context.TeamProgressReports.RemoveRange(_context.TeamProgressReports);

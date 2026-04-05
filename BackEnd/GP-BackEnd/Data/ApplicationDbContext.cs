@@ -15,7 +15,7 @@ namespace GP_BackEnd.Data
         public DbSet<Team> Teams { get; set; }
         public DbSet<TeamMember> TeamMembers { get; set; }
         public DbSet<TaskItem> TaskItems { get; set; }
-        public DbSet<ProjectFile> TaskAttachments { get; set; }
+        public DbSet<ProjectFile> ProjectFiles { get; set; }
         public DbSet<Appointment> Appointments { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<UserProfile> UserProfiles { get; set; }
@@ -89,7 +89,7 @@ namespace GP_BackEnd.Data
             // TaskAttachment -> User
             modelBuilder.Entity<ProjectFile>()
                 .HasOne(ta => ta.User)
-                .WithMany(u => u.TaskAttachments)
+                .WithMany(u => u.ProjectFiles)
                 .HasForeignKey(ta => ta.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 

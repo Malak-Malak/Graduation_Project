@@ -18,13 +18,22 @@ namespace GP_BackEnd.Controllers
             _fileSystemService = fileSystemService;
         }
 
-        // GET api/filesystem
-        [HttpGet]
-        public async Task<IActionResult> GetAttachments()
+        // GET api/filesystem/supervisor-files
+        [HttpGet("supervisor-files")]
+        public async Task<IActionResult> GetSupervisorFiles()
         {
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-            var attachments = await _fileSystemService.GetAttachmentsAsync(userId);
-            return Ok(attachments);
+            var files = await _fileSystemService.GetSupervisorFilesAsync(userId);
+            return Ok(files);
+        }
+
+        // GET api/filesystem/student-files
+        [HttpGet("student-files")]
+        public async Task<IActionResult> GetStudentFiles()
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var files = await _fileSystemService.GetStudentFilesAsync(userId);
+            return Ok(files);
         }
 
         // POST api/filesystem/add

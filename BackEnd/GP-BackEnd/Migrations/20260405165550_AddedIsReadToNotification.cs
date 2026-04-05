@@ -12,7 +12,7 @@ namespace GP_BackEnd.Migrations
         {
             migrationBuilder.AddColumn<string>(
                 name: "Description",
-                table: "TaskAttachments",
+                table: "ProjectFiles",
                 type: "text",
                 nullable: true);
         }
@@ -22,7 +22,7 @@ namespace GP_BackEnd.Migrations
         {
             migrationBuilder.DropColumn(
                 name: "Description",
-                table: "TaskAttachments");
+                table: "ProjectFiles");
         }
     }
 }

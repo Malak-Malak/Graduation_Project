@@ -1605,10 +1605,6 @@
           "description": {
             "type": "string",
             "nullable": true
-          },
-          "taskItemId": {
-            "type": "integer",
-            "format": "int32"
           }
         },
         "additionalProperties": false

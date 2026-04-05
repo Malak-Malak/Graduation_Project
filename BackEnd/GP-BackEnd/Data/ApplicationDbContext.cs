@@ -15,7 +15,7 @@ namespace GP_BackEnd.Data
         public DbSet<Team> Teams { get; set; }
         public DbSet<TeamMember> TeamMembers { get; set; }
         public DbSet<TaskItem> TaskItems { get; set; }
-        public DbSet<TaskAttachment> TaskAttachments { get; set; }
+        public DbSet<ProjectFile> TaskAttachments { get; set; }
         public DbSet<Appointment> Appointments { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<UserProfile> UserProfiles { get; set; }
@@ -79,15 +79,15 @@ namespace GP_BackEnd.Data
                 .HasForeignKey(ti => ti.ProjectId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // TaskAttachment -> TaskItem
-            modelBuilder.Entity<TaskAttachment>()
-                .HasOne(ta => ta.TaskItem)
-                .WithMany(ti => ti.Attachments)
-                .HasForeignKey(ta => ta.TaskItemId)
+            // TaskAttachment -> Team
+            modelBuilder.Entity<ProjectFile>()
+                .HasOne(ta => ta.Team)
+                .WithMany(t => t.Attachments)
+                .HasForeignKey(ta => ta.TeamId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // TaskAttachment -> User
-            modelBuilder.Entity<TaskAttachment>()
+            modelBuilder.Entity<ProjectFile>()
                 .HasOne(ta => ta.User)
                 .WithMany(u => u.TaskAttachments)
                 .HasForeignKey(ta => ta.UserId)
@@ -216,6 +216,8 @@ namespace GP_BackEnd.Data
                 .WithMany()
                 .HasForeignKey(r => r.CreatedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+   
 
             // Username must be unique
             modelBuilder.Entity<User>()

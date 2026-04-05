@@ -20,7 +20,6 @@ namespace GP_BackEnd.Models
         public Project Project { get; set; }
         public User CreatedBy { get; set; }
         public int Version { get; set; } = 0;
-        public ICollection<TaskAttachment> Attachments { get; set; }
         public ICollection<TaskAssignment> Assignments { get; set; }
 
         public ICollection<Feedback> Feedbacks { get; set; }

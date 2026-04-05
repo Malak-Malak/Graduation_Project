@@ -35,7 +35,7 @@ namespace GP_BackEnd.Controllers
             var result = await _fileSystemService.AddAttachmentAsync(userId, dto);
 
             if (!result)
-                return BadRequest("Could not add attachment. You may not have access to this task.");
+                return BadRequest("Could not add attachment. You may not be in a team.");
 
             return Ok("Attachment added successfully.");
         }

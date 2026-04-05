@@ -14,59 +14,37 @@ namespace GP_BackEnd.Services
             _context = context;
         }
 
-        // Check if user has access to the task (is a team member or supervisor)
-        private async Task<bool> HasAccessAsync(int userId, int taskItemId)
+        // Get team id for any user (student or supervisor)
+        private async Task<int?> GetTeamIdAsync(int userId)
         {
-            var task = await _context.TaskItems
-                .FirstOrDefaultAsync(t => t.Id == taskItemId);
-
-            if (task == null) return false;
-
-            var isMember = await _context.TeamMembers
-                .AnyAsync(tm => tm.TeamId == task.TeamId && tm.UserId == userId);
-
-            var isSupervisor = await _context.Teams
-                .AnyAsync(t => t.Id == task.TeamId && t.SupervisorId == userId);
-
-            return isMember || isSupervisor;
-        }
-
-        // Get all attachments for a task
-        public async Task<List<AttachmentDto>> GetAttachmentsAsync(int userId)
-        {
-            // Check if user is a team member or supervisor
             var teamMember = await _context.TeamMembers
                 .FirstOrDefaultAsync(tm => tm.UserId == userId);
 
-            int? teamId = null;
+            if (teamMember != null) return teamMember.TeamId;
 
-            if (teamMember != null)
-            {
-                teamId = teamMember.TeamId;
-            }
-            else
-            {
-                // Check if supervisor
-                var supervisorTeam = await _context.Teams
-                    .FirstOrDefaultAsync(t => t.SupervisorId == userId);
-                teamId = supervisorTeam?.Id;
-            }
+            var supervisorTeam = await _context.Teams
+                .FirstOrDefaultAsync(t => t.SupervisorId == userId);
 
+            return supervisorTeam?.Id;
+        }
+
+        // Get all attachments for a team
+        public async Task<List<AttachmentDto>> GetAttachmentsAsync(int userId)
+        {
+            var teamId = await GetTeamIdAsync(userId);
             if (teamId == null) return new List<AttachmentDto>();
 
             return await _context.TaskAttachments
-                .Include(ta => ta.TaskItem)
                 .Include(ta => ta.User)
                     .ThenInclude(u => u.UserProfile)
-                .Where(ta => ta.TaskItem.TeamId == teamId)
+                .Where(ta => ta.TeamId == teamId)
+                .OrderByDescending(ta => ta.UploadedAt)
                 .Select(ta => new AttachmentDto
                 {
                     Id = ta.Id,
                     FilePath = ta.FilePath,
                     Description = ta.Description,
                     UploadedAt = ta.UploadedAt,
-                    TaskItemId = ta.TaskItemId,
-                    TaskTitle = ta.TaskItem.Title,
                     UploadedByUserId = ta.UserId,
                     UploadedByName = ta.User.UserProfile != null
                         ? ta.User.UserProfile.FullName
@@ -78,15 +56,15 @@ namespace GP_BackEnd.Services
         // Add attachment
         public async Task<bool> AddAttachmentAsync(int userId, AddAttachmentDto dto)
         {
-            if (!await HasAccessAsync(userId, dto.TaskItemId))
-                return false;
+            var teamId = await GetTeamIdAsync(userId);
+            if (teamId == null) return false;
 
-            _context.TaskAttachments.Add(new TaskAttachment
+            _context.TaskAttachments.Add(new ProjectFile
             {
                 FilePath = dto.FilePath,
                 Description = dto.Description,
                 UploadedAt = DateTime.UtcNow,
-                TaskItemId = dto.TaskItemId,
+                TeamId = teamId.Value,
                 UserId = userId
             });
 

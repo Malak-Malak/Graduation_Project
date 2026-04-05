@@ -18,6 +18,7 @@ namespace GP_BackEnd.Models
         public ICollection<Appointment> Appointments { get; set; }
         public ICollection<TeamProgressReport> ProgressReports { get; set; }
         public Project Project { get; set; }
+        public ICollection<ProjectFile> Attachments { get; set; }
         public ICollection<Feedback> Feedbacks { get; set; }
     }
 }

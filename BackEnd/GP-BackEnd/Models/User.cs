@@ -17,7 +17,7 @@ namespace GP_BackEnd.Models
         public DateTime CreatedAt { get; set; }
         public UserProfile UserProfile { get; set; }
         public ICollection<TeamMember> TeamMembers { get; set; }
-        public ICollection<TaskAttachment> TaskAttachments { get; set; }
+        public ICollection<ProjectFile> TaskAttachments { get; set; }
         public ICollection<Notification> Notifications { get; set; }
         public ICollection<Team> SupervisedTeams { get; set; }
         public ICollection<TaskAssignment> TaskAssignments { get; set; }

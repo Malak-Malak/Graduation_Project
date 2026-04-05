@@ -137,7 +137,7 @@ A comprehensive backend API for managing graduation projects, built with ASP.NET
 ---
 
 ## 🔗 Base URL
-https://gpms.up.railway.app
+[https://gpms.up.railway.app](https://gpms.up.railway.app/swagger/index.html)
 
 ---
 

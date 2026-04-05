@@ -91,7 +91,7 @@ builder.Services.AddScoped<KanbanService>();
 builder.Services.AddScoped<AppointmentService>();
 builder.Services.AddScoped<FeedbackService>();
 builder.Services.AddScoped<FileSystemService>();
-
+builder.Services.AddScoped<NotificationService>();
 
 var app = builder.Build();
 

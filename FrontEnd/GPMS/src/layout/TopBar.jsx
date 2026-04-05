@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import {
-    AppBar, Toolbar, Box, Typography, IconButton, Badge,
-    InputBase, Menu, MenuItem, Avatar, useTheme, Chip,
+    AppBar, Toolbar, Box, Typography, IconButton,
+    Badge, InputBase, Menu, MenuItem, Avatar, useTheme,
 } from '@mui/material';
 import {
     Search as SearchIcon,
@@ -19,6 +19,7 @@ import { styled, alpha } from '@mui/material/styles';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 
+// ── Search ────────────────────────────────────────────────────────────────────
 const Search = styled('div')(({ theme }) => ({
     position: 'relative',
     borderRadius: theme.shape.borderRadius,
@@ -27,17 +28,13 @@ const Search = styled('div')(({ theme }) => ({
     marginRight: theme.spacing(2),
     width: 'auto',
 }));
-
 const SearchIconWrapper = styled('div')(({ theme }) => ({
     padding: theme.spacing(0, 2),
     height: '100%',
     position: 'absolute',
     pointerEvents: 'none',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
 }));
-
 const StyledInputBase = styled(InputBase)(({ theme }) => ({
     color: 'inherit',
     '& .MuiInputBase-input': {
@@ -47,7 +44,11 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
     },
 }));
 
-const PRIMARY = "#B46F4C";
+const DEFAULT_COLOR = "#B46F4C";
+const P1_COLOR = "#C49A6C";
+const P2_COLOR = "#6D8A7D";
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const TopBar = ({ onMenuClick, isMobile }) => {
     const theme = useTheme();
@@ -76,11 +77,12 @@ const TopBar = ({ onMenuClick, isMobile }) => {
     const displayName = user?.name ?? user?.fullName ?? user?.username ?? "User";
     const avatarLetter = displayName.charAt(0).toUpperCase();
 
-    // ── Phase config (student only) ───────────────────────────────────────────
-    const isPhase2 = role === "student" && currentPhase === "Phase2";
-    const phaseColor = isPhase2 ? "#6D8A7D" : "#C49A6C";
-    const PhaseIcon = isPhase2 ? RocketLaunchOutlinedIcon : LightbulbOutlinedIcon;
-    const phaseLabel = isPhase2 ? "Phase 2 — Project" : "Phase 1 — Proposal";
+    // ── Phase config ──────────────────────────────────────────────────────────
+    const isStudent = role === "student";
+    const isP2 = isStudent && currentPhase === "Phase2";
+    const phaseColor = isStudent ? (isP2 ? P2_COLOR : P1_COLOR) : DEFAULT_COLOR;
+    const PhaseIcon = isP2 ? RocketLaunchOutlinedIcon : LightbulbOutlinedIcon;
+    const phaseLabel = isP2 ? "Phase 2 — Project" : "Phase 1 — Proposal";
 
     return (
         <AppBar
@@ -88,123 +90,104 @@ const TopBar = ({ onMenuClick, isMobile }) => {
             color="transparent"
             elevation={0}
             sx={{
-                borderBottom: `1px solid ${theme.palette.divider}`,
                 bgcolor: theme.palette.background.paper,
                 height: 64,
                 justifyContent: 'center',
-                // subtle top phase indicator line for student
-                borderTop: role === "student"
-                    ? `2px solid ${phaseColor}40`
-                    : "none",
+                // ── خط علوي سميك وواضح ──
+                borderTop: isStudent
+                    ? `3px solid ${phaseColor}`
+                    : `1px solid ${theme.palette.divider}`,
+                borderBottom: `1px solid ${theme.palette.divider}`,
                 transition: "border-top-color 0.4s ease",
             }}
         >
             <Toolbar sx={{ minHeight: '64px !important' }}>
 
                 {isMobile && (
-                    <IconButton
-                        onClick={onMenuClick}
-                        sx={{ mr: 1, color: theme.palette.text.secondary }}
-                    >
+                    <IconButton onClick={onMenuClick} sx={{ mr: 1, color: theme.palette.text.secondary }}>
                         <MenuIcon />
                     </IconButton>
                 )}
 
-                {/* Welcome text */}
-                <Typography
-                    variant="h6"
-                    noWrap
-                    sx={{
-                        fontWeight: 600,
-                        display: { xs: 'none', sm: 'block' },
-                        color: theme.palette.text.primary,
-                    }}
-                >
+                {/* Welcome */}
+                <Typography variant="h6" noWrap sx={{
+                    fontWeight: 600,
+                    display: { xs: 'none', sm: 'block' },
+                    color: theme.palette.text.primary,
+                }}>
                     Welcome back,{' '}
-                    <Box
-                        component="span"
-                        sx={{
-                            color: role === "student" ? phaseColor : PRIMARY,
-                            transition: "color 0.4s ease",
-                        }}
-                    >
+                    <Box component="span" sx={{ color: phaseColor, transition: "color 0.4s ease" }}>
                         {displayName.split(' ')[0]}
                     </Box>
                 </Typography>
 
-                {/* Phase badge — only for student, visible on sm+ */}
-                {role === "student" && (
-                    <Box sx={{ display: { xs: 'none', md: 'flex' }, ml: 2, alignItems: 'center' }}>
-                        <Chip
-                            icon={<PhaseIcon sx={{ fontSize: '14px !important' }} />}
-                            label={phaseLabel}
-                            size="small"
-                            sx={{
-                                height: 24,
-                                fontSize: "0.7rem",
-                                fontWeight: 700,
-                                bgcolor: `${phaseColor}12`,
-                                color: phaseColor,
-                                border: `1px solid ${phaseColor}30`,
-                                "& .MuiChip-icon": { color: phaseColor },
-                                "& .MuiChip-label": { px: 1 },
-                                transition: "all 0.4s ease",
-                                letterSpacing: "0.02em",
-                            }}
-                        />
+                {/* Phase chip — واضح وكبير */}
+                {isStudent && (
+                    <Box
+                        sx={{
+                            display: { xs: 'none', md: 'flex' },
+                            alignItems: 'center',
+                            gap: "6px",
+                            ml: 2,
+                            px: 1.4,
+                            py: 0.6,
+                            borderRadius: "8px",
+                            bgcolor: `${phaseColor}18`,
+                            border: `1.5px solid ${phaseColor}50`,
+                            transition: "all 0.4s ease",
+                        }}
+                    >
+                        <PhaseIcon sx={{ fontSize: 15, color: phaseColor, transition: "color 0.4s" }} />
+                        <Typography sx={{
+                            fontSize: "0.78rem",
+                            fontWeight: 700,
+                            color: phaseColor,
+                            letterSpacing: "0.02em",
+                            lineHeight: 1,
+                            transition: "color 0.4s ease",
+                        }}>
+                            {phaseLabel}
+                        </Typography>
                     </Box>
                 )}
 
                 <Box sx={{ flexGrow: 1 }} />
 
-                {/* Search — hidden on small mobile */}
+                {/* Search */}
                 <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
                     <Search>
                         <SearchIconWrapper>
                             <SearchIcon sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
                         </SearchIconWrapper>
-                        <StyledInputBase
-                            placeholder="Search…"
-                            inputProps={{ 'aria-label': 'search' }}
-                        />
+                        <StyledInputBase placeholder="Search…" inputProps={{ 'aria-label': 'search' }} />
                     </Search>
                 </Box>
 
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                    {/* Theme toggle */}
+
                     <IconButton onClick={toggleMode} sx={{ color: theme.palette.text.secondary }}>
                         {mode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
                     </IconButton>
 
-                    {/* Notifications */}
-                    <IconButton
-                        onClick={handleNotificationMenuOpen}
-                        sx={{ color: theme.palette.text.secondary }}
-                    >
+                    <IconButton onClick={handleNotificationMenuOpen} sx={{ color: theme.palette.text.secondary }}>
                         <Badge badgeContent={unreadCount} color="error">
                             <NotificationsIcon />
                         </Badge>
                     </IconButton>
 
-                    {/* Avatar */}
                     <IconButton edge="end" onClick={handleProfileMenuOpen}>
-                        <Avatar
-                            src={user?.avatar}
-                            sx={{
-                                width: 34,
-                                height: 34,
-                                bgcolor: role === "student" ? phaseColor : PRIMARY,
-                                fontSize: "0.9rem",
-                                fontWeight: 700,
-                                transition: "background-color 0.4s ease",
-                            }}
-                        >
+                        <Avatar src={user?.avatar} sx={{
+                            width: 34, height: 34,
+                            bgcolor: phaseColor,
+                            fontSize: "0.9rem", fontWeight: 700,
+                            transition: "background-color 0.4s ease",
+                        }}>
                             {avatarLetter}
                         </Avatar>
                     </IconButton>
                 </Box>
 
-                {/* Profile Menu */}
+                {/* Profile menu */}
                 <Menu
                     anchorEl={anchorEl}
                     open={Boolean(anchorEl)}
@@ -217,24 +200,18 @@ const TopBar = ({ onMenuClick, isMobile }) => {
                     </MenuItem>
                 </Menu>
 
-                {/* Notifications Menu */}
+                {/* Notifications menu */}
                 <Menu
                     anchorEl={notificationAnchor}
                     open={Boolean(notificationAnchor)}
                     onClose={handleMenuClose}
-                    PaperProps={{
-                        sx: { mt: 1.5, borderRadius: 2, minWidth: 300, maxHeight: 400 },
-                    }}
+                    PaperProps={{ sx: { mt: 1.5, borderRadius: 2, minWidth: 300, maxHeight: 400 } }}
                 >
                     {notifications.map((n) => (
                         <MenuItem
                             key={n.id}
                             onClick={handleMenuClose}
-                            sx={{
-                                bgcolor: !n.read
-                                    ? alpha(role === "student" ? phaseColor : PRIMARY, 0.08)
-                                    : 'transparent',
-                            }}
+                            sx={{ bgcolor: !n.read ? alpha(phaseColor, 0.08) : 'transparent' }}
                         >
                             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                                 <Typography variant="body2" fontWeight={n.read ? 400 : 600}>

@@ -3,7 +3,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import {
     Box, Drawer, List, ListItemButton, ListItemIcon, ListItemText,
-    Typography, Avatar, IconButton, Tooltip, Stack, Chip,
+    Typography, Avatar, IconButton, Tooltip, Stack,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
@@ -28,13 +28,11 @@ import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
 import LightModeOutlinedIcon from "@mui/icons-material/LightModeOutlined";
 import HowToRegOutlinedIcon from "@mui/icons-material/HowToRegOutlined";
 import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined";
-import LightbulbOutlinedIcon from "@mui/icons-material/LightbulbOutlined";
-import RocketLaunchOutlinedIcon from "@mui/icons-material/RocketLaunchOutlined";
-import SwapHorizOutlinedIcon from "@mui/icons-material/SwapHorizOutlined";
 
 import { useAuth } from "../contexts/AuthContext";
 import { useThemeContext } from "../contexts/ThemeContext";
 
+// ─────────────────────────────────────────────────────────────────────────────
 const NAV_ITEMS = {
     admin: [
         { label: "Dashboard", icon: <DashboardOutlinedIcon />, path: "/admin" },
@@ -72,194 +70,112 @@ const NAV_ITEMS = {
 const ROLE_LABEL = { admin: "Administrator", supervisor: "Supervisor", student: "Student" };
 const ROLE_COLOR = { admin: "#C47E7E", supervisor: "#6D8A7D", student: "#B46F4C" };
 
-// ── Phase Switcher (only for student) ────────────────────────────────────────
+const P1 = { color: "#C49A6C", label: "Phase 1", sub: "Proposal" };
+const P2 = { color: "#6D8A7D", label: "Phase 2", sub: "Project" };
 
-function PhaseSwitcher({ collapsed, onSwitch, currentPhase }) {
+// ── Compact Phase Toggle ──────────────────────────────────────────────────────
+// نفس المساحة الأصلية — avatar + اسم + رول + toggle في صف واحد أنيق
+function PhaseToggle({ onSwitch, currentPhase }) {
     const theme = useTheme();
-    const t = theme.palette.custom ?? {};
-    const isPhase2 = currentPhase === "Phase2";
+    const isDark = theme.palette.mode === "dark";
+    const isP2 = currentPhase === "Phase2";
+    const phase = isP2 ? P2 : P1;
 
-    const phase1Color = "#C49A6C";
-    const phase2Color = "#6D8A7D";
-    const activeColor = isPhase2 ? phase2Color : phase1Color;
-    const inactiveColor = theme.palette.text.secondary;
+    const TRACK_W = 34;
+    const TRACK_H = 18;
+    const KNOB = 12;
+    const PAD = 3;
 
-    if (collapsed) {
-        return (
-            <Tooltip
-                title={`Switch to ${isPhase2 ? "Phase 1 (Proposal)" : "Phase 2 (Project)"}`}
-                placement="right"
-            >
-                <Box
-                    onClick={onSwitch}
-                    sx={{
-                        mx: 1,
-                        mb: 0.5,
-                        height: 40,
-                        borderRadius: "8px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        cursor: "pointer",
-                        border: `1px solid ${activeColor}35`,
-                        bgcolor: `${activeColor}10`,
-                        transition: "all 0.2s ease",
-                        "&:hover": {
-                            bgcolor: `${activeColor}20`,
-                            borderColor: `${activeColor}60`,
-                        },
-                    }}
-                >
-                    <SwapHorizOutlinedIcon sx={{ fontSize: 18, color: activeColor }} />
-                </Box>
-            </Tooltip>
-        );
-    }
+    const trackBg = isP2
+        ? (isDark ? "#2e3d38" : "#c0d5cf")
+        : (isDark ? "#362e25" : "#ddd0bc");
 
     return (
-        <Box sx={{ px: 1.5, pb: 1.5 }}>
-            {/* section label */}
-            <Typography sx={{
-                fontSize: "0.62rem",
-                fontWeight: 700,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                color: theme.palette.text.disabled,
-                mb: 0.8,
-                pl: 0.5,
-            }}>
-                Project Phase
-            </Typography>
-
-            {/* toggle bar */}
-            <Box
+        <Box
+            onClick={onSwitch}
+            sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 0.7,
+                cursor: "pointer",
+                userSelect: "none",
+                "&:hover .phase-label": { opacity: 0.75 },
+            }}
+        >
+            {/* Phase label — compact */}
+            <Typography
+                className="phase-label"
                 sx={{
-                    display: "flex",
-                    borderRadius: "10px",
-                    border: `1px solid ${activeColor}30`,
-                    bgcolor: `${activeColor}08`,
-                    overflow: "hidden",
-                    position: "relative",
+                    fontSize: "0.65rem",
+                    fontWeight: 600,
+                    color: phase.color,
+                    lineHeight: 1,
+                    letterSpacing: "0.01em",
+                    transition: "color 0.35s, opacity 0.2s",
+                    whiteSpace: "nowrap",
                 }}
             >
-                {/* sliding indicator */}
+                {phase.label}
+            </Typography>
+
+            {/* Toggle track */}
+            <Box
+                sx={{
+                    position: "relative",
+                    width: TRACK_W,
+                    height: TRACK_H,
+                    borderRadius: TRACK_H / 2,
+                    bgcolor: trackBg,
+                    flexShrink: 0,
+                    transition: "background-color 0.35s ease",
+                    boxShadow: isDark
+                        ? "inset 0 1px 2px rgba(0,0,0,0.45)"
+                        : "inset 0 1px 2px rgba(0,0,0,0.12)",
+                }}
+            >
                 <Box sx={{
                     position: "absolute",
-                    top: 0,
-                    left: isPhase2 ? "50%" : 0,
-                    width: "50%",
-                    height: "100%",
-                    bgcolor: `${activeColor}18`,
-                    borderRight: isPhase2 ? "none" : `1px solid ${activeColor}30`,
-                    borderLeft: isPhase2 ? `1px solid ${activeColor}30` : "none",
-                    transition: "left 0.3s cubic-bezier(0.4,0,0.2,1)",
-                    borderRadius: isPhase2 ? "0 9px 9px 0" : "9px 0 0 9px",
+                    top: PAD,
+                    left: isP2 ? TRACK_W - KNOB - PAD : PAD,
+                    width: KNOB,
+                    height: KNOB,
+                    borderRadius: "50%",
+                    bgcolor: "#fff",
+                    transition: "left 0.28s cubic-bezier(0.4, 0, 0.2, 1)",
+                    boxShadow: isDark
+                        ? "0 1px 3px rgba(0,0,0,0.55)"
+                        : "0 1px 3px rgba(0,0,0,0.22)",
                 }} />
-
-                {/* Phase 1 button */}
-                <Box
-                    onClick={isPhase2 ? onSwitch : undefined}
-                    sx={{
-                        flex: 1,
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        py: 0.9,
-                        gap: 0.3,
-                        cursor: isPhase2 ? "pointer" : "default",
-                        zIndex: 1,
-                        position: "relative",
-                        transition: "all 0.2s",
-                        "&:hover": isPhase2 ? {
-                            bgcolor: `${phase1Color}10`,
-                        } : {},
-                    }}
-                >
-                    <LightbulbOutlinedIcon sx={{
-                        fontSize: 15,
-                        color: !isPhase2 ? phase1Color : inactiveColor,
-                        transition: "color 0.3s",
-                    }} />
-                    <Typography sx={{
-                        fontSize: "0.65rem",
-                        fontWeight: !isPhase2 ? 700 : 500,
-                        color: !isPhase2 ? phase1Color : inactiveColor,
-                        lineHeight: 1,
-                        transition: "all 0.3s",
-                    }}>
-                        Phase 1
-                    </Typography>
-                    <Typography sx={{
-                        fontSize: "0.55rem",
-                        color: !isPhase2 ? `${phase1Color}99` : `${inactiveColor}70`,
-                        lineHeight: 1,
-                        transition: "all 0.3s",
-                    }}>
-                        Proposal
-                    </Typography>
-                </Box>
-
-                {/* divider */}
-                <Box sx={{ width: "1px", bgcolor: `${activeColor}20`, flexShrink: 0 }} />
-
-                {/* Phase 2 button */}
-                <Box
-                    onClick={!isPhase2 ? onSwitch : undefined}
-                    sx={{
-                        flex: 1,
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        py: 0.9,
-                        gap: 0.3,
-                        cursor: !isPhase2 ? "pointer" : "default",
-                        zIndex: 1,
-                        position: "relative",
-                        transition: "all 0.2s",
-                        "&:hover": !isPhase2 ? {
-                            bgcolor: `${phase2Color}10`,
-                        } : {},
-                    }}
-                >
-                    <RocketLaunchOutlinedIcon sx={{
-                        fontSize: 15,
-                        color: isPhase2 ? phase2Color : inactiveColor,
-                        transition: "color 0.3s",
-                    }} />
-                    <Typography sx={{
-                        fontSize: "0.65rem",
-                        fontWeight: isPhase2 ? 700 : 500,
-                        color: isPhase2 ? phase2Color : inactiveColor,
-                        lineHeight: 1,
-                        transition: "all 0.3s",
-                    }}>
-                        Phase 2
-                    </Typography>
-                    <Typography sx={{
-                        fontSize: "0.55rem",
-                        color: isPhase2 ? `${phase2Color}99` : `${inactiveColor}70`,
-                        lineHeight: 1,
-                        transition: "all 0.3s",
-                    }}>
-                        Project
-                    </Typography>
-                </Box>
             </Box>
         </Box>
     );
 }
 
-// ── Main Sidebar ──────────────────────────────────────────────────────────────
+// ── Collapsed dot indicator ───────────────────────────────────────────────────
+function PhaseDot({ currentPhase, onSwitch }) {
+    const isP2 = currentPhase === "Phase2";
+    const phase = isP2 ? P2 : P1;
+    return (
+        <Tooltip title={`${phase.label} — click to switch`} placement="right">
+            <Box
+                onClick={onSwitch}
+                sx={{
+                    width: 7, height: 7, borderRadius: "50%",
+                    bgcolor: phase.color,
+                    mt: 0.7, cursor: "pointer",
+                    transition: "background-color 0.4s ease",
+                    "&:hover": { transform: "scale(1.35)" },
+                }}
+            />
+        </Tooltip>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function Sidebar({
-    width,
-    collapsedWidth,
-    collapsed,
-    mobileOpen,
-    onMobileClose,
-    onCollapse,
-    isMobile,
-    onPhaseSwitch,     // () => void  — called when user clicks phase switcher
+    width, collapsedWidth, collapsed, mobileOpen,
+    onMobileClose, onCollapse, isMobile, onPhaseSwitch,
 }) {
     const theme = useTheme();
     const location = useLocation();
@@ -270,16 +186,21 @@ export default function Sidebar({
     const t = theme.palette.custom ?? {};
     const navItems = NAV_ITEMS[role] ?? [];
     const currentWidth = collapsed ? collapsedWidth : width;
+    const isP2 = currentPhase === "Phase2";
+    const phaseAccent = role === "student"
+        ? (isP2 ? P2.color : P1.color)
+        : (ROLE_COLOR[role] ?? "#B46F4C");
+
+    const border = t.borderLight ?? theme.palette.divider;
+    const tPri = t.textPrimary ?? theme.palette.text.primary;
+    const tSec = t.textSecondary ?? theme.palette.text.secondary;
 
     const isActive = (path) =>
         path === `/${role}`
             ? location.pathname === path
             : location.pathname.startsWith(path);
 
-    const handleNav = (path) => {
-        navigate(path);
-        if (isMobile) onMobileClose();
-    };
+    const handleNav = (path) => { navigate(path); if (isMobile) onMobileClose(); };
 
     const handleLogout = () => {
         sessionStorage.removeItem("team_checked");
@@ -289,57 +210,35 @@ export default function Sidebar({
         navigate("/login");
     };
 
-    // ── phase accent colour (only for student) ────────────────────────────
-    const isPhase2 = currentPhase === "Phase2";
-    const phaseAccent = role === "student"
-        ? (isPhase2 ? "#6D8A7D" : "#C49A6C")
-        : (ROLE_COLOR[role] ?? "#B46F4C");
-
-    // ── drawer content ────────────────────────────────────────────────────
     const drawerContent = (
         <Box sx={{
-            display: "flex",
-            flexDirection: "column",
-            height: "100%",
-            width: currentWidth,
-            overflow: "hidden",
+            display: "flex", flexDirection: "column", height: "100%",
+            width: currentWidth, overflow: "hidden",
             transition: theme.transitions.create("width", {
-                easing: theme.transitions.easing.sharp,
-                duration: 220,
+                easing: theme.transitions.easing.sharp, duration: 220,
             }),
-            // Subtle phase-tinted left border for student
-            borderRight: role === "student"
-                ? `2px solid ${phaseAccent}25`
-                : "none",
         }}>
 
-            {/* ── Logo + collapse ── */}
+            {/* ── Logo ── */}
             <Box sx={{
-                height: 64,
-                display: "flex",
-                alignItems: "center",
+                height: 64, display: "flex", alignItems: "center",
                 px: collapsed ? 1.5 : 2.5,
                 justifyContent: collapsed ? "center" : "space-between",
-                borderBottom: `1px solid ${t.borderLight ?? theme.palette.divider}`,
-                flexShrink: 0,
+                borderBottom: `1px solid ${border}`, flexShrink: 0,
             }}>
                 {!collapsed && (
                     <Box>
                         <Typography sx={{
                             fontFamily: '"Playfair Display", serif',
-                            fontWeight: 700,
-                            fontSize: "1.05rem",
-                            color: t.accentPrimary ?? phaseAccent,
-                            lineHeight: 1.2,
+                            fontWeight: 700, fontSize: "1.05rem",
+                            color: phaseAccent, lineHeight: 1.2,
                             transition: "color 0.4s ease",
                         }}>
                             GPMS
                         </Typography>
                         <Typography sx={{
-                            fontSize: "0.65rem",
-                            color: t.textTertiary ?? theme.palette.text.disabled,
-                            letterSpacing: "0.06em",
-                            textTransform: "uppercase",
+                            fontSize: "0.65rem", color: theme.palette.text.disabled,
+                            letterSpacing: "0.06em", textTransform: "uppercase",
                         }}>
                             Palestine Tech Uni
                         </Typography>
@@ -347,18 +246,12 @@ export default function Sidebar({
                 )}
                 {!isMobile && (
                     <Tooltip title={collapsed ? "Expand" : "Collapse"} placement="right">
-                        <IconButton
-                            size="small"
-                            onClick={onCollapse}
-                            sx={{
-                                width: 28,
-                                height: 28,
-                                border: `1px solid ${t.borderLight ?? theme.palette.divider}`,
-                                color: t.textSecondary ?? theme.palette.text.secondary,
-                                bgcolor: t.surfaceCard ?? "transparent",
-                                "&:hover": { bgcolor: t.surfaceHover ?? theme.palette.action.hover },
-                            }}
-                        >
+                        <IconButton size="small" onClick={onCollapse} sx={{
+                            width: 28, height: 28,
+                            border: `1px solid ${border}`,
+                            color: tSec,
+                            "&:hover": { bgcolor: theme.palette.action.hover },
+                        }}>
                             {collapsed
                                 ? <ChevronRightIcon sx={{ fontSize: 16 }} />
                                 : <ChevronLeftIcon sx={{ fontSize: 16 }} />}
@@ -367,142 +260,118 @@ export default function Sidebar({
                 )}
             </Box>
 
-            {/* ── User profile (expanded) ── */}
+            {/* ── User card — expanded ── */}
             {!collapsed && (
-                <Box sx={{
-                    px: 2.5,
-                    py: 2,
-                    borderBottom: `1px solid ${t.borderLight ?? theme.palette.divider}`,
-                }}>
-                    <Stack direction="row" spacing={1.5} alignItems="center">
-                        <Avatar
-                            src={user?.avatar}
-                            sx={{
-                                width: 38,
-                                height: 38,
-                                bgcolor: ROLE_COLOR[role],
-                                fontSize: "0.9rem",
-                                fontWeight: 600,
-                                flexShrink: 0,
-                            }}
-                        >
+                <Box sx={{ px: 2, pt: 1.6, pb: 1.6, borderBottom: `1px solid ${border}` }}>
+
+                    {/* Row 1: Avatar + Name + Role badge */}
+                    <Stack direction="row" spacing={1.2} alignItems="center">
+                        <Avatar src={user?.avatar} sx={{
+                            width: 36, height: 36,
+                            bgcolor: `${phaseAccent}20`,
+                            color: phaseAccent,
+                            fontSize: "0.85rem", fontWeight: 600, flexShrink: 0,
+                            transition: "background-color 0.4s ease, color 0.4s ease",
+                        }}>
                             {user?.name?.charAt(0).toUpperCase()
-                                ?? user?.username?.charAt(0).toUpperCase()
-                                ?? "?"}
+                                ?? user?.username?.charAt(0).toUpperCase() ?? "?"}
                         </Avatar>
-                        <Box sx={{ minWidth: 0 }}>
+
+                        <Box sx={{ minWidth: 0, flex: 1 }}>
+                            {/* Name */}
                             <Typography
                                 variant="body2"
                                 fontWeight={600}
                                 noWrap
-                                sx={{ color: t.textPrimary ?? theme.palette.text.primary }}
+                                sx={{ fontSize: "1rem", color: tPri, lineHeight: 1.2 }}
                             >
                                 {user?.name ?? user?.username ?? "User"}
                             </Typography>
-                            <Stack direction="row" spacing={0.6} alignItems="center" mt={0.3}>
+
+                            {/* Row 2: Role pill + Phase toggle (inline, same row) */}
+                            <Box sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                mt: 0.5,
+                                gap: 0.5,
+                            }}>
+                                {/* Role pill */}
                                 <Box sx={{
                                     display: "inline-flex",
                                     alignItems: "center",
-                                    px: 0.8,
-                                    py: 0.15,
-                                    borderRadius: 1,
-                                    bgcolor: `${ROLE_COLOR[role]}18`,
+                                    gap: 0.4,
                                 }}>
+                                    {/* Accent dot */}
+                                    <Box sx={{
+                                        width: 5, height: 5, borderRadius: "50%",
+                                        bgcolor: ROLE_COLOR[role] ?? phaseAccent,
+                                        flexShrink: 0,
+                                        transition: "background-color 0.4s",
+                                    }} />
                                     <Typography sx={{
                                         fontSize: "0.65rem",
-                                        fontWeight: 600,
-                                        letterSpacing: "0.05em",
-                                        textTransform: "uppercase",
-                                        color: ROLE_COLOR[role],
+                                        color: tSec,
+                                        lineHeight: 1,
                                     }}>
                                         {ROLE_LABEL[role] ?? role}
                                     </Typography>
                                 </Box>
 
-                                {/* Phase badge — only for student */}
+                                {/* Phase toggle — students only, inline */}
                                 {role === "student" && (
-                                    <Chip
-                                        label={currentPhase === "Phase2" ? "P2" : "P1"}
-                                        size="small"
-                                        sx={{
-                                            height: 16,
-                                            fontSize: "0.58rem",
-                                            fontWeight: 700,
-                                            bgcolor: `${phaseAccent}18`,
-                                            color: phaseAccent,
-                                            border: `1px solid ${phaseAccent}30`,
-                                            "& .MuiChip-label": { px: 0.6 },
-                                            transition: "all 0.4s ease",
-                                        }}
-                                    />
+                                    <Tooltip
+                                        title={`Switch to ${isP2 ? "Phase 1 — Proposal" : "Phase 2 — Project"}`}
+                                        placement="top"
+                                    >
+                                        <span>
+                                            <PhaseToggle
+                                                currentPhase={currentPhase}
+                                                onSwitch={onPhaseSwitch}
+                                            />
+                                        </span>
+                                    </Tooltip>
                                 )}
-                            </Stack>
+                            </Box>
                         </Box>
                     </Stack>
 
-                    {role === "student" && (
-                        <Box sx={{ mt: 1.5 }}>
-                            {user?.teamName && (
-                                <Typography sx={{ fontSize: "0.75rem", color: t.textSecondary ?? theme.palette.text.secondary }}>
-                                    Team:{" "}
-                                    <span style={{ color: phaseAccent, fontWeight: 600 }}>
-                                        {user.teamName}
-                                    </span>
-                                </Typography>
-                            )}
-                            {user?.studentId && (
-                                <Typography sx={{ fontSize: "0.72rem", color: t.textTertiary ?? theme.palette.text.disabled, mt: 0.3 }}>
-                                    ID: {user.studentId}
-                                </Typography>
-                            )}
-                        </Box>
+                    {/* Row 3: Team or Department — only if data exists */}
+                    {role === "student" && user?.teamName && (
+                        <Typography sx={{ fontSize: "0.7rem", color: tSec, mt: 1, pl: "48px" }}>
+                            <Box component="span" sx={{ color: phaseAccent, fontWeight: 600, transition: "color 0.4s" }}>
+                                {user.teamName}
+                            </Box>
+                        </Typography>
                     )}
-
                     {role === "supervisor" && user?.department && (
-                        <Typography sx={{ fontSize: "0.75rem", color: t.textSecondary ?? theme.palette.text.secondary, mt: 1 }}>
+                        <Typography sx={{ fontSize: "0.7rem", color: tSec, mt: 1, pl: "48px" }}>
                             {user.department}
                         </Typography>
                     )}
                 </Box>
             )}
 
-            {/* ── User avatar (collapsed) ── */}
+            {/* ── User avatar — collapsed ── */}
             {collapsed && (
                 <Box sx={{
-                    display: "flex",
-                    justifyContent: "center",
-                    py: 2,
-                    borderBottom: `1px solid ${t.borderLight ?? theme.palette.divider}`,
+                    display: "flex", flexDirection: "column", alignItems: "center",
+                    py: 2, borderBottom: `1px solid ${border}`,
                 }}>
                     <Tooltip title={user?.name ?? user?.username ?? "User"} placement="right">
-                        <Avatar
-                            src={user?.avatar}
-                            sx={{
-                                width: 36,
-                                height: 36,
-                                bgcolor: ROLE_COLOR[role],
-                                fontSize: "0.85rem",
-                                fontWeight: 600,
-                            }}
-                        >
+                        <Avatar src={user?.avatar} sx={{
+                            width: 34, height: 34,
+                            bgcolor: `${phaseAccent}20`,
+                            color: phaseAccent,
+                            fontSize: "0.82rem", fontWeight: 600,
+                            transition: "background-color 0.4s ease, color 0.4s ease",
+                        }}>
                             {user?.name?.charAt(0) ?? user?.username?.charAt(0) ?? "?"}
                         </Avatar>
                     </Tooltip>
-                </Box>
-            )}
-
-            {/* ── Phase Switcher (student only) ── */}
-            {role === "student" && (
-                <Box sx={{
-                    pt: 1.5,
-                    borderBottom: `1px solid ${t.borderLight ?? theme.palette.divider}`,
-                    pb: collapsed ? 0 : 0,
-                }}>
-                    <PhaseSwitcher
-                        collapsed={collapsed}
-                        currentPhase={currentPhase}
-                        onSwitch={onPhaseSwitch}
-                    />
+                    {role === "student" && (
+                        <PhaseDot currentPhase={currentPhase} onSwitch={onPhaseSwitch} />
+                    )}
                 </Box>
             )}
 
@@ -517,26 +386,18 @@ export default function Sidebar({
                                     selected={active}
                                     onClick={() => handleNav(item.path)}
                                     sx={{
-                                        mx: 1,
-                                        mb: 0.25,
-                                        px: 1.5,
+                                        mx: 1, mb: 0.25, px: 1.5,
                                         justifyContent: collapsed ? "center" : "flex-start",
-                                        borderRadius: "8px",
-                                        minHeight: 40,
-                                        // active state uses phase accent for student
+                                        borderRadius: "8px", minHeight: 40,
                                         "&.Mui-selected": {
-                                            bgcolor: `${role === "student" ? phaseAccent : (t.accentPrimary ?? "#B46F4C")}12`,
-                                            "&:hover": {
-                                                bgcolor: `${role === "student" ? phaseAccent : (t.accentPrimary ?? "#B46F4C")}18`,
-                                            },
+                                            bgcolor: `${phaseAccent}12`,
+                                            "&:hover": { bgcolor: `${phaseAccent}1A` },
                                         },
                                     }}
                                 >
                                     <ListItemIcon sx={{
                                         minWidth: collapsed ? "auto" : 36,
-                                        color: active
-                                            ? (role === "student" ? phaseAccent : (t.accentPrimary ?? "#B46F4C"))
-                                            : (t.textSecondary ?? theme.palette.text.secondary),
+                                        color: active ? phaseAccent : tSec,
                                         "& svg": { fontSize: 20 },
                                         transition: "color 0.3s ease",
                                     }}>
@@ -548,9 +409,7 @@ export default function Sidebar({
                                             primaryTypographyProps={{
                                                 fontSize: "0.875rem",
                                                 fontWeight: active ? 600 : 500,
-                                                color: active
-                                                    ? (role === "student" ? phaseAccent : (t.accentPrimary ?? "#B46F4C"))
-                                                    : (t.textPrimary ?? theme.palette.text.primary),
+                                                color: active ? phaseAccent : tPri,
                                                 noWrap: true,
                                             }}
                                         />
@@ -563,110 +422,66 @@ export default function Sidebar({
             </Box>
 
             {/* ── Bottom actions ── */}
-            <Box sx={{ borderTop: `1px solid ${t.borderLight ?? theme.palette.divider}`, py: 1 }}>
-
-                {/* theme toggle */}
+            <Box sx={{ borderTop: `1px solid ${border}`, py: 1 }}>
                 <Tooltip title={`Switch to ${mode === "light" ? "Dark" : "Light"} mode`} placement="right">
-                    <ListItemButton
-                        onClick={toggleMode}
-                        sx={{
-                            mx: 1,
-                            borderRadius: "8px",
-                            justifyContent: collapsed ? "center" : "flex-start",
-                            minHeight: 40,
-                            px: 1.5,
-                        }}
-                    >
-                        <ListItemIcon sx={{
-                            minWidth: collapsed ? "auto" : 36,
-                            color: t.textSecondary ?? theme.palette.text.secondary,
-                            "& svg": { fontSize: 20 },
-                        }}>
-                            {mode === "light"
-                                ? <DarkModeOutlinedIcon />
-                                : <LightModeOutlinedIcon />}
+                    <ListItemButton onClick={toggleMode} sx={{
+                        mx: 1, borderRadius: "8px",
+                        justifyContent: collapsed ? "center" : "flex-start",
+                        minHeight: 40, px: 1.5,
+                    }}>
+                        <ListItemIcon sx={{ minWidth: collapsed ? "auto" : 36, color: tSec, "& svg": { fontSize: 20 } }}>
+                            {mode === "light" ? <DarkModeOutlinedIcon /> : <LightModeOutlinedIcon />}
                         </ListItemIcon>
                         {!collapsed && (
                             <ListItemText
                                 primary={mode === "light" ? "Dark Mode" : "Light Mode"}
-                                primaryTypographyProps={{
-                                    fontSize: "0.875rem",
-                                    fontWeight: 500,
-                                    color: t.textPrimary ?? theme.palette.text.primary,
-                                }}
+                                primaryTypographyProps={{ fontSize: "0.875rem", fontWeight: 500, color: tPri }}
                             />
                         )}
                     </ListItemButton>
                 </Tooltip>
 
-                {/* settings */}
                 {role !== "admin" && (
                     <Tooltip title={collapsed ? "Settings" : ""} placement="right">
                         <ListItemButton
                             onClick={() => handleNav(`/${role}/settings`)}
                             selected={isActive(`/${role}/settings`)}
                             sx={{
-                                mx: 1,
-                                borderRadius: "8px",
+                                mx: 1, borderRadius: "8px",
                                 justifyContent: collapsed ? "center" : "flex-start",
-                                minHeight: 40,
-                                px: 1.5,
+                                minHeight: 40, px: 1.5,
                             }}
                         >
-                            <ListItemIcon sx={{
-                                minWidth: collapsed ? "auto" : 36,
-                                color: t.textSecondary ?? theme.palette.text.secondary,
-                                "& svg": { fontSize: 20 },
-                            }}>
+                            <ListItemIcon sx={{ minWidth: collapsed ? "auto" : 36, color: tSec, "& svg": { fontSize: 20 } }}>
                                 <SettingsOutlinedIcon />
                             </ListItemIcon>
                             {!collapsed && (
                                 <ListItemText
                                     primary="Settings"
-                                    primaryTypographyProps={{
-                                        fontSize: "0.875rem",
-                                        fontWeight: 500,
-                                        color: t.textPrimary ?? theme.palette.text.primary,
-                                    }}
+                                    primaryTypographyProps={{ fontSize: "0.875rem", fontWeight: 500, color: tPri }}
                                 />
                             )}
                         </ListItemButton>
                     </Tooltip>
                 )}
 
-                {/* logout */}
                 <Tooltip title={collapsed ? "Logout" : ""} placement="right">
-                    <ListItemButton
-                        onClick={handleLogout}
-                        sx={{
-                            mx: 1,
-                            borderRadius: "8px",
-                            justifyContent: collapsed ? "center" : "flex-start",
-                            minHeight: 40,
-                            px: 1.5,
-                            "&:hover": {
-                                bgcolor: `${t.error ?? "#C47E7E"}14`,
-                                "& .MuiListItemIcon-root, & .MuiListItemText-primary": {
-                                    color: t.error ?? "#C47E7E",
-                                },
-                            },
-                        }}
-                    >
-                        <ListItemIcon sx={{
-                            minWidth: collapsed ? "auto" : 36,
-                            color: t.textSecondary ?? theme.palette.text.secondary,
-                            "& svg": { fontSize: 20 },
-                        }}>
+                    <ListItemButton onClick={handleLogout} sx={{
+                        mx: 1, borderRadius: "8px",
+                        justifyContent: collapsed ? "center" : "flex-start",
+                        minHeight: 40, px: 1.5,
+                        "&:hover": {
+                            bgcolor: `${t.error ?? "#C47E7E"}14`,
+                            "& .MuiListItemIcon-root": { color: t.error ?? "#C47E7E" },
+                        },
+                    }}>
+                        <ListItemIcon sx={{ minWidth: collapsed ? "auto" : 36, color: tSec, "& svg": { fontSize: 20 } }}>
                             <LogoutOutlinedIcon />
                         </ListItemIcon>
                         {!collapsed && (
                             <ListItemText
                                 primary="Logout"
-                                primaryTypographyProps={{
-                                    fontSize: "0.875rem",
-                                    fontWeight: 500,
-                                    color: t.textPrimary ?? theme.palette.text.primary,
-                                }}
+                                primaryTypographyProps={{ fontSize: "0.875rem", fontWeight: 500, color: tPri }}
                             />
                         )}
                     </ListItemButton>
@@ -677,42 +492,25 @@ export default function Sidebar({
 
     if (isMobile) {
         return (
-            <Drawer
-                variant="temporary"
-                open={mobileOpen}
-                onClose={onMobileClose}
+            <Drawer variant="temporary" open={mobileOpen} onClose={onMobileClose}
                 ModalProps={{ keepMounted: true }}
-                sx={{
-                    "& .MuiDrawer-paper": {
-                        width,
-                        boxSizing: "border-box",
-                        bgcolor: theme.palette.background.paper,
-                    },
-                }}
-            >
+                sx={{ "& .MuiDrawer-paper": { width, boxSizing: "border-box", bgcolor: theme.palette.background.paper } }}>
                 {drawerContent}
             </Drawer>
         );
     }
 
     return (
-        <Drawer
-            variant="permanent"
-            sx={{
-                width: currentWidth,
-                flexShrink: 0,
-                "& .MuiDrawer-paper": {
-                    width: currentWidth,
-                    boxSizing: "border-box",
-                    bgcolor: theme.palette.background.paper,
-                    overflowX: "hidden",
-                    transition: theme.transitions.create("width", {
-                        easing: theme.transitions.easing.sharp,
-                        duration: 220,
-                    }),
-                },
-            }}
-        >
+        <Drawer variant="permanent" sx={{
+            width: currentWidth, flexShrink: 0,
+            "& .MuiDrawer-paper": {
+                width: currentWidth, boxSizing: "border-box",
+                bgcolor: theme.palette.background.paper, overflowX: "hidden",
+                transition: theme.transitions.create("width", {
+                    easing: theme.transitions.easing.sharp, duration: 220,
+                }),
+            },
+        }}>
             {drawerContent}
         </Drawer>
     );

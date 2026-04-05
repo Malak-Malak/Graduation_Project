@@ -28,27 +28,59 @@ namespace GP_BackEnd.Services
             return supervisorTeam?.Id;
         }
 
-        // Get all attachments for a team
-        public async Task<List<AttachmentDto>> GetAttachmentsAsync(int userId)
+        // Get files uploaded by supervisor
+        public async Task<List<AttachmentDto>> GetSupervisorFilesAsync(int userId)
         {
             var teamId = await GetTeamIdAsync(userId);
             if (teamId == null) return new List<AttachmentDto>();
 
-            return await _context.TaskAttachments
-                .Include(ta => ta.User)
+            // Get supervisor id for this team
+            var team = await _context.Teams.FindAsync(teamId);
+            if (team == null) return new List<AttachmentDto>();
+
+            return await _context.ProjectFiles
+                .Include(f => f.User)
                     .ThenInclude(u => u.UserProfile)
-                .Where(ta => ta.TeamId == teamId)
-                .OrderByDescending(ta => ta.UploadedAt)
-                .Select(ta => new AttachmentDto
+                .Where(f => f.TeamId == teamId && f.UserId == team.SupervisorId)
+                .OrderByDescending(f => f.UploadedAt)
+                .Select(f => new AttachmentDto
                 {
-                    Id = ta.Id,
-                    FilePath = ta.FilePath,
-                    Description = ta.Description,
-                    UploadedAt = ta.UploadedAt,
-                    UploadedByUserId = ta.UserId,
-                    UploadedByName = ta.User.UserProfile != null
-                        ? ta.User.UserProfile.FullName
-                        : ta.User.Username
+                    Id = f.Id,
+                    FilePath = f.FilePath,
+                    Description = f.Description,
+                    UploadedAt = f.UploadedAt,
+                    UploadedByUserId = f.UserId,
+                    UploadedByName = f.User.UserProfile != null
+                        ? f.User.UserProfile.FullName
+                        : f.User.Username
+                })
+                .ToListAsync();
+        }
+
+        // Get files uploaded by students
+        public async Task<List<AttachmentDto>> GetStudentFilesAsync(int userId)
+        {
+            var teamId = await GetTeamIdAsync(userId);
+            if (teamId == null) return new List<AttachmentDto>();
+
+            var team = await _context.Teams.FindAsync(teamId);
+            if (team == null) return new List<AttachmentDto>();
+
+            return await _context.ProjectFiles
+                .Include(f => f.User)
+                    .ThenInclude(u => u.UserProfile)
+                .Where(f => f.TeamId == teamId && f.UserId != team.SupervisorId)
+                .OrderByDescending(f => f.UploadedAt)
+                .Select(f => new AttachmentDto
+                {
+                    Id = f.Id,
+                    FilePath = f.FilePath,
+                    Description = f.Description,
+                    UploadedAt = f.UploadedAt,
+                    UploadedByUserId = f.UserId,
+                    UploadedByName = f.User.UserProfile != null
+                        ? f.User.UserProfile.FullName
+                        : f.User.Username
                 })
                 .ToListAsync();
         }
@@ -59,7 +91,7 @@ namespace GP_BackEnd.Services
             var teamId = await GetTeamIdAsync(userId);
             if (teamId == null) return false;
 
-            _context.TaskAttachments.Add(new ProjectFile
+            _context.ProjectFiles.Add(new ProjectFile
             {
                 FilePath = dto.FilePath,
                 Description = dto.Description,
@@ -75,7 +107,7 @@ namespace GP_BackEnd.Services
         // Edit attachment (only the one who uploaded it)
         public async Task<bool> EditAttachmentAsync(int userId, int attachmentId, EditAttachmentDto dto)
         {
-            var attachment = await _context.TaskAttachments
+            var attachment = await _context.ProjectFiles
                 .FirstOrDefaultAsync(ta => ta.Id == attachmentId && ta.UserId == userId);
 
             if (attachment == null) return false;
@@ -90,12 +122,12 @@ namespace GP_BackEnd.Services
         // Delete attachment (only the one who uploaded it)
         public async Task<bool> DeleteAttachmentAsync(int userId, int attachmentId)
         {
-            var attachment = await _context.TaskAttachments
+            var attachment = await _context.ProjectFiles
                 .FirstOrDefaultAsync(ta => ta.Id == attachmentId && ta.UserId == userId);
 
             if (attachment == null) return false;
 
-            _context.TaskAttachments.Remove(attachment);
+            _context.ProjectFiles.Remove(attachment);
             await _context.SaveChangesAsync();
             return true;
         }

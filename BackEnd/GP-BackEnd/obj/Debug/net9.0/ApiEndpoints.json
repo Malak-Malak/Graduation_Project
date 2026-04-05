@@ -275,16 +275,6 @@
   },
   {
     "ContainingType": "GP_BackEnd.Controllers.FileSystemController",
-    "Method": "GetAttachments",
-    "RelativePath": "api/FileSystem",
-    "HttpMethod": "GET",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "GP_BackEnd.Controllers.FileSystemController",
     "Method": "AddAttachment",
     "RelativePath": "api/FileSystem/add",
     "HttpMethod": "POST",
@@ -334,6 +324,26 @@
         "IsRequired": true
       }
     ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.FileSystemController",
+    "Method": "GetStudentFiles",
+    "RelativePath": "api/FileSystem/student-files",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.FileSystemController",
+    "Method": "GetSupervisorFiles",
+    "RelativePath": "api/FileSystem/supervisor-files",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
     "ReturnTypes": []
   },
   {

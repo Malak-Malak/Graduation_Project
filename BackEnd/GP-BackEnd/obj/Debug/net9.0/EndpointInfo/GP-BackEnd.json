@@ -459,7 +459,19 @@
         }
       }
     },
-    "/api/FileSystem": {
+    "/api/FileSystem/supervisor-files": {
+      "get": {
+        "tags": [
+          "FileSystem"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/FileSystem/student-files": {
       "get": {
         "tags": [
           "FileSystem"

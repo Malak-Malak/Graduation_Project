@@ -361,7 +361,7 @@ namespace GP_BackEnd.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "TaskAttachments",
+                name: "ProjectFiles",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
@@ -430,12 +430,12 @@ namespace GP_BackEnd.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "IX_TaskAttachments_TaskItemId",
-                table: "TaskAttachments",
+                table: "ProjectFiles",
                 column: "TaskItemId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_TaskAttachments_UserId",
-                table: "TaskAttachments",
+                table: "ProjectFiles",
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
@@ -516,7 +516,7 @@ namespace GP_BackEnd.Migrations
                 name: "RegistrationRequests");
 
             migrationBuilder.DropTable(
-                name: "TaskAttachments");
+                name: "ProjectFiles");
 
             migrationBuilder.DropTable(
                 name: "TeamJoinRequests");

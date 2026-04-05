@@ -239,7 +239,7 @@ namespace GP_BackEnd.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("TaskAttachments");
+                    b.ToTable("ProjectFiles");
                 });
 
             modelBuilder.Entity("GP_BackEnd.Models.TaskItem", b =>
@@ -648,7 +648,7 @@ namespace GP_BackEnd.Migrations
                         .IsRequired();
 
                     b.HasOne("GP_BackEnd.Models.User", "User")
-                        .WithMany("TaskAttachments")
+                        .WithMany("ProjectFiles")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -820,7 +820,7 @@ namespace GP_BackEnd.Migrations
 
                     b.Navigation("TaskAssignments");
 
-                    b.Navigation("TaskAttachments");
+                    b.Navigation("ProjectFiles");
 
                     b.Navigation("TeamMembers");
 

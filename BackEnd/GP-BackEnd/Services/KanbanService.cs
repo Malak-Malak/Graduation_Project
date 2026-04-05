@@ -22,6 +22,13 @@ namespace GP_BackEnd.Services
             return teamMember?.TeamId;
         }
 
+        // Get current version for a user
+        private async Task<int> GetUserVersionAsync(int userId)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            return user?.CurrentVersion ?? 0;
+        }
+
         // Map TaskItem to TaskDto
         private TaskDto MapToDto(TaskItem task)
         {
@@ -52,13 +59,15 @@ namespace GP_BackEnd.Services
             var teamId = await GetTeamIdAsync(userId);
             if (teamId == null) return null;
 
+            var version = await GetUserVersionAsync(userId);
+
             var tasks = await _context.TaskItems
                 .Include(t => t.CreatedBy)
                     .ThenInclude(u => u.UserProfile)
                 .Include(t => t.Assignments)
                     .ThenInclude(a => a.User)
                         .ThenInclude(u => u.UserProfile)
-                .Where(t => t.TeamId == teamId)
+                .Where(t => t.TeamId == teamId && t.Version == version)
                 .ToListAsync();
 
             return new KanbanBoardDto
@@ -75,7 +84,8 @@ namespace GP_BackEnd.Services
             var teamId = await GetTeamIdAsync(userId);
             if (teamId == null) return false;
 
-            // Validate status
+            var version = await GetUserVersionAsync(userId);
+
             var validStatuses = new[] { "To Do", "In Progress", "Done" };
             if (!validStatuses.Contains(dto.Status))
                 dto.Status = "To Do";
@@ -87,18 +97,17 @@ namespace GP_BackEnd.Services
                 Status = dto.Status,
                 Deadline = dto.Deadline,
                 TeamId = teamId.Value,
-                CreatedByUserId = userId
+                CreatedByUserId = userId,
+                Version = version
             };
 
             _context.TaskItems.Add(task);
             await _context.SaveChangesAsync();
 
-            // Assign members
             if (dto.AssignedUserIds != null && dto.AssignedUserIds.Any())
             {
                 foreach (var assignedUserId in dto.AssignedUserIds)
                 {
-                    // Check user is in the team
                     var isMember = await _context.TeamMembers
                         .AnyAsync(tm => tm.TeamId == teamId && tm.UserId == assignedUserId);
 
@@ -123,9 +132,11 @@ namespace GP_BackEnd.Services
             var teamId = await GetTeamIdAsync(userId);
             if (teamId == null) return false;
 
+            var version = await GetUserVersionAsync(userId);
+
             var task = await _context.TaskItems
                 .Include(t => t.Assignments)
-                .FirstOrDefaultAsync(t => t.Id == taskId && t.TeamId == teamId);
+                .FirstOrDefaultAsync(t => t.Id == taskId && t.TeamId == teamId && t.Version == version);
 
             if (task == null) return false;
 
@@ -133,7 +144,6 @@ namespace GP_BackEnd.Services
             task.Description = dto.Description;
             task.Deadline = dto.Deadline;
 
-            // Update assignments
             _context.TaskAssignments.RemoveRange(task.Assignments);
 
             if (dto.AssignedUserIds != null && dto.AssignedUserIds.Any())
@@ -163,8 +173,10 @@ namespace GP_BackEnd.Services
             var teamId = await GetTeamIdAsync(userId);
             if (teamId == null) return false;
 
+            var version = await GetUserVersionAsync(userId);
+
             var task = await _context.TaskItems
-                .FirstOrDefaultAsync(t => t.Id == dto.TaskId && t.TeamId == teamId);
+                .FirstOrDefaultAsync(t => t.Id == dto.TaskId && t.TeamId == teamId && t.Version == version);
 
             if (task == null) return false;
 
@@ -182,8 +194,10 @@ namespace GP_BackEnd.Services
             var teamId = await GetTeamIdAsync(userId);
             if (teamId == null) return false;
 
+            var version = await GetUserVersionAsync(userId);
+
             var task = await _context.TaskItems
-                .FirstOrDefaultAsync(t => t.Id == taskId && t.TeamId == teamId);
+                .FirstOrDefaultAsync(t => t.Id == taskId && t.TeamId == teamId && t.Version == version);
 
             if (task == null) return false;
 
@@ -211,6 +225,35 @@ namespace GP_BackEnd.Services
                         : tm.User.Username
                 })
                 .ToListAsync();
+        }
+        // Edit a feedback (supervisor only)
+        public async Task<bool> EditFeedbackAsync(int supervisorId, int feedbackId, string newContent)
+        {
+            var feedback = await _context.Feedbacks
+                .FirstOrDefaultAsync(f => f.Id == feedbackId
+                    && f.SenderId == supervisorId
+                    && f.ParentFeedbackId == null);
+
+            if (feedback == null) return false;
+
+            feedback.Content = newContent;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        // Edit a reply (only the one who wrote it)
+        public async Task<bool> EditReplyAsync(int userId, int replyId, string newContent)
+        {
+            var reply = await _context.Feedbacks
+                .FirstOrDefaultAsync(f => f.Id == replyId
+                    && f.SenderId == userId
+                    && f.ParentFeedbackId != null);
+
+            if (reply == null) return false;
+
+            reply.Content = newContent;
+            await _context.SaveChangesAsync();
+            return true;
         }
     }
 }

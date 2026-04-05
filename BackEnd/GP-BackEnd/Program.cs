@@ -80,6 +80,7 @@ builder.Services.AddCors(options =>
     });
 });
 
+
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<AdminService>();
@@ -88,6 +89,8 @@ builder.Services.AddScoped<SupervisorService>();
 builder.Services.AddScoped<UserProfileService>();
 builder.Services.AddScoped<KanbanService>();
 builder.Services.AddScoped<AppointmentService>();
+builder.Services.AddScoped<FeedbackService>();
+
 
 
 var app = builder.Build();

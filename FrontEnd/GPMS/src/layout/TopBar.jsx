@@ -95,7 +95,7 @@ const TopBar = ({ onMenuClick, isMobile }) => {
                 justifyContent: 'center',
                 // ── خط علوي سميك وواضح ──
                 borderTop: isStudent
-                    ? `3px solid ${phaseColor}`
+                    ? `0px solid ${phaseColor}`
                     : `1px solid ${theme.palette.divider}`,
                 borderBottom: `1px solid ${theme.palette.divider}`,
                 transition: "border-top-color 0.4s ease",

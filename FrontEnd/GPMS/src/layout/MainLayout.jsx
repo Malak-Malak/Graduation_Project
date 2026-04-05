@@ -5,7 +5,7 @@ import { Box, useMediaQuery } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import Sidebar from "./Sidebar.jsx";
 import TopBar from "./TopBar.jsx";
-import PhaseBanner from "./PhaseBanner.jsx";
+// import PhaseBanner from "./PhaseBanner.jsx";
 
 const SIDEBAR_WIDTH = 260;
 const SIDEBAR_COLLAPSED_WIDTH = 68;
@@ -62,7 +62,7 @@ export default function MainLayout({ children, onPhaseSwitch }) {
         />
 
         {/* ── Phase Banner — ثابت تحت الـ TopBar ── */}
-        <PhaseBanner />
+        {/* <PhaseBanner /> */}
 
         {/* ── Page content ── */}
         <Box

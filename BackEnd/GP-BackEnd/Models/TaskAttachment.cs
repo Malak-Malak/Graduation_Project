@@ -9,6 +9,7 @@ namespace GP_BackEnd.Models
     {
         [Key]
         public int Id { get; set; }
+        public string? Description { get; set; }
         public string FilePath { get; set; }
         public DateTime UploadedAt { get; set; }
         public int TaskItemId { get; set; }       

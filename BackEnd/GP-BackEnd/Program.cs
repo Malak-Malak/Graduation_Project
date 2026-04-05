@@ -90,7 +90,7 @@ builder.Services.AddScoped<UserProfileService>();
 builder.Services.AddScoped<KanbanService>();
 builder.Services.AddScoped<AppointmentService>();
 builder.Services.AddScoped<FeedbackService>();
-
+builder.Services.AddScoped<FileSystemService>();
 
 
 var app = builder.Build();

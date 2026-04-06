@@ -46,6 +46,7 @@ namespace GP_BackEnd.Services
                 .Select(f => new AttachmentDto
                 {
                     Id = f.Id,
+                    FileName = f.FileName,
                     FilePath = f.FilePath,
                     Description = f.Description,
                     UploadedAt = f.UploadedAt,
@@ -74,6 +75,7 @@ namespace GP_BackEnd.Services
                 .Select(f => new AttachmentDto
                 {
                     Id = f.Id,
+                    FileName = f.FileName,
                     FilePath = f.FilePath,
                     Description = f.Description,
                     UploadedAt = f.UploadedAt,
@@ -94,6 +96,7 @@ namespace GP_BackEnd.Services
             _context.ProjectFiles.Add(new ProjectFile
             {
                 FilePath = dto.FilePath,
+                FileName = dto.FileName,
                 Description = dto.Description,
                 UploadedAt = DateTime.UtcNow,
                 TeamId = teamId.Value,
@@ -113,6 +116,7 @@ namespace GP_BackEnd.Services
             if (attachment == null) return false;
 
             attachment.FilePath = dto.FilePath;
+            attachment.FileName = dto.FileName;
             attachment.Description = dto.Description;
 
             await _context.SaveChangesAsync();

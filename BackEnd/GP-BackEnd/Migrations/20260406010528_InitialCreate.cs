@@ -56,6 +56,7 @@ namespace GP_BackEnd.Migrations
                     Email = table.Column<string>(type: "text", nullable: false),
                     PasswordHash = table.Column<string>(type: "text", nullable: false),
                     Role = table.Column<string>(type: "text", nullable: false),
+                    CurrentVersion = table.Column<int>(type: "integer", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
@@ -69,8 +70,10 @@ namespace GP_BackEnd.Migrations
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Version = table.Column<int>(type: "integer", nullable: false),
                     Title = table.Column<string>(type: "text", nullable: false),
                     Message = table.Column<string>(type: "text", nullable: false),
+                    IsRead = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     UserId = table.Column<int>(type: "integer", nullable: false)
                 },
@@ -122,6 +125,7 @@ namespace GP_BackEnd.Migrations
                     GitHubLink = table.Column<string>(type: "text", nullable: true),
                     LinkedinLink = table.Column<string>(type: "text", nullable: true),
                     Field = table.Column<string>(type: "text", nullable: true),
+                    Bio = table.Column<string>(type: "text", nullable: true),
                     TotalNumOfCreditCards = table.Column<int>(type: "integer", nullable: false),
                     PersonalEmail = table.Column<string>(type: "text", nullable: false),
                     IsGraduate = table.Column<bool>(type: "boolean", nullable: false),
@@ -147,8 +151,8 @@ namespace GP_BackEnd.Migrations
                     ProjectTitle = table.Column<string>(type: "text", nullable: false),
                     Status = table.Column<string>(type: "text", nullable: false),
                     SupervisorId = table.Column<int>(type: "integer", nullable: false),
-                    CreatedByUserId = table.Column<int>(type: "integer", nullable: false),
-                    ProjectId = table.Column<int>(type: "integer", nullable: true)
+                    ProjectId = table.Column<int>(type: "integer", nullable: true),
+                    CreatedByUserId = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -157,7 +161,8 @@ namespace GP_BackEnd.Migrations
                         name: "FK_Teams_Projects_ProjectId",
                         column: x => x.ProjectId,
                         principalTable: "Projects",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Teams_Users_CreatedByUserId",
                         column: x => x.CreatedByUserId,
@@ -180,6 +185,7 @@ namespace GP_BackEnd.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     DateTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     Status = table.Column<string>(type: "text", nullable: false),
+                    Version = table.Column<int>(type: "integer", nullable: false),
                     Link = table.Column<string>(type: "text", nullable: false),
                     TeamId = table.Column<int>(type: "integer", nullable: false),
                     SupervisorId = table.Column<int>(type: "integer", nullable: false)
@@ -202,6 +208,63 @@ namespace GP_BackEnd.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ProjectFiles",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    FilePath = table.Column<string>(type: "text", nullable: false),
+                    Description = table.Column<string>(type: "text", nullable: true),
+                    UploadedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    TeamId = table.Column<int>(type: "integer", nullable: false),
+                    UserId = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ProjectFiles", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ProjectFiles_Teams_TeamId",
+                        column: x => x.TeamId,
+                        principalTable: "Teams",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ProjectFiles_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Requirements",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Description = table.Column<string>(type: "text", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    TeamId = table.Column<int>(type: "integer", nullable: false),
+                    CreatedByUserId = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Requirements", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Requirements_Teams_TeamId",
+                        column: x => x.TeamId,
+                        principalTable: "Teams",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Requirements_Users_CreatedByUserId",
+                        column: x => x.CreatedByUserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "TaskItems",
                 columns: table => new
                 {
@@ -212,7 +275,9 @@ namespace GP_BackEnd.Migrations
                     Status = table.Column<string>(type: "text", nullable: false),
                     Deadline = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     TeamId = table.Column<int>(type: "integer", nullable: false),
-                    ProjectId = table.Column<int>(type: "integer", nullable: true)
+                    ProjectId = table.Column<int>(type: "integer", nullable: true),
+                    CreatedByUserId = table.Column<int>(type: "integer", nullable: false),
+                    Version = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -229,6 +294,12 @@ namespace GP_BackEnd.Migrations
                         principalTable: "Teams",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_TaskItems_Users_CreatedByUserId",
+                        column: x => x.CreatedByUserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -294,6 +365,7 @@ namespace GP_BackEnd.Migrations
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Version = table.Column<int>(type: "integer", nullable: false),
                     CompletionRate = table.Column<double>(type: "double precision", nullable: false),
                     RiskLevel = table.Column<string>(type: "text", nullable: false),
                     Suggestions = table.Column<string>(type: "text", nullable: false),
@@ -329,6 +401,7 @@ namespace GP_BackEnd.Migrations
                     SenderId = table.Column<int>(type: "integer", nullable: false),
                     TeamId = table.Column<int>(type: "integer", nullable: false),
                     TaskItemId = table.Column<int>(type: "integer", nullable: true),
+                    Version = table.Column<int>(type: "integer", nullable: false),
                     ParentFeedbackId = table.Column<int>(type: "integer", nullable: true)
                 },
                 constraints: table =>
@@ -361,27 +434,25 @@ namespace GP_BackEnd.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "ProjectFiles",
+                name: "TaskAssignments",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    FilePath = table.Column<string>(type: "text", nullable: false),
-                    UploadedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     TaskItemId = table.Column<int>(type: "integer", nullable: false),
                     UserId = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_TaskAttachments", x => x.Id);
+                    table.PrimaryKey("PK_TaskAssignments", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_TaskAttachments_TaskItems_TaskItemId",
+                        name: "FK_TaskAssignments_TaskItems_TaskItemId",
                         column: x => x.TaskItemId,
                         principalTable: "TaskItems",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_TaskAttachments_Users_UserId",
+                        name: "FK_TaskAssignments_Users_UserId",
                         column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "Id",
@@ -424,19 +495,44 @@ namespace GP_BackEnd.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_ProjectFiles_TeamId",
+                table: "ProjectFiles",
+                column: "TeamId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ProjectFiles_UserId",
+                table: "ProjectFiles",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Projects_SupervisorId",
                 table: "Projects",
                 column: "SupervisorId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_TaskAttachments_TaskItemId",
-                table: "ProjectFiles",
+                name: "IX_Requirements_CreatedByUserId",
+                table: "Requirements",
+                column: "CreatedByUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Requirements_TeamId",
+                table: "Requirements",
+                column: "TeamId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TaskAssignments_TaskItemId",
+                table: "TaskAssignments",
                 column: "TaskItemId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_TaskAttachments_UserId",
-                table: "ProjectFiles",
+                name: "IX_TaskAssignments_UserId",
+                table: "TaskAssignments",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TaskItems_CreatedByUserId",
+                table: "TaskItems",
+                column: "CreatedByUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_TaskItems_ProjectId",
@@ -486,7 +582,8 @@ namespace GP_BackEnd.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_Teams_ProjectId",
                 table: "Teams",
-                column: "ProjectId");
+                column: "ProjectId",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Teams_SupervisorId",
@@ -497,6 +594,12 @@ namespace GP_BackEnd.Migrations
                 name: "IX_UserProfiles_UserId",
                 table: "UserProfiles",
                 column: "UserId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_Username",
+                table: "Users",
+                column: "Username",
                 unique: true);
         }
 
@@ -513,10 +616,16 @@ namespace GP_BackEnd.Migrations
                 name: "Notifications");
 
             migrationBuilder.DropTable(
+                name: "ProjectFiles");
+
+            migrationBuilder.DropTable(
                 name: "RegistrationRequests");
 
             migrationBuilder.DropTable(
-                name: "ProjectFiles");
+                name: "Requirements");
+
+            migrationBuilder.DropTable(
+                name: "TaskAssignments");
 
             migrationBuilder.DropTable(
                 name: "TeamJoinRequests");

@@ -249,14 +249,14 @@ namespace GP_BackEnd.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("ProjectId")
+                    b.Property<int>("TeamId")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedByUserId");
 
-                    b.HasIndex("ProjectId");
+                    b.HasIndex("TeamId");
 
                     b.ToTable("Requirements");
                 });
@@ -705,15 +705,15 @@ namespace GP_BackEnd.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("GP_BackEnd.Models.Project", "Project")
+                    b.HasOne("GP_BackEnd.Models.Team", "Team")
                         .WithMany("Requirements")
-                        .HasForeignKey("ProjectId")
+                        .HasForeignKey("TeamId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("CreatedBy");
 
-                    b.Navigation("Project");
+                    b.Navigation("Team");
                 });
 
             modelBuilder.Entity("GP_BackEnd.Models.TaskAssignment", b =>
@@ -863,8 +863,6 @@ namespace GP_BackEnd.Migrations
                 {
                     b.Navigation("ProgressReports");
 
-                    b.Navigation("Requirements");
-
                     b.Navigation("Tasks");
 
                     b.Navigation("Team");
@@ -886,6 +884,8 @@ namespace GP_BackEnd.Migrations
                     b.Navigation("Feedbacks");
 
                     b.Navigation("ProgressReports");
+
+                    b.Navigation("Requirements");
 
                     b.Navigation("Tasks");
 

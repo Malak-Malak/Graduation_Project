@@ -212,5 +212,122 @@ namespace GP_BackEnd.Services
             await _context.SaveChangesAsync();
             return true;
         }
+        // Add multiple university records at once
+        public async Task<(int added, int skipped)> AddUniversityRecordsAsync(List<AddUniversityRecordDto> records)
+        {
+            int added = 0;
+            int skipped = 0;
+
+            foreach (var dto in records)
+            {
+                var existing = await _context.UniversityRecords
+                    .FirstOrDefaultAsync(u => u.UniversityEmail == dto.UniversityEmail);
+
+                if (existing != null)
+                {
+                    skipped++;
+                    continue;
+                }
+
+                _context.UniversityRecords.Add(new UniversityRecord
+                {
+                    UniversityEmail = dto.UniversityEmail,
+                    Username = dto.Username,
+                    Password = dto.Password,
+                    FullName = dto.FullName,
+                    Role = dto.Role,
+                    Department = dto.Department,
+                    IsGraduate = dto.IsGraduate
+                });
+
+                added++;
+            }
+
+            await _context.SaveChangesAsync();
+            return (added, skipped);
+        }
+
+        // Submit multiple registration requests at once
+        public async Task<(int submitted, int skipped)> SubmitMultipleRequestsAsync(List<string> emails)
+        {
+            int submitted = 0;
+            int skipped = 0;
+
+            foreach (var email in emails)
+            {
+                var universityRecord = await _context.UniversityRecords
+                    .FirstOrDefaultAsync(u => u.UniversityEmail == email);
+
+                if (universityRecord == null) { skipped++; continue; }
+
+                if (universityRecord.Role == "Student" && !universityRecord.IsGraduate)
+                { skipped++; continue; }
+
+                var existingRequest = await _context.RegistrationRequests
+                    .FirstOrDefaultAsync(r => r.UniversityEmail == email);
+
+                if (existingRequest != null) { skipped++; continue; }
+
+                var existingUser = await _context.Users
+                    .FirstOrDefaultAsync(u => u.Email == email);
+
+                if (existingUser != null) { skipped++; continue; }
+
+                _context.RegistrationRequests.Add(new RegistrationRequest
+                {
+                    UniversityEmail = email,
+                    Status = "Pending",
+                    RequestedAt = DateTime.UtcNow
+                });
+
+                submitted++;
+            }
+
+            await _context.SaveChangesAsync();
+            return (submitted, skipped);
+        }
+
+        // Approve all pending requests at once
+        public async Task<int> ApproveAllRequestsAsync()
+        {
+            var pendingRequests = await _context.RegistrationRequests
+                .Where(r => r.Status == "Pending")
+                .ToListAsync();
+
+            int approved = 0;
+
+            foreach (var request in pendingRequests)
+            {
+                var universityRecord = await _context.UniversityRecords
+                    .FirstOrDefaultAsync(u => u.UniversityEmail == request.UniversityEmail);
+
+                if (universityRecord == null) continue;
+
+                var existingUser = await _context.Users
+                    .FirstOrDefaultAsync(u => u.Email == request.UniversityEmail);
+
+                if (existingUser != null)
+                {
+                    request.Status = "Approved";
+                    continue;
+                }
+
+                var user = new User
+                {
+                    Username = universityRecord.Username,
+                    Email = universityRecord.UniversityEmail,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(universityRecord.Password),
+                    Role = char.ToUpper(universityRecord.Role[0]) + universityRecord.Role.Substring(1).ToLower(),
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.Users.Add(user);
+                request.Status = "Approved";
+                approved++;
+            }
+
+            await _context.SaveChangesAsync();
+            return approved;
+        }
     }
 }

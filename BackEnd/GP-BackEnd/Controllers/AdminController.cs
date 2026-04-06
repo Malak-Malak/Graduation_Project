@@ -110,5 +110,28 @@ namespace GP_BackEnd.Controllers
 
             return Ok("Request deleted successfully.");
         }
+        // POST api/admin/add-university-records-bulk
+        [HttpPost("add-university-records-bulk")]
+        public async Task<IActionResult> AddUniversityRecordsBulk([FromBody] List<AddUniversityRecordDto> records)
+        {
+            var (added, skipped) = await _adminService.AddUniversityRecordsAsync(records);
+            return Ok(new { added, skipped });
+        }
+
+        // POST api/admin/request-access-bulk
+        [HttpPost("request-access-bulk")]
+        public async Task<IActionResult> RequestAccessBulk([FromBody] BulkEmailsDto dto)
+        {
+            var (submitted, skipped) = await _adminService.SubmitMultipleRequestsAsync(dto.Emails);
+            return Ok(new { submitted, skipped });
+        }
+
+        // POST api/admin/approve-all-requests
+        [HttpPost("approve-all-requests")]
+        public async Task<IActionResult> ApproveAllRequests()
+        {
+            var approved = await _adminService.ApproveAllRequestsAsync();
+            return Ok(new { approved, message = $"{approved} users approved and accounts created." });
+        }
     }
 }

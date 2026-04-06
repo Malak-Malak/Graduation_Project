@@ -17,9 +17,35 @@
   },
   {
     "ContainingType": "GP_BackEnd.Controllers.AdminController",
+    "Method": "AddUniversityRecordsBulk",
+    "RelativePath": "api/Admin/add-university-records-bulk",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "records",
+        "Type": "System.Collections.Generic.List\u00601[[GP_BackEnd.DTOs.Admin.AddUniversityRecordDto, GP-BackEnd, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.AdminController",
     "Method": "GetAllRequests",
     "RelativePath": "api/Admin/all-requests",
     "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.AdminController",
+    "Method": "ApproveAllRequests",
+    "RelativePath": "api/Admin/approve-all-requests",
+    "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,
     "Parameters": [],
@@ -65,6 +91,22 @@
     "IsController": true,
     "Order": 0,
     "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.AdminController",
+    "Method": "RequestAccessBulk",
+    "RelativePath": "api/Admin/request-access-bulk",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "GP_BackEnd.DTOs.Admin.BulkEmailsDto",
+        "IsRequired": true
+      }
+    ],
     "ReturnTypes": []
   },
   {

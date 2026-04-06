@@ -22,6 +22,5 @@ namespace GP_BackEnd.Models
         public User Supervisor { get; set; }
         public ICollection<TaskItem> Tasks { get; set; }
         public ICollection<TeamProgressReport> ProgressReports { get; set; }
-        public ICollection<Requirement> Requirements { get; set; }
     }
 }

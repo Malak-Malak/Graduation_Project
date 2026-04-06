@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace GP_BackEnd.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260404063556_AddedVersioning")]
-    partial class AddedVersioning
+    [Migration("20260406010528_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -116,6 +116,9 @@ namespace GP_BackEnd.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Message")
                         .IsRequired()
                         .HasColumnType("text");
@@ -174,6 +177,39 @@ namespace GP_BackEnd.Migrations
                     b.ToTable("Projects");
                 });
 
+            modelBuilder.Entity("GP_BackEnd.Models.ProjectFile", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("FilePath")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("TeamId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TeamId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ProjectFiles");
+                });
+
             modelBuilder.Entity("GP_BackEnd.Models.RegistrationRequest", b =>
                 {
                     b.Property<int>("Id")
@@ -198,6 +234,36 @@ namespace GP_BackEnd.Migrations
                     b.ToTable("RegistrationRequests");
                 });
 
+            modelBuilder.Entity("GP_BackEnd.Models.Requirement", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("TeamId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("TeamId");
+
+                    b.ToTable("Requirements");
+                });
+
             modelBuilder.Entity("GP_BackEnd.Models.TaskAssignment", b =>
                 {
                     b.Property<int>("Id")
@@ -219,36 +285,6 @@ namespace GP_BackEnd.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("TaskAssignments");
-                });
-
-            modelBuilder.Entity("GP_BackEnd.Models.TaskAttachment", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("FilePath")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("TaskItemId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("UploadedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TaskItemId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("ProjectFiles");
                 });
 
             modelBuilder.Entity("GP_BackEnd.Models.TaskItem", b =>
@@ -645,6 +681,44 @@ namespace GP_BackEnd.Migrations
                     b.Navigation("Supervisor");
                 });
 
+            modelBuilder.Entity("GP_BackEnd.Models.ProjectFile", b =>
+                {
+                    b.HasOne("GP_BackEnd.Models.Team", "Team")
+                        .WithMany("Attachments")
+                        .HasForeignKey("TeamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GP_BackEnd.Models.User", "User")
+                        .WithMany("ProjectFiles")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Team");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("GP_BackEnd.Models.Requirement", b =>
+                {
+                    b.HasOne("GP_BackEnd.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GP_BackEnd.Models.Team", "Team")
+                        .WithMany("Requirements")
+                        .HasForeignKey("TeamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Team");
+                });
+
             modelBuilder.Entity("GP_BackEnd.Models.TaskAssignment", b =>
                 {
                     b.HasOne("GP_BackEnd.Models.TaskItem", "TaskItem")
@@ -655,25 +729,6 @@ namespace GP_BackEnd.Migrations
 
                     b.HasOne("GP_BackEnd.Models.User", "User")
                         .WithMany("TaskAssignments")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("TaskItem");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("GP_BackEnd.Models.TaskAttachment", b =>
-                {
-                    b.HasOne("GP_BackEnd.Models.TaskItem", "TaskItem")
-                        .WithMany("Attachments")
-                        .HasForeignKey("TaskItemId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("GP_BackEnd.Models.User", "User")
-                        .WithMany("ProjectFiles")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -820,8 +875,6 @@ namespace GP_BackEnd.Migrations
                 {
                     b.Navigation("Assignments");
 
-                    b.Navigation("Attachments");
-
                     b.Navigation("Feedbacks");
                 });
 
@@ -829,9 +882,13 @@ namespace GP_BackEnd.Migrations
                 {
                     b.Navigation("Appointments");
 
+                    b.Navigation("Attachments");
+
                     b.Navigation("Feedbacks");
 
                     b.Navigation("ProgressReports");
+
+                    b.Navigation("Requirements");
 
                     b.Navigation("Tasks");
 
@@ -844,11 +901,11 @@ namespace GP_BackEnd.Migrations
 
                     b.Navigation("Notifications");
 
+                    b.Navigation("ProjectFiles");
+
                     b.Navigation("SupervisedTeams");
 
                     b.Navigation("TaskAssignments");
-
-                    b.Navigation("ProjectFiles");
 
                     b.Navigation("TeamMembers");
 

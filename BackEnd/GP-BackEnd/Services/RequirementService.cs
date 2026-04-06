@@ -14,30 +14,24 @@ namespace GP_BackEnd.Services
             _context = context;
         }
 
-        // Get project id for a user
-        private async Task<int?> GetProjectIdAsync(int userId)
+        // Get team id for a user
+        private async Task<int?> GetTeamIdAsync(int userId)
         {
             var teamMember = await _context.TeamMembers
                 .FirstOrDefaultAsync(tm => tm.UserId == userId);
-
-            if (teamMember == null) return null;
-
-            var team = await _context.Teams
-                .FirstOrDefaultAsync(t => t.Id == teamMember.TeamId);
-
-            return team?.ProjectId;
+            return teamMember?.TeamId;
         }
 
-        // Get all requirements for a project
+        // Get all requirements for a team
         public async Task<List<RequirementDto>> GetRequirementsAsync(int userId)
         {
-            var projectId = await GetProjectIdAsync(userId);
-            if (projectId == null) return new List<RequirementDto>();
+            var teamId = await GetTeamIdAsync(userId);
+            if (teamId == null) return new List<RequirementDto>();
 
             return await _context.Requirements
                 .Include(r => r.CreatedBy)
                     .ThenInclude(u => u.UserProfile)
-                .Where(r => r.ProjectId == projectId)
+                .Where(r => r.TeamId == teamId)
                 .OrderByDescending(r => r.CreatedAt)
                 .Select(r => new RequirementDto
                 {
@@ -54,17 +48,16 @@ namespace GP_BackEnd.Services
         // Add a requirement
         public async Task<bool> AddRequirementAsync(int userId, AddRequirementDto dto)
         {
-            var projectId = await GetProjectIdAsync(userId);
-            if (projectId == null) return false;
+            var teamId = await GetTeamIdAsync(userId);
+            if (teamId == null) return false;
 
             _context.Requirements.Add(new Requirement
             {
                 Description = dto.Description,
-                ProjectId = projectId.Value,
+                TeamId = teamId.Value,
                 CreatedByUserId = userId,
                 CreatedAt = DateTime.UtcNow
             });
-
             await _context.SaveChangesAsync();
             return true;
         }
@@ -72,12 +65,11 @@ namespace GP_BackEnd.Services
         // Update a requirement
         public async Task<bool> UpdateRequirementAsync(int userId, int requirementId, UpdateRequirementDto dto)
         {
-            var projectId = await GetProjectIdAsync(userId);
-            if (projectId == null) return false;
+            var teamId = await GetTeamIdAsync(userId);
+            if (teamId == null) return false;
 
             var requirement = await _context.Requirements
-                .FirstOrDefaultAsync(r => r.Id == requirementId && r.ProjectId == projectId);
-
+                .FirstOrDefaultAsync(r => r.Id == requirementId && r.TeamId == teamId);
             if (requirement == null) return false;
 
             requirement.Description = dto.Description;
@@ -88,12 +80,11 @@ namespace GP_BackEnd.Services
         // Delete a requirement
         public async Task<bool> DeleteRequirementAsync(int userId, int requirementId)
         {
-            var projectId = await GetProjectIdAsync(userId);
-            if (projectId == null) return false;
+            var teamId = await GetTeamIdAsync(userId);
+            if (teamId == null) return false;
 
             var requirement = await _context.Requirements
-                .FirstOrDefaultAsync(r => r.Id == requirementId && r.ProjectId == projectId);
-
+                .FirstOrDefaultAsync(r => r.Id == requirementId && r.TeamId == teamId);
             if (requirement == null) return false;
 
             _context.Requirements.Remove(requirement);

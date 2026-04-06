@@ -203,11 +203,11 @@ namespace GP_BackEnd.Data
                 .WithOne(p => p.Team)
                 .HasForeignKey<Team>(t => t.ProjectId)
                 .OnDelete(DeleteBehavior.Restrict);
-            // Requirement -> Project
+            // Requirement -> Team  
             modelBuilder.Entity<Requirement>()
-                .HasOne(r => r.Project)
-                .WithMany(p => p.Requirements)
-                .HasForeignKey(r => r.ProjectId)
+                .HasOne(r => r.Team)
+                .WithMany(t => t.Requirements)
+                .HasForeignKey(r => r.TeamId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // Requirement -> CreatedBy (User)

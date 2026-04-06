@@ -28,6 +28,7 @@ import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
 import LightModeOutlinedIcon from "@mui/icons-material/LightModeOutlined";
 import HowToRegOutlinedIcon from "@mui/icons-material/HowToRegOutlined";
 import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined";
+import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 
 import { useAuth } from "../contexts/AuthContext";
 import { useThemeContext } from "../contexts/ThemeContext";
@@ -60,6 +61,7 @@ const NAV_ITEMS = {
         { label: "Discovery Hub", icon: <SearchOutlinedIcon />, path: "/student/team-finder" },
         { label: "Kanban Board", icon: <ViewKanbanOutlinedIcon />, path: "/student/kanban" },
         { label: "Timeline", icon: <TimelineOutlinedIcon />, path: "/student/timeline" },
+        { label: "Requirements", icon: <AssignmentOutlinedIcon />, path: "/student/requirements", phase2Only: true },
         { label: "Files", icon: <FolderOutlinedIcon />, path: "/student/files" },
         { label: "Meetings", icon: <CalendarMonthOutlinedIcon />, path: "/student/meetings" },
         { label: "Analytics", icon: <QueryStatsOutlinedIcon />, path: "/student/analytics" },
@@ -378,46 +380,48 @@ export default function Sidebar({
             {/* ── Nav items ── */}
             <Box sx={{ flexGrow: 1, overflowY: "auto", overflowX: "hidden", py: 1 }}>
                 <List dense disablePadding>
-                    {navItems.map((item) => {
-                        const active = isActive(item.path);
-                        return (
-                            <Tooltip key={item.path} title={collapsed ? item.label : ""} placement="right">
-                                <ListItemButton
-                                    selected={active}
-                                    onClick={() => handleNav(item.path)}
-                                    sx={{
-                                        mx: 1, mb: 0.25, px: 1.5,
-                                        justifyContent: collapsed ? "center" : "flex-start",
-                                        borderRadius: "8px", minHeight: 40,
-                                        "&.Mui-selected": {
-                                            bgcolor: `${phaseAccent}12`,
-                                            "&:hover": { bgcolor: `${phaseAccent}1A` },
-                                        },
-                                    }}
-                                >
-                                    <ListItemIcon sx={{
-                                        minWidth: collapsed ? "auto" : 36,
-                                        color: active ? phaseAccent : tSec,
-                                        "& svg": { fontSize: 20 },
-                                        transition: "color 0.3s ease",
-                                    }}>
-                                        {item.icon}
-                                    </ListItemIcon>
-                                    {!collapsed && (
-                                        <ListItemText
-                                            primary={item.label}
-                                            primaryTypographyProps={{
-                                                fontSize: "0.875rem",
-                                                fontWeight: active ? 600 : 500,
-                                                color: active ? phaseAccent : tPri,
-                                                noWrap: true,
-                                            }}
-                                        />
-                                    )}
-                                </ListItemButton>
-                            </Tooltip>
-                        );
-                    })}
+                    {navItems
+                        .filter((item) => !item.phase2Only || isP2)
+                        .map((item) => {
+                            const active = isActive(item.path);
+                            return (
+                                <Tooltip key={item.path} title={collapsed ? item.label : ""} placement="right">
+                                    <ListItemButton
+                                        selected={active}
+                                        onClick={() => handleNav(item.path)}
+                                        sx={{
+                                            mx: 1, mb: 0.25, px: 1.5,
+                                            justifyContent: collapsed ? "center" : "flex-start",
+                                            borderRadius: "8px", minHeight: 40,
+                                            "&.Mui-selected": {
+                                                bgcolor: `${phaseAccent}12`,
+                                                "&:hover": { bgcolor: `${phaseAccent}1A` },
+                                            },
+                                        }}
+                                    >
+                                        <ListItemIcon sx={{
+                                            minWidth: collapsed ? "auto" : 36,
+                                            color: active ? phaseAccent : tSec,
+                                            "& svg": { fontSize: 20 },
+                                            transition: "color 0.3s ease",
+                                        }}>
+                                            {item.icon}
+                                        </ListItemIcon>
+                                        {!collapsed && (
+                                            <ListItemText
+                                                primary={item.label}
+                                                primaryTypographyProps={{
+                                                    fontSize: "0.875rem",
+                                                    fontWeight: active ? 600 : 500,
+                                                    color: active ? phaseAccent : tPri,
+                                                    noWrap: true,
+                                                }}
+                                            />
+                                        )}
+                                    </ListItemButton>
+                                </Tooltip>
+                            );
+                        })}
                 </List>
             </Box>
 

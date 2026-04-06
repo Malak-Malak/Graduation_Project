@@ -20,6 +20,7 @@ import ProfileSetupModal from "../../components/common/student/Profile/ProfileSe
 import MyTeamPage from "../../components/common/student/MyTeam/MyTeamPage";
 import DiscoveryHub from "../../components/common/student/DiscoveryHub/DiscoveryHub";
 import Feedback from "../../components/common/student/Feedback/Feedback";
+import ProjectRequirements from "../../components/common/student/Requirements/ProjectRequirements";
 // ← NEW: Phase overlay
 import PhaseTransitionOverlay from "../../components/common/shared/PhaseTransitionOverlay";
 
@@ -221,6 +222,7 @@ export default function StudentPage() {
                     <Route path="meetings" element={<StudentMeetings />} />
                     <Route path="analytics" element={<StudentAnalytics />} />
                     <Route path="timeline" element={<ProjectTimeline />} />
+                    <Route path="requirements" element={<ProjectRequirements />} />
                     <Route path="profile" element={<UserProfilePage />} />
                     <Route path="my-team" element={<MyTeamPage />} />
                     <Route path="*" element={<Navigate to="/student" replace />} />

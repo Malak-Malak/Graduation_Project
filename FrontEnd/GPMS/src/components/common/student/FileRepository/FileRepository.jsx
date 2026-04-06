@@ -1,18 +1,27 @@
 // src/components/common/student/FileRepository/FileRepository.jsx
 //
-// Student sees their uploaded links.
-// Under each file they see supervisor feedback and can reply.
+// Two tabs:
+//   Tab 0 "My Files"         — student's own files: add / edit / delete
+//                              feedbackMap shown per file (supervisor feedback + student replies)
+//   Tab 1 "Supervisor Files" — supervisor's files: read-only list
 //
-// FIX: feedbackMap is keyed by taskItemId (which supervisor sets = attachmentId).
-//      So the lookup feedbackMap[file.attachmentId] is correct ONLY when
-//      the backend echoes taskItemId === attachmentId on feedback items.
-//      We keep that contract and add a safety fallback.
+// API:
+//   GET  /api/FileSystem/student-files    → student's own files
+//   GET  /api/FileSystem/supervisor-files → supervisor's files (read-only for student)
+//   GET  /api/Feedback/team/{teamId}      → feedback keyed by taskItemId = attachmentId
+//   POST /api/FileSystem/add              → { filePath, description }
+//   PUT  /api/FileSystem/edit/{id}        → { filePath, description }
+//   DELETE /api/FileSystem/delete/{id}
+//   POST /api/Feedback/reply              → { content, parentFeedbackId }
+//   PUT  /api/Feedback/edit-reply/{id}    → { content }
+//   DELETE /api/Feedback/delete-reply/{id}
 
 import { useState, useEffect, useCallback } from "react";
 import {
     Box, Typography, Stack, Paper, Button, IconButton, Tooltip,
     CircularProgress, Alert, Dialog, DialogTitle, DialogContent,
-    DialogActions, TextField, InputAdornment, Avatar, Divider, Collapse, Tabs, Tab, Badge,
+    DialogActions, TextField, InputAdornment, Avatar, Divider,
+    Collapse, Tabs, Tab, Badge, Chip,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import LinkOutlinedIcon from "@mui/icons-material/LinkOutlined";
@@ -28,6 +37,7 @@ import SendOutlinedIcon from "@mui/icons-material/SendOutlined";
 import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
 import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
 import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
+import SupervisorAccountOutlinedIcon from "@mui/icons-material/SupervisorAccountOutlined";
 import RateReviewOutlinedIcon from "@mui/icons-material/RateReviewOutlined";
 
 import fileSystemApi from "../../../../api/handler/endpoints/fileSystemApi";
@@ -37,10 +47,10 @@ import { useAuth } from "../../../../contexts/AuthContext";
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 const getFileType = (filePath = "") => {
-    const lower = filePath.toLowerCase();
-    if (lower.includes("drive.google") || lower.includes("docs.google")) return "gdrive";
-    if (lower.includes("github.com")) return "github";
-    if (lower.includes("onedrive") || lower.includes("sharepoint")) return "onedrive";
+    const l = filePath.toLowerCase();
+    if (l.includes("drive.google") || l.includes("docs.google")) return "gdrive";
+    if (l.includes("github.com")) return "github";
+    if (l.includes("onedrive") || l.includes("sharepoint")) return "onedrive";
     return "link";
 };
 
@@ -52,7 +62,7 @@ const TYPE_META = {
 };
 
 const getDisplayName = (filePath = "", description = "") => {
-    if (description) return description;
+    if (description?.trim()) return description.trim();
     try {
         const url = new URL(filePath);
         return url.hostname + (url.pathname.length > 1 ? url.pathname.slice(0, 36) + "…" : "");
@@ -61,20 +71,17 @@ const getDisplayName = (filePath = "", description = "") => {
 
 const formatDate = (iso) => {
     if (!iso) return "";
-    return new Date(iso).toLocaleDateString("en-GB", {
-        day: "2-digit", month: "short", year: "numeric",
-    });
+    return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 };
 
 const getInitials = (name = "") =>
     name.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase()).join("");
 
-const AVATAR_COLORS = ["#C47E7E", "#C49A6C", "#7E9FC4", "#6D8A7D", "#9E86C4"];
-const colorFor = (name = "") => AVATAR_COLORS[(name.charCodeAt(0) ?? 0) % AVATAR_COLORS.length];
+const PALETTE = ["#C47E7E", "#C49A6C", "#7E9FC4", "#6D8A7D", "#9E86C4"];
+const colorFor = (name = "") => PALETTE[(name.charCodeAt(0) ?? 0) % PALETTE.length];
 
 const EMPTY_FORM = { filePath: "", description: "" };
 
-// ── Tab panel wrapper ─────────────────────────────────────────────────────────
 function TabPanel({ children, value, index }) {
     return value === index ? <Box sx={{ pt: 3 }}>{children}</Box> : null;
 }
@@ -89,91 +96,98 @@ export default function FileRepository() {
     const teamId = user?.teamId ?? null;
     const currentUserId = String(user?.id ?? user?.userId ?? "");
 
-    // ── tab ───────────────────────────────────────────────────────────────────
     const [activeTab, setActiveTab] = useState(0);
 
-    // ── data ──────────────────────────────────────────────────────────────────
-    const [files, setFiles] = useState([]);
-    // feedbackMap: keyed by taskItemId (= attachmentId set by supervisor when creating feedback)
-    const [feedbackMap, setFeedbackMap] = useState({});
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    // student files
+    const [myFiles, setMyFiles] = useState([]);
+    const [myLoading, setMyLoading] = useState(true);
+    const [myError, setMyError] = useState(null);
 
-    // add/edit link dialog
+    // supervisor files (read-only)
+    const [supFiles, setSupFiles] = useState([]);
+    const [supLoading, setSupLoading] = useState(true);
+    const [supError, setSupError] = useState(null);
+
+    // feedback: keyed by attachmentId (= taskItemId on feedback)
+    const [feedbackMap, setFeedbackMap] = useState({});
+
+    // add/edit dialog
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editTarget, setEditTarget] = useState(null);
     const [form, setForm] = useState(EMPTY_FORM);
     const [formError, setFormError] = useState("");
     const [saving, setSaving] = useState(false);
 
-    // reply state
-    const [replyBoxOpen, setReplyBoxOpen] = useState({});
+    // reply
+    const [replyOpen, setReplyOpen] = useState({});
     const [replyContent, setReplyContent] = useState({});
     const [replySaving, setReplySaving] = useState({});
 
-    // edit reply state
+    // edit reply
     const [editingReply, setEditingReply] = useState(null);
     const [editReplySave, setEditReplySave] = useState(false);
 
-    // ── fetch files + feedback ────────────────────────────────────────────────
-    const fetchAll = useCallback(async () => {
+    // ── fetch ─────────────────────────────────────────────────────────────────
+
+    const fetchMyFiles = useCallback(async () => {
+        setMyLoading(true); setMyError(null);
         try {
-            setLoading(true);
-            setError(null);
-
-            const filesData = await fileSystemApi.getAllFiles();
-            const fileList = Array.isArray(filesData) ? filesData : [];
-            setFiles(fileList);
-
-            if (teamId && fileList.length > 0) {
-                const fbData = await feedbackApi.getFeedbackByTeam(Number(teamId));
-                const map = {};
-                // KEY FIX: taskItemId on feedback = attachmentId of the file
-                (Array.isArray(fbData) ? fbData : []).forEach((fb) => {
-                    const key = fb.taskItemId;
-                    if (key === undefined || key === null) return; // skip unlinked feedback
-                    if (!map[key]) map[key] = [];
-                    map[key].push(fb);
-                });
-                setFeedbackMap(map);
-            }
+            const data = await fileSystemApi.getStudentFiles();
+            setMyFiles(Array.isArray(data) ? data : []);
         } catch (err) {
-            setError(err?.response?.data?.message ?? err?.message ?? "Failed to load files.");
-        } finally {
-            setLoading(false);
-        }
+            setMyError(err?.response?.data?.message ?? err?.message ?? "Failed to load your files.");
+        } finally { setMyLoading(false); }
+    }, []);
+
+    const fetchFeedback = useCallback(async () => {
+        if (!teamId) return;
+        try {
+            const fbData = await feedbackApi.getFeedbackByTeam(Number(teamId));
+            const map = {};
+            (Array.isArray(fbData) ? fbData : []).forEach((fb) => {
+                const key = fb.taskItemId;
+                if (key == null) return;
+                if (!map[key]) map[key] = [];
+                map[key].push(fb);
+            });
+            setFeedbackMap(map);
+        } catch { /* silent */ }
     }, [teamId]);
 
-    useEffect(() => { fetchAll(); }, [fetchAll]);
+    const fetchSupFiles = useCallback(async () => {
+        setSupLoading(true); setSupError(null);
+        try {
+            const data = await fileSystemApi.getSupervisorFiles();
+            setSupFiles(Array.isArray(data) ? data : []);
+        } catch (err) {
+            setSupError(err?.response?.data?.message ?? err?.message ?? "Failed to load supervisor files.");
+        } finally { setSupLoading(false); }
+    }, []);
 
-    // ── derived: files that have feedback (for "Review Requests" tab) ─────────
-    const filesWithFeedback = files.filter(
-        (f) => (feedbackMap[f.attachmentId] ?? []).length > 0
-    );
-    const totalPendingReplies = filesWithFeedback.reduce((acc, f) => {
+    useEffect(() => {
+        fetchMyFiles();
+        fetchFeedback();
+        fetchSupFiles();
+    }, [fetchMyFiles, fetchFeedback, fetchSupFiles]);
+
+    // badge: unanswered feedback count
+    const pendingCount = myFiles.reduce((acc, f) => {
         const fbs = feedbackMap[f.attachmentId] ?? [];
-        // count feedback items that have NO reply from the current student yet
-        const unanswered = fbs.filter(
+        return acc + fbs.filter(
             (fb) => !(fb.replies ?? []).some((r) => String(r.authorId) === currentUserId)
         ).length;
-        return acc + unanswered;
     }, 0);
 
-    // ── add / edit link dialog ────────────────────────────────────────────────
-    const openAdd = () => {
-        setEditTarget(null);
-        setForm(EMPTY_FORM);
-        setFormError("");
-        setDialogOpen(true);
-    };
+    // ── dialog ────────────────────────────────────────────────────────────────
 
+    const openAdd = () => {
+        setEditTarget(null); setForm(EMPTY_FORM); setFormError(""); setDialogOpen(true);
+    };
     const openEdit = (f) => {
         setEditTarget(f);
         setForm({ filePath: f.filePath, description: f.description ?? "" });
-        setFormError("");
-        setDialogOpen(true);
+        setFormError(""); setDialogOpen(true);
     };
-
     const closeDialog = () => { if (!saving) setDialogOpen(false); };
 
     const handleSaveLink = async () => {
@@ -181,109 +195,266 @@ export default function FileRepository() {
         try { new URL(form.filePath.trim()); }
         catch { setFormError("Please enter a valid URL starting with https://"); return; }
 
-        setSaving(true);
-        setFormError("");
+        setSaving(true); setFormError("");
         try {
             if (editTarget) {
                 await fileSystemApi.editFile(editTarget.attachmentId, {
-                    filePath: form.filePath.trim(),
-                    description: form.description.trim(),
+                    filePath: form.filePath.trim(), description: form.description.trim(),
                 });
             } else {
                 await fileSystemApi.addFile({
-                    filePath: form.filePath.trim(),
-                    description: form.description.trim(),
-                    taskItemId: 0,
+                    filePath: form.filePath.trim(), description: form.description.trim(),
                 });
             }
-            await fetchAll();
+            await fetchMyFiles();
             setDialogOpen(false);
         } catch (err) {
             setFormError(err?.response?.data?.message ?? "Something went wrong.");
-        } finally {
-            setSaving(false);
-        }
+        } finally { setSaving(false); }
     };
 
-    // ── delete file ───────────────────────────────────────────────────────────
     const handleDeleteFile = async (attachmentId) => {
-        setFiles((prev) => prev.filter((f) => f.attachmentId !== attachmentId));
+        setMyFiles((p) => p.filter((f) => f.attachmentId !== attachmentId));
         try { await fileSystemApi.deleteFile(attachmentId); }
-        catch { await fetchAll(); }
+        catch { await fetchMyFiles(); }
     };
 
-    // ── reply to feedback ─────────────────────────────────────────────────────
-    const toggleReplyBox = (feedbackId) => {
-        setReplyBoxOpen((prev) => ({ ...prev, [feedbackId]: !prev[feedbackId] }));
-        setReplyContent((prev) => ({ ...prev, [feedbackId]: "" }));
+    // ── reply ─────────────────────────────────────────────────────────────────
+
+    const toggleReply = (feedbackId) => {
+        setReplyOpen((p) => ({ ...p, [feedbackId]: !p[feedbackId] }));
+        setReplyContent((p) => ({ ...p, [feedbackId]: "" }));
     };
 
     const handleSubmitReply = async (feedbackId) => {
         const content = (replyContent[feedbackId] ?? "").trim();
         if (!content) return;
-        setReplySaving((prev) => ({ ...prev, [feedbackId]: true }));
+        setReplySaving((p) => ({ ...p, [feedbackId]: true }));
         try {
             await feedbackApi.replyToFeedback({ content, parentFeedbackId: feedbackId });
-            setReplyBoxOpen((prev) => ({ ...prev, [feedbackId]: false }));
-            await fetchAll();
-        } catch { /* keep box open */ }
-        finally { setReplySaving((prev) => ({ ...prev, [feedbackId]: false })); }
+            setReplyOpen((p) => ({ ...p, [feedbackId]: false }));
+            await fetchFeedback();
+        } catch { /* keep open */ }
+        finally { setReplySaving((p) => ({ ...p, [feedbackId]: false })); }
     };
 
-    // ── edit reply ────────────────────────────────────────────────────────────
     const handleSaveEditReply = async () => {
         if (!editingReply?.content.trim()) return;
         setEditReplySave(true);
         try {
             await feedbackApi.editReply(editingReply.replyId, editingReply.content.trim());
             setEditingReply(null);
-            await fetchAll();
-        } catch { /* keep open */ }
+            await fetchFeedback();
+        } catch { /* keep */ }
         finally { setEditReplySave(false); }
     };
 
-    // ── delete reply ──────────────────────────────────────────────────────────
     const handleDeleteReply = async (replyId) => {
-        try {
-            await feedbackApi.deleteReply(replyId);
-            await fetchAll();
-        } catch { /* ignore */ }
+        try { await feedbackApi.deleteReply(replyId); await fetchFeedback(); }
+        catch { /* ignore */ }
     };
 
-    // ── shared: render a single file card ────────────────────────────────────
-    const renderFileCard = (file, { showFeedback = false, allowDelete = true } = {}) => {
-        const type = getFileType(file.filePath);
-        const meta = TYPE_META[type];
-        const displayName = getDisplayName(file.filePath, file.description);
-        const fileFeedbacks = feedbackMap[file.attachmentId] ?? [];
-        const hasFeedback = fileFeedbacks.length > 0;
+    // ── render feedback thread ────────────────────────────────────────────────
+
+    const renderFeedbackThread = (file) => {
+        const feedbacks = feedbackMap[file.attachmentId] ?? [];
+        if (!feedbacks.length) return null;
 
         return (
-            <Paper key={file.attachmentId} elevation={1} sx={{
+            <>
+                <Divider sx={{ borderColor: t.borderLight }} />
+                <Box sx={{ px: 2.5, py: 2, bgcolor: `${t.surfaceHover}50` }}>
+                    <Typography sx={{
+                        fontSize: "0.7rem", fontWeight: 700, color: t.accentPrimary,
+                        textTransform: "uppercase", letterSpacing: "0.07em", mb: 1.5,
+                    }}>
+                        💬 Supervisor Feedback
+                    </Typography>
+                    <Stack spacing={2.5}>
+                        {feedbacks.map((fb) => (
+                            <Box key={fb.feedbackId}>
+                                <Stack direction="row" gap={1.2} alignItems="flex-start">
+                                    <Avatar sx={{
+                                        width: 32, height: 32,
+                                        bgcolor: colorFor(fb.authorName ?? ""),
+                                        fontSize: "0.72rem", fontWeight: 700,
+                                    }}>
+                                        {getInitials(fb.authorName ?? "")}
+                                    </Avatar>
+                                    <Box sx={{ flex: 1 }}>
+                                        <Stack direction="row" gap={1} alignItems="center" mb={0.4}>
+                                            <Typography sx={{ fontWeight: 700, fontSize: "0.82rem", color: t.textPrimary }}>
+                                                {fb.authorName}
+                                            </Typography>
+                                            <Typography sx={{ fontSize: "0.68rem", color: t.textTertiary }}>
+                                                {formatDate(fb.createdAt)}
+                                            </Typography>
+                                        </Stack>
+                                        <Paper elevation={0} sx={{
+                                            p: 1.2, borderRadius: "4px 12px 12px 12px",
+                                            bgcolor: `${t.accentPrimary}08`,
+                                            border: `1px solid ${t.accentPrimary}22`,
+                                        }}>
+                                            <Typography sx={{ fontSize: "0.84rem", color: t.textSecondary, lineHeight: 1.55 }}>
+                                                {fb.content}
+                                            </Typography>
+                                        </Paper>
+                                        <Button size="small"
+                                            startIcon={<ReplyOutlinedIcon sx={{ fontSize: 13 }} />}
+                                            onClick={() => toggleReply(fb.feedbackId)}
+                                            sx={{
+                                                mt: 0.4, fontSize: "0.71rem", color: t.textTertiary,
+                                                px: 0.5, "&:hover": { color: t.accentPrimary }
+                                            }}>
+                                            {replyOpen[fb.feedbackId] ? "Cancel" : "Reply"}
+                                        </Button>
+                                    </Box>
+                                </Stack>
+
+                                {/* Existing replies */}
+                                {(fb.replies ?? []).length > 0 && (
+                                    <Box sx={{ mt: 1.2, ml: 5.5, pl: 1.5, borderLeft: `2px solid ${t.borderLight}` }}>
+                                        <Stack spacing={1.2}>
+                                            {fb.replies.map((reply) => {
+                                                const isMe = String(reply.authorId) === currentUserId;
+                                                const isEditing = editingReply?.replyId === reply.replyId;
+                                                return (
+                                                    <Stack key={reply.replyId} direction="row" gap={1} alignItems="flex-start">
+                                                        <Avatar sx={{
+                                                            width: 24, height: 24,
+                                                            bgcolor: colorFor(reply.authorName ?? ""),
+                                                            fontSize: "0.6rem",
+                                                        }}>
+                                                            {getInitials(reply.authorName ?? "")}
+                                                        </Avatar>
+                                                        <Box sx={{ flex: 1 }}>
+                                                            <Stack direction="row" justifyContent="space-between" alignItems="center">
+                                                                <Stack direction="row" gap={0.8} alignItems="center">
+                                                                    <Typography sx={{ fontWeight: 600, fontSize: "0.75rem", color: t.textPrimary }}>
+                                                                        {reply.authorName}
+                                                                    </Typography>
+                                                                    <Typography sx={{ fontSize: "0.65rem", color: t.textTertiary }}>
+                                                                        {formatDate(reply.createdAt)}
+                                                                    </Typography>
+                                                                </Stack>
+                                                                {isMe && !isEditing && (
+                                                                    <Stack direction="row">
+                                                                        <Tooltip title="Edit reply">
+                                                                            <IconButton size="small"
+                                                                                onClick={() => setEditingReply({ replyId: reply.replyId, content: reply.content })}
+                                                                                sx={{ color: t.textTertiary, "&:hover": { color: t.accentPrimary } }}>
+                                                                                <EditOutlinedIcon sx={{ fontSize: 13 }} />
+                                                                            </IconButton>
+                                                                        </Tooltip>
+                                                                        <Tooltip title="Delete reply">
+                                                                            <IconButton size="small"
+                                                                                onClick={() => handleDeleteReply(reply.replyId)}
+                                                                                sx={{ color: t.textTertiary, "&:hover": { color: t.error } }}>
+                                                                                <DeleteOutlineIcon sx={{ fontSize: 13 }} />
+                                                                            </IconButton>
+                                                                        </Tooltip>
+                                                                    </Stack>
+                                                                )}
+                                                            </Stack>
+                                                            {isEditing ? (
+                                                                <Stack gap={0.8} mt={0.4}>
+                                                                    <TextField fullWidth size="small"
+                                                                        value={editingReply.content}
+                                                                        onChange={(e) => setEditingReply((p) => ({ ...p, content: e.target.value }))}
+                                                                    />
+                                                                    <Stack direction="row" gap={1}>
+                                                                        <Button size="small" variant="contained"
+                                                                            startIcon={editReplySave
+                                                                                ? <CircularProgress size={11} color="inherit" />
+                                                                                : <CheckOutlinedIcon sx={{ fontSize: 12 }} />}
+                                                                            onClick={handleSaveEditReply}
+                                                                            disabled={editReplySave}
+                                                                            sx={{ bgcolor: t.accentPrimary, borderRadius: 2, fontSize: "0.7rem" }}>
+                                                                            Save
+                                                                        </Button>
+                                                                        <Button size="small"
+                                                                            startIcon={<CloseOutlinedIcon sx={{ fontSize: 12 }} />}
+                                                                            onClick={() => setEditingReply(null)}
+                                                                            sx={{ color: t.textSecondary, fontSize: "0.7rem" }}>
+                                                                            Cancel
+                                                                        </Button>
+                                                                    </Stack>
+                                                                </Stack>
+                                                            ) : (
+                                                                <Typography sx={{ fontSize: "0.78rem", color: t.textSecondary, mt: 0.2 }}>
+                                                                    {reply.content}
+                                                                </Typography>
+                                                            )}
+                                                        </Box>
+                                                    </Stack>
+                                                );
+                                            })}
+                                        </Stack>
+                                    </Box>
+                                )}
+
+                                {/* Reply input */}
+                                <Collapse in={Boolean(replyOpen[fb.feedbackId])}>
+                                    <Stack direction="row" gap={1} alignItems="flex-start" sx={{ mt: 1, ml: 5.5 }}>
+                                        <Avatar sx={{ width: 24, height: 24, bgcolor: t.accentPrimary, fontSize: "0.6rem" }}>
+                                            {getInitials(user?.name ?? "Me")}
+                                        </Avatar>
+                                        <Box sx={{ flex: 1 }}>
+                                            <TextField fullWidth size="small" multiline minRows={1}
+                                                placeholder="Write your reply…"
+                                                value={replyContent[fb.feedbackId] ?? ""}
+                                                onChange={(e) => setReplyContent((p) => ({ ...p, [fb.feedbackId]: e.target.value }))}
+                                                onKeyDown={(e) => { if (e.key === "Enter" && e.ctrlKey) handleSubmitReply(fb.feedbackId); }}
+                                                sx={{ mb: 0.8 }}
+                                            />
+                                            <Button size="small" variant="contained"
+                                                endIcon={replySaving[fb.feedbackId]
+                                                    ? <CircularProgress size={11} color="inherit" />
+                                                    : <SendOutlinedIcon sx={{ fontSize: 13 }} />}
+                                                onClick={() => handleSubmitReply(fb.feedbackId)}
+                                                disabled={replySaving[fb.feedbackId] || !(replyContent[fb.feedbackId] ?? "").trim()}
+                                                sx={{ bgcolor: t.accentPrimary, borderRadius: 2, fontSize: "0.72rem" }}>
+                                                {replySaving[fb.feedbackId] ? "Sending…" : "Send Reply"}
+                                            </Button>
+                                        </Box>
+                                    </Stack>
+                                </Collapse>
+                            </Box>
+                        ))}
+                    </Stack>
+                </Box>
+            </>
+        );
+    };
+
+    // ── render file cards ─────────────────────────────────────────────────────
+
+    const renderMyFileCard = (file) => {
+        const meta = TYPE_META[getFileType(file.filePath)];
+        const displayName = getDisplayName(file.filePath, file.description);
+        const hasFeedback = (feedbackMap[file.attachmentId] ?? []).length > 0;
+
+        return (
+            <Paper key={file.attachmentId} elevation={0} sx={{
                 borderRadius: 3,
                 bgcolor: theme.palette.background.paper,
+                border: `1px solid ${hasFeedback ? t.accentPrimary + "35" : t.borderLight}`,
                 overflow: "hidden",
-                border: hasFeedback && showFeedback
-                    ? `1px solid ${t.accentPrimary}40`
-                    : "1px solid transparent",
+                transition: "box-shadow .15s",
+                "&:hover": { boxShadow: theme.shadows[2] },
             }}>
-                {/* File row */}
-                <Stack
-                    direction={{ xs: "column", sm: "row" }}
-                    alignItems={{ sm: "center" }}
-                    justifyContent="space-between"
-                    gap={1.5}
-                    sx={{ p: 2.5 }}
-                >
-                    <Stack direction="row" alignItems="center" gap={1.5}>
+                <Stack direction={{ xs: "column", sm: "row" }}
+                    alignItems={{ sm: "center" }} justifyContent="space-between"
+                    gap={1.5} sx={{ p: 2.5 }}>
+                    <Stack direction="row" alignItems="center" gap={1.5} sx={{ minWidth: 0 }}>
                         <Box sx={{
-                            p: 0.8, borderRadius: 2,
+                            p: 0.9, borderRadius: 2, flexShrink: 0,
                             bgcolor: `${meta.color}15`, color: meta.color,
                             "& svg": { fontSize: 20 },
                         }}>
                             {meta.icon}
                         </Box>
-                        <Box>
+                        <Box sx={{ minWidth: 0 }}>
                             <Typography sx={{ fontWeight: 600, fontSize: "0.875rem", color: t.textPrimary }}>
                                 {displayName}
                             </Typography>
@@ -291,23 +462,25 @@ export default function FileRepository() {
                                 target="_blank" rel="noopener noreferrer"
                                 sx={{
                                     fontSize: "0.72rem", color: t.accentPrimary,
-                                    textDecoration: "none",
+                                    textDecoration: "none", display: "block",
+                                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                                    maxWidth: 360,
                                     "&:hover": { textDecoration: "underline" },
-                                    display: "block", maxWidth: 380,
-                                    overflow: "hidden", textOverflow: "ellipsis",
-                                    whiteSpace: "nowrap",
                                 }}>
                                 {file.filePath}
                             </Typography>
                         </Box>
                     </Stack>
-
                     <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }}>
                         {hasFeedback && (
-                            <Tooltip title="Has supervisor feedback">
-                                <ChatBubbleOutlineOutlinedIcon
-                                    sx={{ fontSize: 16, color: t.accentPrimary, mr: 0.5 }} />
-                            </Tooltip>
+                            <Chip size="small"
+                                icon={<ChatBubbleOutlineOutlinedIcon sx={{ fontSize: "13px !important" }} />}
+                                label="Feedback"
+                                sx={{
+                                    bgcolor: `${t.accentPrimary}12`, color: t.accentPrimary,
+                                    fontWeight: 600, fontSize: "0.68rem"
+                                }}
+                            />
                         )}
                         <Tooltip title="Open link">
                             <IconButton size="small" component="a"
@@ -322,320 +495,184 @@ export default function FileRepository() {
                                 <EditOutlinedIcon sx={{ fontSize: 17 }} />
                             </IconButton>
                         </Tooltip>
-                        {allowDelete && (
-                            <Tooltip title="Delete">
-                                <IconButton size="small" onClick={() => handleDeleteFile(file.attachmentId)}
-                                    sx={{ color: t.textTertiary, "&:hover": { color: t.error } }}>
-                                    <DeleteOutlineIcon sx={{ fontSize: 17 }} />
-                                </IconButton>
-                            </Tooltip>
-                        )}
+                        <Tooltip title="Delete">
+                            <IconButton size="small" onClick={() => handleDeleteFile(file.attachmentId)}
+                                sx={{ color: t.textTertiary, "&:hover": { color: t.error } }}>
+                                <DeleteOutlineIcon sx={{ fontSize: 17 }} />
+                            </IconButton>
+                        </Tooltip>
                     </Stack>
                 </Stack>
+                {renderFeedbackThread(file)}
+            </Paper>
+        );
+    };
 
-                {/* Feedback + replies */}
-                {showFeedback && hasFeedback && (
-                    <>
-                        <Divider sx={{ borderColor: t.borderLight }} />
-                        <Box sx={{ px: 2.5, py: 2, bgcolor: `${t.surfaceHover}50` }}>
-                            <Typography sx={{
-                                fontSize: "0.72rem", fontWeight: 700,
-                                color: t.accentPrimary, textTransform: "uppercase",
-                                letterSpacing: "0.06em", mb: 1.5,
-                            }}>
-                                💬 Supervisor Feedback
-                            </Typography>
-
-                            <Stack spacing={2}>
-                                {fileFeedbacks.map((fb) => (
-                                    <Box key={fb.feedbackId}>
-                                        {/* Feedback bubble */}
-                                        <Stack direction="row" gap={1.2} alignItems="flex-start">
-                                            <Avatar sx={{
-                                                width: 32, height: 32,
-                                                bgcolor: colorFor(fb.authorName),
-                                                fontSize: "0.72rem", fontWeight: 700,
-                                            }}>
-                                                {getInitials(fb.authorName)}
-                                            </Avatar>
-                                            <Box sx={{ flex: 1 }}>
-                                                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.3}>
-                                                    <Stack direction="row" gap={1} alignItems="center">
-                                                        <Typography sx={{ fontWeight: 700, fontSize: "0.82rem", color: t.textPrimary }}>
-                                                            {fb.authorName}
-                                                        </Typography>
-                                                        <Typography sx={{ fontSize: "0.68rem", color: t.textTertiary }}>
-                                                            {formatDate(fb.createdAt)}
-                                                        </Typography>
-                                                    </Stack>
-                                                </Stack>
-                                                <Paper elevation={0} sx={{
-                                                    p: 1.2, borderRadius: 2,
-                                                    bgcolor: `${t.accentPrimary}08`,
-                                                    border: `1px solid ${t.accentPrimary}20`,
-                                                }}>
-                                                    <Typography sx={{ fontSize: "0.84rem", color: t.textSecondary, lineHeight: 1.5 }}>
-                                                        {fb.content}
-                                                    </Typography>
-                                                </Paper>
-
-                                                {/* Reply button */}
-                                                <Button size="small"
-                                                    startIcon={<ReplyOutlinedIcon sx={{ fontSize: 13 }} />}
-                                                    onClick={() => toggleReplyBox(fb.feedbackId)}
-                                                    sx={{
-                                                        mt: 0.5, fontSize: "0.72rem",
-                                                        color: t.textTertiary,
-                                                        "&:hover": { color: t.accentPrimary },
-                                                    }}>
-                                                    {replyBoxOpen[fb.feedbackId] ? "Cancel" : "Reply"}
-                                                </Button>
-                                            </Box>
-                                        </Stack>
-
-                                        {/* Existing replies */}
-                                        {(fb.replies ?? []).length > 0 && (
-                                            <Box sx={{ mt: 1, ml: 5.5, pl: 1.5, borderLeft: `2px solid ${t.borderLight}` }}>
-                                                <Stack spacing={1}>
-                                                    {fb.replies.map((reply) => {
-                                                        const isMyReply = String(reply.authorId) === currentUserId;
-                                                        const isEditingThis = editingReply?.replyId === reply.replyId;
-                                                        return (
-                                                            <Stack key={reply.replyId} direction="row" gap={1} alignItems="flex-start">
-                                                                <Avatar sx={{
-                                                                    width: 24, height: 24,
-                                                                    bgcolor: colorFor(reply.authorName),
-                                                                    fontSize: "0.6rem",
-                                                                }}>
-                                                                    {getInitials(reply.authorName)}
-                                                                </Avatar>
-                                                                <Box sx={{ flex: 1 }}>
-                                                                    <Stack direction="row" justifyContent="space-between" alignItems="center">
-                                                                        <Stack direction="row" gap={0.8} alignItems="center">
-                                                                            <Typography sx={{ fontWeight: 600, fontSize: "0.75rem", color: t.textPrimary }}>
-                                                                                {reply.authorName}
-                                                                            </Typography>
-                                                                            <Typography sx={{ fontSize: "0.65rem", color: t.textTertiary }}>
-                                                                                {formatDate(reply.createdAt)}
-                                                                            </Typography>
-                                                                        </Stack>
-                                                                        {isMyReply && !isEditingThis && (
-                                                                            <Stack direction="row">
-                                                                                <Tooltip title="Edit">
-                                                                                    <IconButton size="small"
-                                                                                        onClick={() => setEditingReply({ replyId: reply.replyId, content: reply.content })}
-                                                                                        sx={{ color: t.textTertiary, "&:hover": { color: t.accentPrimary } }}>
-                                                                                        <EditOutlinedIcon sx={{ fontSize: 13 }} />
-                                                                                    </IconButton>
-                                                                                </Tooltip>
-                                                                                <Tooltip title="Delete">
-                                                                                    <IconButton size="small"
-                                                                                        onClick={() => handleDeleteReply(reply.replyId)}
-                                                                                        sx={{ color: t.textTertiary, "&:hover": { color: t.error } }}>
-                                                                                        <DeleteOutlineIcon sx={{ fontSize: 13 }} />
-                                                                                    </IconButton>
-                                                                                </Tooltip>
-                                                                            </Stack>
-                                                                        )}
-                                                                    </Stack>
-                                                                    {isEditingThis ? (
-                                                                        <Stack gap={0.8} mt={0.5}>
-                                                                            <TextField fullWidth size="small"
-                                                                                value={editingReply.content}
-                                                                                onChange={(e) => setEditingReply((p) => ({ ...p, content: e.target.value }))} />
-                                                                            <Stack direction="row" gap={1}>
-                                                                                <Button size="small" variant="contained"
-                                                                                    startIcon={editReplySave ? <CircularProgress size={11} color="inherit" /> : <CheckOutlinedIcon sx={{ fontSize: 12 }} />}
-                                                                                    onClick={handleSaveEditReply}
-                                                                                    disabled={editReplySave}
-                                                                                    sx={{ bgcolor: t.accentPrimary, borderRadius: 2, fontSize: "0.7rem" }}>
-                                                                                    Save
-                                                                                </Button>
-                                                                                <Button size="small"
-                                                                                    startIcon={<CloseOutlinedIcon sx={{ fontSize: 12 }} />}
-                                                                                    onClick={() => setEditingReply(null)}
-                                                                                    sx={{ color: t.textSecondary, fontSize: "0.7rem" }}>
-                                                                                    Cancel
-                                                                                </Button>
-                                                                            </Stack>
-                                                                        </Stack>
-                                                                    ) : (
-                                                                        <Typography sx={{ fontSize: "0.78rem", color: t.textSecondary }}>
-                                                                            {reply.content}
-                                                                        </Typography>
-                                                                    )}
-                                                                </Box>
-                                                            </Stack>
-                                                        );
-                                                    })}
-                                                </Stack>
-                                            </Box>
-                                        )}
-
-                                        {/* Reply input box */}
-                                        <Collapse in={Boolean(replyBoxOpen[fb.feedbackId])}>
-                                            <Stack direction="row" gap={1} alignItems="flex-start"
-                                                sx={{ mt: 1, ml: 5.5 }}>
-                                                <Avatar sx={{
-                                                    width: 24, height: 24,
-                                                    bgcolor: t.accentPrimary,
-                                                    fontSize: "0.6rem",
-                                                }}>
-                                                    {getInitials(user?.name ?? "Me")}
-                                                </Avatar>
-                                                <Box sx={{ flex: 1 }}>
-                                                    <TextField fullWidth size="small" multiline minRows={1}
-                                                        placeholder="Write your reply…"
-                                                        value={replyContent[fb.feedbackId] ?? ""}
-                                                        onChange={(e) => setReplyContent((p) => ({ ...p, [fb.feedbackId]: e.target.value }))}
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === "Enter" && e.ctrlKey) handleSubmitReply(fb.feedbackId);
-                                                        }}
-                                                        sx={{ mb: 0.8 }}
-                                                    />
-                                                    <Button size="small" variant="contained"
-                                                        endIcon={replySaving[fb.feedbackId]
-                                                            ? <CircularProgress size={11} color="inherit" />
-                                                            : <SendOutlinedIcon sx={{ fontSize: 13 }} />}
-                                                        onClick={() => handleSubmitReply(fb.feedbackId)}
-                                                        disabled={replySaving[fb.feedbackId] || !(replyContent[fb.feedbackId] ?? "").trim()}
-                                                        sx={{ bgcolor: t.accentPrimary, borderRadius: 2, fontSize: "0.72rem" }}>
-                                                        {replySaving[fb.feedbackId] ? "Sending…" : "Reply"}
-                                                    </Button>
-                                                </Box>
-                                            </Stack>
-                                        </Collapse>
-                                    </Box>
-                                ))}
-                            </Stack>
+    const renderSupFileCard = (file) => {
+        const meta = TYPE_META[getFileType(file.filePath)];
+        const displayName = getDisplayName(file.filePath, file.description);
+        return (
+            <Paper key={file.attachmentId} elevation={0} sx={{
+                borderRadius: 3,
+                bgcolor: theme.palette.background.paper,
+                border: `1px solid ${t.borderLight}`,
+                overflow: "hidden",
+                transition: "box-shadow .15s",
+                "&:hover": { boxShadow: theme.shadows[2] },
+            }}>
+                <Stack direction={{ xs: "column", sm: "row" }}
+                    alignItems={{ sm: "center" }} justifyContent="space-between"
+                    gap={1.5} sx={{ p: 2.5 }}>
+                    <Stack direction="row" alignItems="center" gap={1.5} sx={{ minWidth: 0 }}>
+                        <Box sx={{
+                            p: 0.9, borderRadius: 2, flexShrink: 0,
+                            bgcolor: `${meta.color}15`, color: meta.color,
+                            "& svg": { fontSize: 20 },
+                        }}>
+                            {meta.icon}
                         </Box>
-                    </>
-                )}
+                        <Box sx={{ minWidth: 0 }}>
+                            <Typography sx={{ fontWeight: 600, fontSize: "0.875rem", color: t.textPrimary }}>
+                                {displayName}
+                            </Typography>
+                            <Typography component="a" href={file.filePath}
+                                target="_blank" rel="noopener noreferrer"
+                                sx={{
+                                    fontSize: "0.72rem", color: t.accentPrimary,
+                                    textDecoration: "none", display: "block",
+                                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                                    maxWidth: 360,
+                                    "&:hover": { textDecoration: "underline" },
+                                }}>
+                                {file.filePath}
+                            </Typography>
+                        </Box>
+                    </Stack>
+                    <Tooltip title="Open link">
+                        <IconButton size="small" component="a"
+                            href={file.filePath} target="_blank" rel="noopener noreferrer"
+                            sx={{ color: t.textTertiary, flexShrink: 0, "&:hover": { color: t.accentPrimary } }}>
+                            <OpenInNewOutlinedIcon sx={{ fontSize: 17 }} />
+                        </IconButton>
+                    </Tooltip>
+                </Stack>
             </Paper>
         );
     };
 
     // ─────────────────────────────────────────────────────────────────────────
     return (
-        <Box sx={{ maxWidth: 900 }}>
-
+        <Box sx={{ maxWidth: 860 }}>
             {/* Header */}
             <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={3}>
                 <Box>
                     <Typography variant="h2" sx={{ color: t.textPrimary, mb: 0.5 }}>Files</Typography>
-                    <Typography sx={{ color: t.textSecondary, fontSize: "0.9rem" }}>
-                        {files.length} link{files.length !== 1 ? "s" : ""} saved
+                    <Typography sx={{ color: t.textSecondary, fontSize: "0.88rem" }}>
+                        Manage your files and view resources from your supervisor
                     </Typography>
                 </Box>
-                <Button variant="contained" startIcon={<AddLinkOutlinedIcon />}
-                    onClick={openAdd} sx={{ bgcolor: t.accentPrimary, borderRadius: 2 }}>
-                    Add Link
-                </Button>
+                {activeTab === 0 && (
+                    <Button variant="contained" startIcon={<AddLinkOutlinedIcon />}
+                        onClick={openAdd}
+                        sx={{ bgcolor: t.accentPrimary, borderRadius: 2, flexShrink: 0 }}>
+                        Add Link
+                    </Button>
+                )}
             </Stack>
 
             {/* Tabs */}
-            <Tabs
-                value={activeTab}
-                onChange={(_, v) => setActiveTab(v)}
-                sx={{
-                    borderBottom: `1px solid ${t.borderLight}`,
-                    mb: 0,
-                    "& .MuiTab-root": { fontSize: "0.85rem", textTransform: "none", fontWeight: 600 },
-                }}
-            >
-                <Tab
-                    icon={<FolderOutlinedIcon sx={{ fontSize: 17 }} />}
-                    iconPosition="start"
-                    label="My Files"
-                />
-                <Tab
+            <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{
+                borderBottom: `1px solid ${t.borderLight}`,
+                "& .MuiTab-root": { fontSize: "0.85rem", textTransform: "none", fontWeight: 600, minHeight: 44 },
+                "& .MuiTabs-indicator": { height: 2 },
+            }}>
+                <Tab iconPosition="start"
                     icon={
-                        <Badge badgeContent={totalPendingReplies} color="error" max={9}
-                            sx={{ "& .MuiBadge-badge": { fontSize: "0.6rem", minWidth: 16, height: 16 } }}>
-                            <RateReviewOutlinedIcon sx={{ fontSize: 17 }} />
+                        <Badge badgeContent={pendingCount} color="error" max={9}
+                            sx={{ "& .MuiBadge-badge": { fontSize: "0.58rem", minWidth: 15, height: 15 } }}>
+                            <FolderOutlinedIcon sx={{ fontSize: 17 }} />
                         </Badge>
                     }
-                    iconPosition="start"
-                    label="Review Requests"
+                    label="My Files"
+                />
+                <Tab iconPosition="start"
+                    icon={<SupervisorAccountOutlinedIcon sx={{ fontSize: 17 }} />}
+                    label="Supervisor Files"
                 />
             </Tabs>
 
-            {/* Loading */}
-            {loading && (
-                <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
-                    <CircularProgress sx={{ color: t.accentPrimary }} />
-                </Box>
-            )}
+            {/* ── TAB 0: MY FILES ── */}
+            <TabPanel value={activeTab} index={0}>
+                <Paper elevation={0} sx={{
+                    p: 2, mb: 3, borderRadius: 3,
+                    bgcolor: `${t.accentPrimary}08`,
+                    border: `1px solid ${t.accentPrimary}25`,
+                    display: "flex", alignItems: "flex-start", gap: 1.5,
+                }}>
+                    <LinkOutlinedIcon sx={{ color: t.accentPrimary, mt: "2px", flexShrink: 0 }} />
+                    <Box>
+                        <Typography sx={{ fontSize: "0.875rem", fontWeight: 600, color: t.textPrimary, mb: 0.3 }}>
+                            Share links, not files
+                        </Typography>
+                        <Typography sx={{ fontSize: "0.78rem", color: t.textSecondary, lineHeight: 1.6 }}>
+                            Upload to <strong>Google Drive</strong>, <strong>OneDrive</strong>, or{" "}
+                            <strong>GitHub</strong>, then paste the shareable link here.
+                            Your supervisor can review and leave feedback.
+                        </Typography>
+                    </Box>
+                </Paper>
 
-            {/* Error */}
-            {!loading && error && (
-                <Alert severity="error" sx={{ borderRadius: 2, mt: 2 }}>{error}</Alert>
-            )}
+                {myLoading && <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}><CircularProgress sx={{ color: t.accentPrimary }} /></Box>}
+                {!myLoading && myError && <Alert severity="error" sx={{ borderRadius: 2 }}>{myError}</Alert>}
+                {!myLoading && !myError && myFiles.length === 0 && (
+                    <Box sx={{ textAlign: "center", py: 8 }}>
+                        <AddLinkOutlinedIcon sx={{ fontSize: 46, color: t.textTertiary, mb: 1.5 }} />
+                        <Typography sx={{ color: t.textSecondary, fontSize: "0.9rem", mb: 0.5 }}>No links yet.</Typography>
+                        <Typography sx={{ color: t.textTertiary, fontSize: "0.8rem" }}>
+                            Click <strong>Add Link</strong> to share a file with your supervisor.
+                        </Typography>
+                    </Box>
+                )}
+                {!myLoading && !myError && myFiles.length > 0 && (
+                    <Stack spacing={2}>{myFiles.map((f) => renderMyFileCard(f))}</Stack>
+                )}
+            </TabPanel>
 
-            {/* ── Tab 0: My Files ── */}
-            {!loading && !error && (
-                <TabPanel value={activeTab} index={0}>
-                    {/* Info banner */}
-                    <Paper elevation={0} sx={{
-                        p: 2, mb: 3, borderRadius: 3,
-                        bgcolor: `${t.accentPrimary}10`,
-                        border: `1px solid ${t.accentPrimary}30`,
-                        display: "flex", alignItems: "flex-start", gap: 1.5,
-                    }}>
-                        <LinkOutlinedIcon sx={{ color: t.accentPrimary, mt: "2px", flexShrink: 0 }} />
-                        <Box>
-                            <Typography sx={{ fontSize: "0.875rem", fontWeight: 600, color: t.textPrimary, mb: 0.3 }}>
-                                Share links, not files
-                            </Typography>
-                            <Typography sx={{ fontSize: "0.78rem", color: t.textSecondary, lineHeight: 1.6 }}>
-                                Upload your files to <strong>Google Drive</strong>, <strong>OneDrive</strong>,
-                                or <strong>GitHub</strong>, then paste the shareable link here.
-                            </Typography>
-                        </Box>
-                    </Paper>
+            {/* ── TAB 1: SUPERVISOR FILES ── */}
+            <TabPanel value={activeTab} index={1}>
+                <Paper elevation={0} sx={{
+                    p: 2, mb: 3, borderRadius: 3,
+                    bgcolor: `${t.accentPrimary}08`,
+                    border: `1px solid ${t.accentPrimary}25`,
+                    display: "flex", alignItems: "flex-start", gap: 1.5,
+                }}>
+                    <SupervisorAccountOutlinedIcon sx={{ color: t.accentPrimary, mt: "2px", flexShrink: 0 }} />
+                    <Box>
+                        <Typography sx={{ fontSize: "0.875rem", fontWeight: 600, color: t.textPrimary, mb: 0.3 }}>
+                            Resources from your supervisor
+                        </Typography>
+                        <Typography sx={{ fontSize: "0.78rem", color: t.textSecondary, lineHeight: 1.6 }}>
+                            Templates, examples, and reference documents shared by your supervisor.
+                        </Typography>
+                    </Box>
+                </Paper>
 
-                    {files.length === 0 ? (
-                        <Box sx={{ textAlign: "center", py: 8 }}>
-                            <AddLinkOutlinedIcon sx={{ fontSize: 48, color: t.textTertiary, mb: 1.5 }} />
-                            <Typography sx={{ color: t.textSecondary, fontSize: "0.9rem", mb: 0.5 }}>
-                                No links yet.
-                            </Typography>
-                            <Typography sx={{ color: t.textTertiary, fontSize: "0.8rem" }}>
-                                Click <strong>Add Link</strong> to share a file from Google Drive, GitHub, or any cloud service.
-                            </Typography>
-                        </Box>
-                    ) : (
-                        <Stack spacing={2}>
-                            {files.map((file) => renderFileCard(file, { showFeedback: false, allowDelete: true }))}
-                        </Stack>
-                    )}
-                </TabPanel>
-            )}
+                {supLoading && <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}><CircularProgress sx={{ color: t.accentPrimary }} /></Box>}
+                {!supLoading && supError && <Alert severity="error" sx={{ borderRadius: 2 }}>{supError}</Alert>}
+                {!supLoading && !supError && supFiles.length === 0 && (
+                    <Box sx={{ textAlign: "center", py: 8 }}>
+                        <RateReviewOutlinedIcon sx={{ fontSize: 46, color: t.textTertiary, mb: 1.5 }} />
+                        <Typography sx={{ color: t.textSecondary, fontSize: "0.9rem" }}>
+                            No files from your supervisor yet.
+                        </Typography>
+                    </Box>
+                )}
+                {!supLoading && !supError && supFiles.length > 0 && (
+                    <Stack spacing={2}>{supFiles.map((f) => renderSupFileCard(f))}</Stack>
+                )}
+            </TabPanel>
 
-            {/* ── Tab 1: Review Requests ── */}
-            {!loading && !error && (
-                <TabPanel value={activeTab} index={1}>
-                    {filesWithFeedback.length === 0 ? (
-                        <Box sx={{ textAlign: "center", py: 8 }}>
-                            <RateReviewOutlinedIcon sx={{ fontSize: 48, color: t.textTertiary, mb: 1.5 }} />
-                            <Typography sx={{ color: t.textSecondary, fontSize: "0.9rem", mb: 0.5 }}>
-                                No review requests yet.
-                            </Typography>
-                            <Typography sx={{ color: t.textTertiary, fontSize: "0.8rem" }}>
-                                Your supervisor's feedback on your files will appear here.
-                            </Typography>
-                        </Box>
-                    ) : (
-                        <Stack spacing={2}>
-                            {filesWithFeedback.map((file) =>
-                                renderFileCard(file, { showFeedback: true, allowDelete: false })
-                            )}
-                        </Stack>
-                    )}
-                </TabPanel>
-            )}
-
-            {/* Add / Edit Link Dialog */}
+            {/* ── Add / Edit Dialog ── */}
             <Dialog open={dialogOpen} onClose={closeDialog} maxWidth="sm" fullWidth
                 PaperProps={{ sx: { borderRadius: 3 } }}>
                 <DialogTitle sx={{ color: t.textPrimary, fontWeight: 700, pb: 1 }}>
@@ -644,8 +681,7 @@ export default function FileRepository() {
                 <DialogContent sx={{ pt: 1 }}>
                     <Paper elevation={0} sx={{
                         p: 1.5, mb: 2.5, borderRadius: 2,
-                        bgcolor: `${t.accentPrimary}08`,
-                        border: `1px dashed ${t.accentPrimary}40`,
+                        bgcolor: `${t.accentPrimary}08`, border: `1px dashed ${t.accentPrimary}35`,
                     }}>
                         <Typography sx={{ fontSize: "0.78rem", color: t.textSecondary, lineHeight: 1.6 }}>
                             💡 Upload your file to <strong>Google Drive</strong>, <strong>OneDrive</strong>,
@@ -667,25 +703,17 @@ export default function FileRepository() {
                         }}
                     />
                     <TextField fullWidth label="Description (optional)"
-                        placeholder="e.g. Final proposal PDF"
+                        placeholder="e.g. Final report PDF"
                         value={form.description}
                         onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
                         multiline minRows={2}
                     />
-                    {formError && (
-                        <Alert severity="error" sx={{ mt: 1.5, borderRadius: 2, fontSize: "0.8rem" }}>
-                            {formError}
-                        </Alert>
-                    )}
+                    {formError && <Alert severity="error" sx={{ mt: 1.5, borderRadius: 2, fontSize: "0.8rem" }}>{formError}</Alert>}
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
-                    <Button onClick={closeDialog} disabled={saving} sx={{ color: t.textSecondary }}>
-                        Cancel
-                    </Button>
+                    <Button onClick={closeDialog} disabled={saving} sx={{ color: t.textSecondary }}>Cancel</Button>
                     <Button variant="contained" onClick={handleSaveLink} disabled={saving}
-                        startIcon={saving
-                            ? <CircularProgress size={14} color="inherit" />
-                            : <AddLinkOutlinedIcon />}
+                        startIcon={saving ? <CircularProgress size={14} color="inherit" /> : <AddLinkOutlinedIcon />}
                         sx={{ bgcolor: t.accentPrimary, borderRadius: 2 }}>
                         {saving ? "Saving…" : editTarget ? "Save Changes" : "Add Link"}
                     </Button>

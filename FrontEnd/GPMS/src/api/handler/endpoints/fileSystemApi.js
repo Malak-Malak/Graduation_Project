@@ -1,51 +1,57 @@
 // src/api/handler/endpoints/fileSystemApi.js
 //
-// Endpoints:
-//   GET    /api/FileSystem                        → get all files
-//   GET    /api/FileSystem/task/{taskItemId}       → get files by task
-//   POST   /api/FileSystem/add                    → add file (link)
-//   PUT    /api/FileSystem/edit/{attachmentId}     → edit file
-//   DELETE /api/FileSystem/delete/{attachmentId}  → delete file
+// Endpoints (updated to match backend Swagger):
+//   GET    /api/FileSystem/supervisor-files        → supervisor's own uploaded files
+//   GET    /api/FileSystem/student-files           → student's own uploaded files
+//   POST   /api/FileSystem/add                     → add file (link) — no taskItemId
+//   PUT    /api/FileSystem/edit/{attachmentId}      → edit file
+//   DELETE /api/FileSystem/delete/{attachmentId}   → delete file
 
 import axiosInstance from "../../axiosInstance";
 
 const fileSystemApi = {
 
     /**
-     * GET /api/FileSystem
-     * Returns all file links for the logged-in user's project.
+     * GET /api/FileSystem/supervisor-files
+     * Returns files uploaded by the supervisor (scoped to their teams).
+     * Used by: supervisor "My Files" tab + student "Supervisor Files" tab.
      *
      * Expected response shape per item:
      * {
      *   attachmentId : number,
-     *   filePath     : string,   ← shareable URL
+     *   filePath     : string,
      *   description  : string,
-     *   taskItemId   : number,
      * }
      */
-    getAllFiles: () =>
-        axiosInstance.get("/FileSystem").then((r) => r.data),
+    getSupervisorFiles: () =>
+        axiosInstance.get("/FileSystem/supervisor-files").then((r) => r.data),
 
     /**
-     * GET /api/FileSystem/task/{taskItemId}
-     * Returns file links belonging to a specific task.
+     * GET /api/FileSystem/student-files
+     * Returns files uploaded by the student (their own files only).
+     * Used by: student "My Files" tab + supervisor "Review Teams" tab.
      *
-     * @param {number} taskItemId
+     * Expected response shape per item:
+     * {
+     *   attachmentId : number,
+     *   filePath     : string,
+     *   description  : string,
+     * }
      */
-    getFilesByTask: (taskItemId) =>
-        axiosInstance.get(`/FileSystem/task/${taskItemId}`).then((r) => r.data),
+    getStudentFiles: () =>
+        axiosInstance.get("/FileSystem/student-files").then((r) => r.data),
 
     /**
      * POST /api/FileSystem/add
      * Save a new shareable link.
+     * Backend determines ownership from the auth token (student or supervisor).
      *
-     * @param {{ filePath: string, description: string, taskItemId: number }} body
+     * @param {{ filePath: string, description: string }} body
      */
     addFile: (body) =>
         axiosInstance.post("/FileSystem/add", {
             filePath: body.filePath ?? "",
             description: body.description ?? "",
-            taskItemId: body.taskItemId ?? 0,
         }).then((r) => r.data),
 
     /**

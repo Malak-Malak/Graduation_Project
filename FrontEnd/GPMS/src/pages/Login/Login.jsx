@@ -144,7 +144,7 @@ export default function Login() {
               </Box>
 
               {/* ✅ Roles hint */}
-              <Box sx={{ p: 2, borderRadius: 2, bgcolor: alpha(PRIMARY, isDark ? 0.06 : 0.03), border: `1px dashed ${alpha(PRIMARY, 0.35)}` }}>
+              {/* <Box sx={{ p: 2, borderRadius: 2, bgcolor: alpha(PRIMARY, isDark ? 0.06 : 0.03), border: `1px dashed ${alpha(PRIMARY, 0.35)}` }}>
                 <Typography sx={{ fontSize: "0.72rem", fontWeight: 700, color: PRIMARY, mb: 1, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                   Login with your assigned username
                 </Typography>
@@ -160,7 +160,7 @@ export default function Login() {
                     </Typography>
                   </Box>
                 ))}
-              </Box>
+              </Box> */}
             </Stack>
           </Grid>
 

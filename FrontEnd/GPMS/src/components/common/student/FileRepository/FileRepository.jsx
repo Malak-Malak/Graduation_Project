@@ -1,20 +1,23 @@
 // src/components/common/student/FileRepository/FileRepository.jsx
 //
 // Two tabs:
-//   Tab 0 "My Files"         — student's own files: add / edit / delete
-//                              feedbackMap shown per file (supervisor feedback + student replies)
+//   Tab 0 "My Files"         — student's own files: add / edit / delete (owner only)
 //   Tab 1 "Supervisor Files" — supervisor's files: read-only list
 //
 // API:
-//   GET  /api/FileSystem/student-files    → student's own files
-//   GET  /api/FileSystem/supervisor-files → supervisor's files (read-only for student)
-//   GET  /api/Feedback/team/{teamId}      → feedback keyed by taskItemId = attachmentId
+//   GET  /api/FileSystem/student-files
+//   GET  /api/FileSystem/supervisor-files
+//   GET  /api/Feedback/team/{teamId}
 //   POST /api/FileSystem/add              → { filePath, description }
-//   PUT  /api/FileSystem/edit/{id}        → { filePath, description }
+//   PUT  /api/FileSystem/edit/{id}
 //   DELETE /api/FileSystem/delete/{id}
 //   POST /api/Feedback/reply              → { content, parentFeedbackId }
 //   PUT  /api/Feedback/edit-reply/{id}    → { content }
 //   DELETE /api/Feedback/delete-reply/{id}
+//
+// Backend FeedbackDto shape (after mapping in feedbackApi.js):
+//   { feedbackId, content, createdAt, authorName, authorRole, taskItemId,
+//     replies: [{ replyId, content, createdAt, authorName, authorRole }] }
 
 import { useState, useEffect, useCallback } from "react";
 import {
@@ -102,13 +105,14 @@ export default function FileRepository() {
     const [myFiles, setMyFiles] = useState([]);
     const [myLoading, setMyLoading] = useState(true);
     const [myError, setMyError] = useState(null);
+    const [deleteError, setDeleteError] = useState(null);
 
     // supervisor files (read-only)
     const [supFiles, setSupFiles] = useState([]);
     const [supLoading, setSupLoading] = useState(true);
     const [supError, setSupError] = useState(null);
 
-    // feedback: keyed by attachmentId (= taskItemId on feedback)
+    // feedback — keyed by file.id (taskItemId from backend)
     const [feedbackMap, setFeedbackMap] = useState({});
 
     // add/edit dialog
@@ -123,7 +127,7 @@ export default function FileRepository() {
     const [replyContent, setReplyContent] = useState({});
     const [replySaving, setReplySaving] = useState({});
 
-    // edit reply
+    // edit reply — stores { replyId, content }
     const [editingReply, setEditingReply] = useState(null);
     const [editReplySave, setEditReplySave] = useState(false);
 
@@ -142,10 +146,13 @@ export default function FileRepository() {
     const fetchFeedback = useCallback(async () => {
         if (!teamId) return;
         try {
+            // feedbackApi.getFeedbackByTeam already maps:
+            //   id → feedbackId, senderName → authorName, senderRole → authorRole
+            //   replies: id → replyId, senderName → authorName, senderRole → authorRole
             const fbData = await feedbackApi.getFeedbackByTeam(Number(teamId));
             const map = {};
             (Array.isArray(fbData) ? fbData : []).forEach((fb) => {
-                const key = fb.taskItemId;
+                const key = fb.taskItemId; // matches file.id
                 if (key == null) return;
                 if (!map[key]) map[key] = [];
                 map[key].push(fb);
@@ -170,11 +177,12 @@ export default function FileRepository() {
         fetchSupFiles();
     }, [fetchMyFiles, fetchFeedback, fetchSupFiles]);
 
-    // badge: unanswered feedback count
+    // ── pending badge: feedbacks without a Student reply ─────────────────────
+    // authorId is NOT in ReplyDto → use authorRole instead
     const pendingCount = myFiles.reduce((acc, f) => {
-        const fbs = feedbackMap[f.attachmentId] ?? [];
+        const fbs = feedbackMap[f.id] ?? [];
         return acc + fbs.filter(
-            (fb) => !(fb.replies ?? []).some((r) => String(r.authorId) === currentUserId)
+            (fb) => !(fb.replies ?? []).some((r) => r.authorRole === "Student")
         ).length;
     }, 0);
 
@@ -198,7 +206,7 @@ export default function FileRepository() {
         setSaving(true); setFormError("");
         try {
             if (editTarget) {
-                await fileSystemApi.editFile(editTarget.attachmentId, {
+                await fileSystemApi.editFile(editTarget.id, {
                     filePath: form.filePath.trim(), description: form.description.trim(),
                 });
             } else {
@@ -209,14 +217,29 @@ export default function FileRepository() {
             await fetchMyFiles();
             setDialogOpen(false);
         } catch (err) {
-            setFormError(err?.response?.data?.message ?? "Something went wrong.");
+            setFormError(
+                err?.response?.data?.message ??
+                (typeof err?.response?.data === "string" ? err.response.data : null) ??
+                err?.message ??
+                "Something went wrong."
+            );
         } finally { setSaving(false); }
     };
 
-    const handleDeleteFile = async (attachmentId) => {
-        setMyFiles((p) => p.filter((f) => f.attachmentId !== attachmentId));
-        try { await fileSystemApi.deleteFile(attachmentId); }
-        catch { await fetchMyFiles(); }
+    const handleDeleteFile = async (id) => {
+        setDeleteError(null);
+        setMyFiles((p) => p.filter((f) => f.id !== id)); // optimistic
+        try {
+            await fileSystemApi.deleteFile(id);
+        } catch (err) {
+            await fetchMyFiles(); // rollback
+            setDeleteError(
+                err?.response?.data?.message ??
+                (typeof err?.response?.data === "string" ? err.response.data : null) ??
+                err?.message ??
+                "Failed to delete file."
+            );
+        }
     };
 
     // ── reply ─────────────────────────────────────────────────────────────────
@@ -242,6 +265,7 @@ export default function FileRepository() {
         if (!editingReply?.content.trim()) return;
         setEditReplySave(true);
         try {
+            // editingReply.replyId is already mapped correctly from feedbackApi
             await feedbackApi.editReply(editingReply.replyId, editingReply.content.trim());
             setEditingReply(null);
             await fetchFeedback();
@@ -250,14 +274,16 @@ export default function FileRepository() {
     };
 
     const handleDeleteReply = async (replyId) => {
-        try { await feedbackApi.deleteReply(replyId); await fetchFeedback(); }
-        catch { /* ignore */ }
+        try {
+            await feedbackApi.deleteReply(replyId);
+            await fetchFeedback();
+        } catch { /* ignore */ }
     };
 
     // ── render feedback thread ────────────────────────────────────────────────
 
     const renderFeedbackThread = (file) => {
-        const feedbacks = feedbackMap[file.attachmentId] ?? [];
+        const feedbacks = feedbackMap[file.id] ?? [];
         if (!feedbacks.length) return null;
 
         return (
@@ -272,6 +298,7 @@ export default function FileRepository() {
                     </Typography>
                     <Stack spacing={2.5}>
                         {feedbacks.map((fb) => (
+                            // ✅ fb.feedbackId — mapped in feedbackApi from fb.id
                             <Box key={fb.feedbackId}>
                                 <Stack direction="row" gap={1.2} alignItems="flex-start">
                                     <Avatar sx={{
@@ -283,6 +310,7 @@ export default function FileRepository() {
                                     </Avatar>
                                     <Box sx={{ flex: 1 }}>
                                         <Stack direction="row" gap={1} alignItems="center" mb={0.4}>
+                                            {/* ✅ fb.authorName — mapped from fb.senderName */}
                                             <Typography sx={{ fontWeight: 700, fontSize: "0.82rem", color: t.textPrimary }}>
                                                 {fb.authorName}
                                             </Typography>
@@ -316,7 +344,9 @@ export default function FileRepository() {
                                     <Box sx={{ mt: 1.2, ml: 5.5, pl: 1.5, borderLeft: `2px solid ${t.borderLight}` }}>
                                         <Stack spacing={1.2}>
                                             {fb.replies.map((reply) => {
-                                                const isMe = String(reply.authorId) === currentUserId;
+                                                // ✅ authorRole replaces authorId (not in ReplyDto)
+                                                const isMe = reply.authorRole === "Student";
+                                                // ✅ reply.replyId — mapped from reply.id
                                                 const isEditing = editingReply?.replyId === reply.replyId;
                                                 return (
                                                     <Stack key={reply.replyId} direction="row" gap={1} alignItems="flex-start">
@@ -325,6 +355,7 @@ export default function FileRepository() {
                                                             bgcolor: colorFor(reply.authorName ?? ""),
                                                             fontSize: "0.6rem",
                                                         }}>
+                                                            {/* ✅ reply.authorName — mapped from reply.senderName */}
                                                             {getInitials(reply.authorName ?? "")}
                                                         </Avatar>
                                                         <Box sx={{ flex: 1 }}>
@@ -341,7 +372,10 @@ export default function FileRepository() {
                                                                     <Stack direction="row">
                                                                         <Tooltip title="Edit reply">
                                                                             <IconButton size="small"
-                                                                                onClick={() => setEditingReply({ replyId: reply.replyId, content: reply.content })}
+                                                                                onClick={() => setEditingReply({
+                                                                                    replyId: reply.replyId,
+                                                                                    content: reply.content,
+                                                                                })}
                                                                                 sx={{ color: t.textTertiary, "&:hover": { color: t.accentPrimary } }}>
                                                                                 <EditOutlinedIcon sx={{ fontSize: 13 }} />
                                                                             </IconButton>
@@ -432,10 +466,11 @@ export default function FileRepository() {
     const renderMyFileCard = (file) => {
         const meta = TYPE_META[getFileType(file.filePath)];
         const displayName = getDisplayName(file.filePath, file.description);
-        const hasFeedback = (feedbackMap[file.attachmentId] ?? []).length > 0;
+        const hasFeedback = (feedbackMap[file.id] ?? []).length > 0;
+        const isOwner = String(file.uploadedByUserId) === currentUserId;
 
         return (
-            <Paper key={file.attachmentId} elevation={0} sx={{
+            <Paper key={file.id} elevation={0} sx={{
                 borderRadius: 3,
                 bgcolor: theme.palette.background.paper,
                 border: `1px solid ${hasFeedback ? t.accentPrimary + "35" : t.borderLight}`,
@@ -469,6 +504,11 @@ export default function FileRepository() {
                                 }}>
                                 {file.filePath}
                             </Typography>
+                            {!isOwner && file.uploadedByName && (
+                                <Typography sx={{ fontSize: "0.68rem", color: t.textTertiary, mt: 0.3 }}>
+                                    Uploaded by {file.uploadedByName}
+                                </Typography>
+                            )}
                         </Box>
                     </Stack>
                     <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }}>
@@ -489,18 +529,22 @@ export default function FileRepository() {
                                 <OpenInNewOutlinedIcon sx={{ fontSize: 17 }} />
                             </IconButton>
                         </Tooltip>
-                        <Tooltip title="Edit">
-                            <IconButton size="small" onClick={() => openEdit(file)}
-                                sx={{ color: t.textTertiary, "&:hover": { color: t.accentPrimary } }}>
-                                <EditOutlinedIcon sx={{ fontSize: 17 }} />
-                            </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete">
-                            <IconButton size="small" onClick={() => handleDeleteFile(file.attachmentId)}
-                                sx={{ color: t.textTertiary, "&:hover": { color: t.error } }}>
-                                <DeleteOutlineIcon sx={{ fontSize: 17 }} />
-                            </IconButton>
-                        </Tooltip>
+                        {isOwner && (
+                            <>
+                                <Tooltip title="Edit">
+                                    <IconButton size="small" onClick={() => openEdit(file)}
+                                        sx={{ color: t.textTertiary, "&:hover": { color: t.accentPrimary } }}>
+                                        <EditOutlinedIcon sx={{ fontSize: 17 }} />
+                                    </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Delete">
+                                    <IconButton size="small" onClick={() => handleDeleteFile(file.id)}
+                                        sx={{ color: t.textTertiary, "&:hover": { color: t.error } }}>
+                                        <DeleteOutlineIcon sx={{ fontSize: 17 }} />
+                                    </IconButton>
+                                </Tooltip>
+                            </>
+                        )}
                     </Stack>
                 </Stack>
                 {renderFeedbackThread(file)}
@@ -512,7 +556,7 @@ export default function FileRepository() {
         const meta = TYPE_META[getFileType(file.filePath)];
         const displayName = getDisplayName(file.filePath, file.description);
         return (
-            <Paper key={file.attachmentId} elevation={0} sx={{
+            <Paper key={file.id} elevation={0} sx={{
                 borderRadius: 3,
                 bgcolor: theme.palette.background.paper,
                 border: `1px solid ${t.borderLight}`,
@@ -562,7 +606,7 @@ export default function FileRepository() {
 
     // ─────────────────────────────────────────────────────────────────────────
     return (
-        <Box sx={{ maxWidth: 860 }}>
+        <Box sx={{ width: "100%" }}>
             {/* Header */}
             <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={3}>
                 <Box>
@@ -622,8 +666,21 @@ export default function FileRepository() {
                     </Box>
                 </Paper>
 
-                {myLoading && <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}><CircularProgress sx={{ color: t.accentPrimary }} /></Box>}
-                {!myLoading && myError && <Alert severity="error" sx={{ borderRadius: 2 }}>{myError}</Alert>}
+                {deleteError && (
+                    <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}
+                        onClose={() => setDeleteError(null)}>
+                        {deleteError}
+                    </Alert>
+                )}
+
+                {myLoading && (
+                    <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
+                        <CircularProgress sx={{ color: t.accentPrimary }} />
+                    </Box>
+                )}
+                {!myLoading && myError && (
+                    <Alert severity="error" sx={{ borderRadius: 2 }}>{myError}</Alert>
+                )}
                 {!myLoading && !myError && myFiles.length === 0 && (
                     <Box sx={{ textAlign: "center", py: 8 }}>
                         <AddLinkOutlinedIcon sx={{ fontSize: 46, color: t.textTertiary, mb: 1.5 }} />
@@ -657,8 +714,14 @@ export default function FileRepository() {
                     </Box>
                 </Paper>
 
-                {supLoading && <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}><CircularProgress sx={{ color: t.accentPrimary }} /></Box>}
-                {!supLoading && supError && <Alert severity="error" sx={{ borderRadius: 2 }}>{supError}</Alert>}
+                {supLoading && (
+                    <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
+                        <CircularProgress sx={{ color: t.accentPrimary }} />
+                    </Box>
+                )}
+                {!supLoading && supError && (
+                    <Alert severity="error" sx={{ borderRadius: 2 }}>{supError}</Alert>
+                )}
                 {!supLoading && !supError && supFiles.length === 0 && (
                     <Box sx={{ textAlign: "center", py: 8 }}>
                         <RateReviewOutlinedIcon sx={{ fontSize: 46, color: t.textTertiary, mb: 1.5 }} />
@@ -708,7 +771,11 @@ export default function FileRepository() {
                         onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
                         multiline minRows={2}
                     />
-                    {formError && <Alert severity="error" sx={{ mt: 1.5, borderRadius: 2, fontSize: "0.8rem" }}>{formError}</Alert>}
+                    {formError && (
+                        <Alert severity="error" sx={{ mt: 1.5, borderRadius: 2, fontSize: "0.8rem" }}>
+                            {formError}
+                        </Alert>
+                    )}
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
                     <Button onClick={closeDialog} disabled={saving} sx={{ color: t.textSecondary }}>Cancel</Button>

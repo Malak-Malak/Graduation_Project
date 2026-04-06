@@ -22,7 +22,24 @@ const feedbackApi = {
      * }
      */
     getFeedbackByTeam: (teamId) =>
-        axiosInstance.get(`/Feedback/team/${teamId}`).then((r) => r.data),
+        axiosInstance.get(`/Feedback/team/${teamId}`).then((r) => {
+            const data = Array.isArray(r.data) ? r.data : [];
+            return data.map((fb) => ({
+                feedbackId: fb.id,
+                content: fb.content,
+                createdAt: fb.createdAt,
+                authorName: fb.senderName,      // ✅ map
+                authorRole: fb.senderRole,
+                taskItemId: fb.taskItemId,
+                replies: (fb.replies ?? []).map((rep) => ({
+                    replyId: rep.id,            // ✅ map
+                    content: rep.content,
+                    createdAt: rep.createdAt,
+                    authorName: rep.senderName, // ✅ map
+                    authorRole: rep.senderRole,
+                })),
+            }));
+        }),
 
     /** POST /api/Feedback/create
      * @param {{ content: string, teamId: number, taskItemId: number }} body

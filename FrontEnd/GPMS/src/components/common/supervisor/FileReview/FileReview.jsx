@@ -2,24 +2,21 @@
 //
 // Two tabs:
 //   Tab 0 "My Files"     — supervisor uploads their own links (templates, etc.)
-//                          Uses GET /api/FileSystem/supervisor-files
 //   Tab 1 "Review Teams" — supervisor reviews student files and sends feedback
-//                          Uses GET /api/FileSystem/student-files (scoped by selected team via backend)
-//                          Team selector shown in header only on this tab
 //
 // API:
-//   GET    /api/FileSystem/supervisor-files       → supervisor's own files
-//   GET    /api/FileSystem/student-files          → student files for selected team
+//   GET    /api/FileSystem/supervisor-files
+//   GET    /api/FileSystem/student-files
 //   POST   /api/FileSystem/add                    → { filePath, description }
-//   PUT    /api/FileSystem/edit/{attachmentId}
-//   DELETE /api/FileSystem/delete/{attachmentId}
-//   GET    /api/Feedback/team/{teamId}            → feedback keyed by taskItemId = attachmentId
+//   PUT    /api/FileSystem/edit/{id}
+//   DELETE /api/FileSystem/delete/{id}
+//   GET    /api/Feedback/team/{teamId}
 //   POST   /api/Feedback/create                   → { content, teamId, taskItemId }
 //   DELETE /api/Feedback/delete/{feedbackId}
 //
-// FIX: teamId comes from getSupervisorTeams() — field may be "teamId" or "id".
-//      We read both to be safe.
-// FIX: feedbackMap keyed by taskItemId which we set = file.attachmentId on create.
+// Backend FeedbackDto shape (after mapping in feedbackApi.js):
+//   { feedbackId, content, createdAt, authorName, authorRole, taskItemId,
+//     replies: [{ replyId, content, createdAt, authorName, authorRole }] }
 
 import { useState, useEffect, useCallback } from "react";
 import {
@@ -83,9 +80,7 @@ const getInitials = (name = "") =>
 const PALETTE = ["#C47E7E", "#C49A6C", "#7E9FC4", "#6D8A7D", "#9E86C4"];
 const colorFor = (name = "") => PALETTE[(name.charCodeAt(0) ?? 0) % PALETTE.length];
 
-// Safe team id extractor — handles { teamId } or { id }
 const extractTeamId = (tm) => tm?.teamId ?? tm?.id ?? null;
-// Safe team name extractor
 const extractTeamName = (tm) => tm?.teamName ?? tm?.projectTitle ?? tm?.name ?? null;
 
 const EMPTY_FORM = { filePath: "", description: "" };
@@ -107,7 +102,6 @@ export default function FileReview() {
     const [myLoading, setMyLoading] = useState(true);
     const [myError, setMyError] = useState(null);
 
-    // add/edit own file
     const [addOpen, setAddOpen] = useState(false);
     const [editTarget, setEditTarget] = useState(null);
     const [form, setForm] = useState(EMPTY_FORM);
@@ -116,7 +110,7 @@ export default function FileReview() {
 
     // ── review: teams + student files ─────────────────────────────────────────
     const [teams, setTeams] = useState([]);
-    const [selectedTeam, setSelectedTeam] = useState(""); // string id
+    const [selectedTeam, setSelectedTeam] = useState("");
     const [studentFiles, setStudentFiles] = useState([]);
     const [feedbackMap, setFeedbackMap] = useState({});
     const [teamsLoading, setTeamsLoading] = useState(true);
@@ -159,7 +153,7 @@ export default function FileReview() {
             .finally(() => setTeamsLoading(false));
     }, []);
 
-    // ── fetch student files + feedback for selected team ──────────────────────
+    // ── fetch student files + feedback ────────────────────────────────────────
     const loadStudentData = useCallback(async (teamIdStr) => {
         const teamIdNum = Number(teamIdStr);
         if (!teamIdStr || isNaN(teamIdNum)) return;
@@ -168,14 +162,15 @@ export default function FileReview() {
         setStudentFiles([]); setFeedbackMap({});
         try {
             const [filesData, fbData] = await Promise.all([
-                fileSystemApi.getStudentFiles(),                    // backend filters by team from token + selectedTeam header? or just returns all student files for this supervisor
+                fileSystemApi.getStudentFiles(),
+                // feedbackApi maps: id→feedbackId, senderName→authorName, senderRole→authorRole
                 feedbackApi.getFeedbackByTeam(teamIdNum),
             ]);
             setStudentFiles(Array.isArray(filesData) ? filesData : []);
 
-            // Build feedbackMap: key = taskItemId (= attachmentId set when creating feedback)
             const map = {};
             (Array.isArray(fbData) ? fbData : []).forEach((fb) => {
+                // ✅ fb.taskItemId matches file.id
                 const key = fb.taskItemId;
                 if (key == null) return;
                 if (!map[key]) map[key] = [];
@@ -209,7 +204,7 @@ export default function FileReview() {
         setFormSaving(true); setFormError("");
         try {
             if (editTarget) {
-                await fileSystemApi.editFile(editTarget.attachmentId, {
+                await fileSystemApi.editFile(editTarget.id, {
                     filePath: form.filePath.trim(), description: form.description.trim(),
                 });
             } else {
@@ -224,9 +219,9 @@ export default function FileReview() {
         } finally { setFormSaving(false); }
     };
 
-    const handleDeleteOwnFile = async (attachmentId) => {
-        setMyFiles((p) => p.filter((f) => f.attachmentId !== attachmentId));
-        try { await fileSystemApi.deleteFile(attachmentId); }
+    const handleDeleteOwnFile = async (id) => {
+        setMyFiles((p) => p.filter((f) => f.id !== id));
+        try { await fileSystemApi.deleteFile(id); }
         catch { await fetchMyFiles(); }
     };
 
@@ -245,7 +240,7 @@ export default function FileReview() {
             await feedbackApi.createFeedback({
                 content: fbContent.trim(),
                 teamId: teamIdNum,
-                taskItemId: fbFile.attachmentId,   // KEY: links feedback to this file
+                taskItemId: fbFile.id, // ✅ matches backend CreateFeedbackDto.TaskItemId
             });
             setFbOpen(false);
             await loadStudentData(selectedTeam);
@@ -254,24 +249,26 @@ export default function FileReview() {
         } finally { setFbSaving(false); }
     };
 
-    const handleDeleteFeedback = async (feedbackId, attachmentId) => {
+    const handleDeleteFeedback = async (feedbackId, fileId) => {
         try {
             await feedbackApi.deleteFeedback(feedbackId);
+            // ✅ fb.feedbackId — already mapped from fb.id in feedbackApi
             setFeedbackMap((prev) => ({
                 ...prev,
-                [attachmentId]: (prev[attachmentId] ?? []).filter((f) => f.feedbackId !== feedbackId),
+                [fileId]: (prev[fileId] ?? []).filter((f) => f.feedbackId !== feedbackId),
             }));
         } catch { /* ignore */ }
     };
 
-    // ── shared file card renderer ─────────────────────────────────────────────
+    // ── render file card ──────────────────────────────────────────────────────
     const renderFileCard = (file, { isOwn = false } = {}) => {
         const meta = TYPE_META[getFileType(file.filePath)];
         const displayName = getDisplayName(file.filePath, file.description);
-        const feedbacks = isOwn ? [] : (feedbackMap[file.attachmentId] ?? []);
+        // ✅ feedbackMap keyed by file.id (= taskItemId from backend)
+        const feedbacks = isOwn ? [] : (feedbackMap[file.id] ?? []);
 
         return (
-            <Paper key={file.attachmentId} elevation={0} sx={{
+            <Paper key={file.id} elevation={0} sx={{
                 borderRadius: 3,
                 bgcolor: theme.palette.background.paper,
                 border: `1px solid ${feedbacks.length ? t.accentPrimary + "30" : t.borderLight}`,
@@ -282,7 +279,6 @@ export default function FileReview() {
                 <Stack direction={{ xs: "column", sm: "row" }}
                     alignItems={{ sm: "center" }} justifyContent="space-between"
                     gap={1.5} sx={{ p: 2.5 }}>
-                    {/* Left: icon + name */}
                     <Stack direction="row" alignItems="center" gap={1.5} sx={{ minWidth: 0 }}>
                         <Box sx={{
                             p: 0.9, borderRadius: 2, flexShrink: 0,
@@ -309,7 +305,6 @@ export default function FileReview() {
                         </Box>
                     </Stack>
 
-                    {/* Right: actions */}
                     <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }}>
                         {isOwn && (
                             <Chip size="small" label="Shared with students"
@@ -343,7 +338,8 @@ export default function FileReview() {
                                     </IconButton>
                                 </Tooltip>
                                 <Tooltip title="Delete">
-                                    <IconButton size="small" onClick={() => handleDeleteOwnFile(file.attachmentId)}
+                                    <IconButton size="small"
+                                        onClick={() => handleDeleteOwnFile(file.id)}
                                         sx={{ color: t.textTertiary, "&:hover": { color: t.error } }}>
                                         <DeleteOutlineIcon sx={{ fontSize: 17 }} />
                                     </IconButton>
@@ -365,7 +361,7 @@ export default function FileReview() {
                     </Stack>
                 </Stack>
 
-                {/* Feedback thread (review tab only) */}
+                {/* Feedback thread */}
                 {!isOwn && feedbacks.length > 0 && (
                     <>
                         <Divider sx={{ borderColor: t.borderLight }} />
@@ -378,12 +374,14 @@ export default function FileReview() {
                             </Typography>
                             <Stack spacing={1.5}>
                                 {feedbacks.map((fb) => (
+                                    // ✅ fb.feedbackId — mapped from fb.id in feedbackApi
                                     <Stack key={fb.feedbackId} direction="row" gap={1.2} alignItems="flex-start">
                                         <Avatar sx={{
                                             width: 30, height: 30,
                                             bgcolor: colorFor(fb.authorName ?? ""),
                                             fontSize: "0.72rem", fontWeight: 700,
                                         }}>
+                                            {/* ✅ fb.authorName — mapped from fb.senderName */}
                                             {getInitials(fb.authorName ?? "")}
                                         </Avatar>
                                         <Box sx={{ flex: 1 }}>
@@ -398,7 +396,7 @@ export default function FileReview() {
                                                 </Stack>
                                                 <Tooltip title="Delete feedback">
                                                     <IconButton size="small"
-                                                        onClick={() => handleDeleteFeedback(fb.feedbackId, file.attachmentId)}
+                                                        onClick={() => handleDeleteFeedback(fb.feedbackId, file.id)}
                                                         sx={{ color: t.textTertiary, "&:hover": { color: t.error } }}>
                                                         <DeleteOutlineIcon sx={{ fontSize: 15 }} />
                                                     </IconButton>
@@ -408,10 +406,10 @@ export default function FileReview() {
                                                 {fb.content}
                                             </Typography>
 
-                                            {/* Student replies */}
                                             {(fb.replies ?? []).length > 0 && (
                                                 <Box sx={{ mt: 1, pl: 2, borderLeft: `2px solid ${t.borderLight}` }}>
                                                     {fb.replies.map((reply) => (
+                                                        // ✅ reply.replyId — mapped from reply.id in feedbackApi
                                                         <Stack key={reply.replyId} direction="row" gap={1}
                                                             alignItems="flex-start" mb={0.8}>
                                                             <Avatar sx={{
@@ -419,6 +417,7 @@ export default function FileReview() {
                                                                 bgcolor: colorFor(reply.authorName ?? ""),
                                                                 fontSize: "0.6rem",
                                                             }}>
+                                                                {/* ✅ reply.authorName — mapped from reply.senderName */}
                                                                 {getInitials(reply.authorName ?? "")}
                                                             </Avatar>
                                                             <Box>
@@ -451,7 +450,7 @@ export default function FileReview() {
 
     // ─────────────────────────────────────────────────────────────────────────
     return (
-        <Box sx={{ maxWidth: 940 }}>
+        <Box sx={{ width: "100%" }}>
             {/* Header */}
             <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={3}>
                 <Box>
@@ -460,9 +459,7 @@ export default function FileReview() {
                         Share resources with students or review their submitted links
                     </Typography>
                 </Box>
-
                 <Stack direction="row" gap={1.5} alignItems="center">
-                    {/* Add button — only on My Files tab */}
                     {activeTab === 0 && (
                         <Button variant="contained" startIcon={<AddLinkOutlinedIcon />}
                             onClick={openAdd}
@@ -470,16 +467,11 @@ export default function FileReview() {
                             Add Link
                         </Button>
                     )}
-
-                    {/* Team selector — only on Review tab, only when teams loaded */}
                     {activeTab === 1 && !teamsLoading && teams.length > 0 && (
                         <FormControl size="small" sx={{ minWidth: 190 }}>
                             <InputLabel>Team</InputLabel>
-                            <Select
-                                label="Team"
-                                value={selectedTeam}
-                                onChange={(e) => setSelectedTeam(e.target.value)}
-                            >
+                            <Select label="Team" value={selectedTeam}
+                                onChange={(e) => setSelectedTeam(e.target.value)}>
                                 {teams.map((tm) => {
                                     const id = extractTeamId(tm);
                                     const name = extractTeamName(tm);
@@ -501,14 +493,8 @@ export default function FileReview() {
                 "& .MuiTab-root": { fontSize: "0.85rem", textTransform: "none", fontWeight: 600, minHeight: 44 },
                 "& .MuiTabs-indicator": { height: 2 },
             }}>
-                <Tab iconPosition="start"
-                    icon={<FolderSharedOutlinedIcon sx={{ fontSize: 17 }} />}
-                    label="My Files"
-                />
-                <Tab iconPosition="start"
-                    icon={<RateReviewOutlinedIcon sx={{ fontSize: 17 }} />}
-                    label="Review Teams"
-                />
+                <Tab iconPosition="start" icon={<FolderSharedOutlinedIcon sx={{ fontSize: 17 }} />} label="My Files" />
+                <Tab iconPosition="start" icon={<RateReviewOutlinedIcon sx={{ fontSize: 17 }} />} label="Review Teams" />
             </Tabs>
 
             {/* ── TAB 0: MY FILES ── */}
@@ -531,8 +517,14 @@ export default function FileReview() {
                     </Box>
                 </Paper>
 
-                {myLoading && <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}><CircularProgress sx={{ color: t.accentPrimary }} /></Box>}
-                {!myLoading && myError && <Alert severity="error" sx={{ borderRadius: 2 }}>{myError}</Alert>}
+                {myLoading && (
+                    <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
+                        <CircularProgress sx={{ color: t.accentPrimary }} />
+                    </Box>
+                )}
+                {!myLoading && myError && (
+                    <Alert severity="error" sx={{ borderRadius: 2 }}>{myError}</Alert>
+                )}
                 {!myLoading && !myError && myFiles.length === 0 && (
                     <Box sx={{ textAlign: "center", py: 8 }}>
                         <AddLinkOutlinedIcon sx={{ fontSize: 46, color: t.textTertiary, mb: 1.5 }} />
@@ -549,19 +541,30 @@ export default function FileReview() {
 
             {/* ── TAB 1: REVIEW TEAMS ── */}
             <TabPanel value={activeTab} index={1}>
-                {teamsLoading && <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}><CircularProgress sx={{ color: t.accentPrimary }} /></Box>}
-                {!teamsLoading && teamsError && <Alert severity="error" sx={{ borderRadius: 2 }}>{teamsError}</Alert>}
+                {teamsLoading && (
+                    <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
+                        <CircularProgress sx={{ color: t.accentPrimary }} />
+                    </Box>
+                )}
+                {!teamsLoading && teamsError && (
+                    <Alert severity="error" sx={{ borderRadius: 2 }}>{teamsError}</Alert>
+                )}
                 {!teamsLoading && !teamsError && teams.length === 0 && (
                     <Box sx={{ textAlign: "center", py: 8 }}>
                         <PeopleOutlinedIcon sx={{ fontSize: 46, color: t.textTertiary, mb: 1.5 }} />
                         <Typography sx={{ color: t.textSecondary }}>No teams assigned to you yet.</Typography>
                     </Box>
                 )}
-
                 {!teamsLoading && teams.length > 0 && (
                     <>
-                        {filesLoading && <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}><CircularProgress sx={{ color: t.accentPrimary }} /></Box>}
-                        {!filesLoading && filesError && <Alert severity="error" sx={{ borderRadius: 2 }}>{filesError}</Alert>}
+                        {filesLoading && (
+                            <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
+                                <CircularProgress sx={{ color: t.accentPrimary }} />
+                            </Box>
+                        )}
+                        {!filesLoading && filesError && (
+                            <Alert severity="error" sx={{ borderRadius: 2 }}>{filesError}</Alert>
+                        )}
                         {!filesLoading && !filesError && studentFiles.length === 0 && (
                             <Box sx={{ textAlign: "center", py: 8 }}>
                                 <LinkOutlinedIcon sx={{ fontSize: 46, color: t.textTertiary, mb: 1.5 }} />
@@ -579,7 +582,7 @@ export default function FileReview() {
                 )}
             </TabPanel>
 
-            {/* ── DIALOG: Add / Edit own file ── */}
+            {/* ── DIALOG: Add / Edit ── */}
             <Dialog open={addOpen} onClose={() => !formSaving && setAddOpen(false)}
                 maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
                 <DialogTitle sx={{ color: t.textPrimary, fontWeight: 700, pb: 1 }}>
@@ -593,7 +596,6 @@ export default function FileReview() {
                         <Typography sx={{ fontSize: "0.78rem", color: t.textSecondary, lineHeight: 1.6 }}>
                             💡 Upload the file to <strong>Google Drive</strong>, <strong>OneDrive</strong>,
                             or <strong>GitHub</strong> first, then paste the shareable link below.
-                            All your students will be able to view this link.
                         </Typography>
                     </Paper>
                     <TextField fullWidth label="File Link *"
@@ -616,7 +618,11 @@ export default function FileReview() {
                         onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
                         multiline minRows={2}
                     />
-                    {formError && <Alert severity="error" sx={{ mt: 1.5, borderRadius: 2, fontSize: "0.8rem" }}>{formError}</Alert>}
+                    {formError && (
+                        <Alert severity="error" sx={{ mt: 1.5, borderRadius: 2, fontSize: "0.8rem" }}>
+                            {formError}
+                        </Alert>
+                    )}
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
                     <Button onClick={() => setAddOpen(false)} disabled={formSaving} sx={{ color: t.textSecondary }}>Cancel</Button>
@@ -658,12 +664,18 @@ export default function FileReview() {
                         onChange={(e) => setFbContent(e.target.value)}
                         error={Boolean(fbError)}
                     />
-                    {fbError && <Alert severity="error" sx={{ mt: 1.5, borderRadius: 2, fontSize: "0.8rem" }}>{fbError}</Alert>}
+                    {fbError && (
+                        <Alert severity="error" sx={{ mt: 1.5, borderRadius: 2, fontSize: "0.8rem" }}>
+                            {fbError}
+                        </Alert>
+                    )}
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
                     <Button onClick={() => setFbOpen(false)} disabled={fbSaving} sx={{ color: t.textSecondary }}>Cancel</Button>
                     <Button variant="contained" onClick={handleSendFeedback} disabled={fbSaving}
-                        endIcon={fbSaving ? <CircularProgress size={14} color="inherit" /> : <SendOutlinedIcon sx={{ fontSize: 15 }} />}
+                        endIcon={fbSaving
+                            ? <CircularProgress size={14} color="inherit" />
+                            : <SendOutlinedIcon sx={{ fontSize: 15 }} />}
                         sx={{ bgcolor: t.accentPrimary, borderRadius: 2 }}>
                         {fbSaving ? "Sending…" : "Send Feedback"}
                     </Button>

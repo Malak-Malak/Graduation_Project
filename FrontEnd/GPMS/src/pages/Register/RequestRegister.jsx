@@ -152,7 +152,7 @@ export default function RequestRegister() {
               </Box>
 
               {/* ✅ Email format hint — student only */}
-              <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: alpha(PRIMARY, isDark ? 0.06 : 0.03), border: `1px dashed ${alpha(PRIMARY, 0.35)}` }}>
+              {/* <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: alpha(PRIMARY, isDark ? 0.06 : 0.03), border: `1px dashed ${alpha(PRIMARY, 0.35)}` }}>
                 <Typography sx={{ fontSize: "0.72rem", fontWeight: 700, color: PRIMARY, mb: 0.5, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                   University Email Format
                 </Typography>
@@ -162,7 +162,7 @@ export default function RequestRegister() {
                 <Typography sx={{ fontSize: "0.78rem", color: "text.secondary", fontFamily: "monospace", mt: 0.3 }}>
                   supervisor: h.n.awad@supervisors.ptuk.edu.ps
                 </Typography>
-              </Box>
+              </Box> */}
 
             </Stack>
           </Grid>

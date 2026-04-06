@@ -461,7 +461,7 @@ export default function PendingRequests() {
 
     /* ── render ── */
     return (
-        <Box sx={{ maxWidth: 900 }}>
+        <Box sx={{ width: "100%" }}>
 
             {/* ── Header ── */}
             <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>

@@ -95,7 +95,7 @@ const TopBar = ({ onMenuClick, isMobile }) => {
     // ── Phase config ──────────────────────────────────────────────────────────
     const isStudent = role === "student";
     const isP2 = isStudent && currentPhase === "Phase2";
-    const phaseColor = isStudent ? (isP2 ? P2_COLOR : P1_COLOR) : DEFAULT_COLOR;
+    const phaseColor = isStudent ? P1_COLOR : DEFAULT_COLOR;
     const PhaseIcon = isP2 ? RocketLaunchOutlinedIcon : LightbulbOutlinedIcon;
     const phaseLabel = isP2 ? "Phase 2 — Project" : "Phase 1 — Proposal";
 

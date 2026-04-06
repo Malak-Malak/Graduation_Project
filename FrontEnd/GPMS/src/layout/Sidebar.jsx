@@ -41,7 +41,7 @@ const NAV_ITEMS = {
         { label: "Pending Requests", icon: <HowToRegOutlinedIcon />, path: "/admin/pending-requests" },
         { label: "User Management", icon: <PeopleOutlineIcon />, path: "/admin/users" },
         { label: "Reports", icon: <AssessmentOutlinedIcon />, path: "/admin/reports" },
-        { label: "Activity Logs", icon: <HistoryOutlinedIcon />, path: "/admin/logs" },
+
         { label: "All Requests", icon: <AssessmentOutlinedIcon />, path: "/admin/all-requests" },
         { label: "Configuration", icon: <SettingsOutlinedIcon />, path: "/admin/settings" },
     ],
@@ -50,7 +50,7 @@ const NAV_ITEMS = {
         { label: "Profile", icon: <AccountCircleOutlinedIcon />, path: "/supervisor/profile" },
         { label: "My Groups", icon: <GroupsOutlinedIcon />, path: "/supervisor/groups" },
         { label: "Pending Requests", icon: <PendingActionsOutlinedIcon />, path: "/supervisor/requests" },
-        { label: "File Review", icon: <FolderOutlinedIcon />, path: "/supervisor/files" },
+        { label: "Files", icon: <FolderOutlinedIcon />, path: "/supervisor/files" },
         { label: "Meetings", icon: <CalendarMonthOutlinedIcon />, path: "/supervisor/meetings" },
         { label: "AI Reports", icon: <AutoAwesomeOutlinedIcon />, path: "/supervisor/ai-reports" },
         { label: "Analytics", icon: <QueryStatsOutlinedIcon />, path: "/supervisor/analytics" },
@@ -190,7 +190,7 @@ export default function Sidebar({
     const currentWidth = collapsed ? collapsedWidth : width;
     const isP2 = currentPhase === "Phase2";
     const phaseAccent = role === "student"
-        ? (isP2 ? P2.color : P1.color)
+        ? P1.color
         : (ROLE_COLOR[role] ?? "#B46F4C");
 
     const border = t.borderLight ?? theme.palette.divider;

@@ -106,7 +106,52 @@ namespace GP_BackEnd.Controllers
             var requests = await _supervisorService.GetLeaveRequestsAsync(supervisorId);
             return Ok(requests);
         }
+        // POST api/supervisor/office-hours
+        // Supervisor sets a new office hour slot
+        [HttpPost("office-hours")]
+        public async Task<IActionResult> SetOfficeHour([FromBody] SetOfficeHourDto dto)
+        {
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var result = await _appointmentService.SetOfficeHourAsync(supervisorId, dto);
+            if (!result)
+                return BadRequest("Could not set office hour.");
+            return Ok("Office hour added successfully.");
+        }
+
+        // GET api/supervisor/office-hours
+        // Supervisor views all their office hours
+        [HttpGet("office-hours")]
+        public async Task<IActionResult> GetMyOfficeHours()
+        {
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var hours = await _appointmentService.GetMyOfficeHoursAsync(supervisorId);
+            return Ok(hours);
+        }
+
+        // DELETE api/supervisor/office-hours/{officeHourId}
+        // Supervisor deletes an office hour slot
+        [HttpDelete("office-hours/{officeHourId}")]
+        public async Task<IActionResult> DeleteOfficeHour(int officeHourId)
+        {
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var result = await _appointmentService.DeleteOfficeHourAsync(supervisorId, officeHourId);
+            if (!result)
+                return BadRequest("Office hour not found or you are not the owner.");
+            return Ok("Office hour deleted successfully.");
+        }
+
+        // GET api/supervisor/all-appointments
+        // Supervisor sees all appointments (all statuses)
+        [HttpGet("all-appointments")]
+        public async Task<IActionResult> GetAllAppointments()
+        {
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var appointments = await _appointmentService.GetAllAppointmentsAsync(supervisorId);
+            return Ok(appointments);
+        }
+
         // GET api/supervisor/pending-appointments
+        // Supervisor sees only pending appointments
         [HttpGet("pending-appointments")]
         public async Task<IActionResult> GetPendingAppointments()
         {
@@ -114,16 +159,16 @@ namespace GP_BackEnd.Controllers
             var appointments = await _appointmentService.GetPendingAppointmentsAsync(supervisorId);
             return Ok(appointments);
         }
+
         // POST api/supervisor/respond-to-appointment
+        // Supervisor approves or rejects an appointment
         [HttpPost("respond-to-appointment")]
         public async Task<IActionResult> RespondToAppointment([FromBody] RespondToAppointmentDto dto)
         {
             var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
             var result = await _appointmentService.RespondToAppointmentAsync(supervisorId, dto);
-
             if (!result)
                 return BadRequest("Appointment not found or already responded to.");
-
             return Ok(dto.IsApproved ? "Appointment approved." : "Appointment rejected.");
         }
     }

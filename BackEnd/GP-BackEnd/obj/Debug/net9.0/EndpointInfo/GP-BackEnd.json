@@ -1332,6 +1332,18 @@
         }
       }
     },
+    "/api/Student/supervisor-office-hours": {
+      "get": {
+        "tags": [
+          "Student"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Student/request-appointment": {
       "post": {
         "tags": [
@@ -1368,6 +1380,37 @@
         "tags": [
           "Student"
         ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Student/update-appointment": {
+      "put": {
+        "tags": [
+          "Student"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAppointmentDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAppointmentDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAppointmentDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "OK"
@@ -1552,6 +1595,82 @@
       }
     },
     "/api/Supervisor/leave-requests": {
+      "get": {
+        "tags": [
+          "Supervisor"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Supervisor/office-hours": {
+      "post": {
+        "tags": [
+          "Supervisor"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetOfficeHourDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetOfficeHourDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetOfficeHourDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Supervisor"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Supervisor/office-hours/{officeHourId}": {
+      "delete": {
+        "tags": [
+          "Supervisor"
+        ],
+        "parameters": [
+          {
+            "name": "officeHourId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Supervisor/all-appointments": {
       "get": {
         "tags": [
           "Supervisor"
@@ -1971,9 +2090,12 @@
       "RequestAppointmentDto": {
         "type": "object",
         "properties": {
-          "dateTime": {
-            "type": "string",
-            "format": "date-time"
+          "officeHourId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isOnline": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -2064,10 +2186,49 @@
         },
         "additionalProperties": false
       },
+      "SetOfficeHourDto": {
+        "type": "object",
+        "properties": {
+          "dayOfWeek": {
+            "type": "string",
+            "nullable": true
+          },
+          "startTime": {
+            "type": "string",
+            "format": "date-span"
+          },
+          "endTime": {
+            "type": "string",
+            "format": "date-span"
+          }
+        },
+        "additionalProperties": false
+      },
       "SubmitRegistrationRequestDto": {
         "type": "object",
         "properties": {
           "universityEmail": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateAppointmentDto": {
+        "type": "object",
+        "properties": {
+          "appointmentId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "officeHourId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isOnline": {
+            "type": "boolean"
+          },
+          "excuse": {
             "type": "string",
             "nullable": true
           }

@@ -207,26 +207,49 @@ namespace GP_BackEnd.Controllers
             var students = await _studentService.GetAllStudentsAsync();
             return Ok(students);
         }
+
+        // GET api/student/supervisor-office-hours
+        // Get the office hours of the student's supervisor
+        [HttpGet("supervisor-office-hours")]
+        public async Task<IActionResult> GetSupervisorOfficeHours()
+        {
+            var studentId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var hours = await _appointmentService.GetSupervisorOfficeHoursAsync(studentId);
+            return Ok(hours);
+        }
+
         // POST api/student/request-appointment
+        // Student picks an office hour slot and requests an appointment
         [HttpPost("request-appointment")]
         public async Task<IActionResult> RequestAppointment([FromBody] RequestAppointmentDto dto)
         {
             var studentId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
             var result = await _appointmentService.RequestAppointmentAsync(studentId, dto);
-
             if (!result)
-                return BadRequest("Could not request appointment. You may not be in a team or have a pending appointment.");
-
+                return BadRequest("Could not request appointment. You may not be in a team, have a pending appointment, or the office hour slot is invalid.");
             return Ok("Appointment request sent successfully.");
         }
 
         // GET api/student/my-appointments
+        // Get all appointments for the student's team (includes IsOnline, Excuse)
         [HttpGet("my-appointments")]
         public async Task<IActionResult> GetMyAppointments()
         {
             var studentId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
             var appointments = await _appointmentService.GetMyAppointmentsAsync(studentId);
             return Ok(appointments);
+        }
+
+        // PUT api/student/update-appointment
+        // Student reschedules an appointment — excuse is mandatory
+        [HttpPut("update-appointment")]
+        public async Task<IActionResult> UpdateAppointment([FromBody] UpdateAppointmentDto dto)
+        {
+            var studentId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var result = await _appointmentService.UpdateAppointmentAsync(studentId, dto);
+            if (!result)
+                return BadRequest("Could not update appointment. Make sure you provided an excuse and the office hour slot is valid.");
+            return Ok("Appointment updated successfully. Supervisor and teammates have been notified.");
         }
 
         // POST api/student/switch-version

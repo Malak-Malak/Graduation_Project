@@ -816,6 +816,16 @@
   },
   {
     "ContainingType": "GP_BackEnd.Controllers.StudentController",
+    "Method": "GetSupervisorOfficeHours",
+    "RelativePath": "api/Student/supervisor-office-hours",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.StudentController",
     "Method": "GetAllSupervisors",
     "RelativePath": "api/Student/supervisors",
     "HttpMethod": "GET",
@@ -846,6 +856,22 @@
   },
   {
     "ContainingType": "GP_BackEnd.Controllers.StudentController",
+    "Method": "UpdateAppointment",
+    "RelativePath": "api/Student/update-appointment",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "GP_BackEnd.DTOs.Appointment.UpdateAppointmentDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.StudentController",
     "Method": "UpdateProjectInfo",
     "RelativePath": "api/Student/update-project-info",
     "HttpMethod": "PUT",
@@ -858,6 +884,16 @@
         "IsRequired": true
       }
     ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.SupervisorController",
+    "Method": "GetAllAppointments",
+    "RelativePath": "api/Supervisor/all-appointments",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
     "ReturnTypes": []
   },
   {
@@ -878,6 +914,48 @@
     "IsController": true,
     "Order": 0,
     "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.SupervisorController",
+    "Method": "SetOfficeHour",
+    "RelativePath": "api/Supervisor/office-hours",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "GP_BackEnd.DTOs.Appointment.SetOfficeHourDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.SupervisorController",
+    "Method": "GetMyOfficeHours",
+    "RelativePath": "api/Supervisor/office-hours",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.SupervisorController",
+    "Method": "DeleteOfficeHour",
+    "RelativePath": "api/Supervisor/office-hours/{officeHourId}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "officeHourId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
     "ReturnTypes": []
   },
   {

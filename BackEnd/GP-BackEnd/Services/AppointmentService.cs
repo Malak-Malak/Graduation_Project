@@ -1,7 +1,5 @@
 ﻿using GP_BackEnd.Data;
 using GP_BackEnd.DTOs.Appointment;
-using GP_BackEnd.DTOs.Student;
-using GP_BackEnd.DTOs.Supervisor;
 using GP_BackEnd.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,67 +14,120 @@ namespace GP_BackEnd.Services
             _context = context;
         }
 
-        // Student: request a new appointment
-        public async Task<bool> RequestAppointmentAsync(int studentId, RequestAppointmentDto dto)
+        // ── Helper: notify all team members + supervisor ───────────────────────
+
+        private async Task NotifyTeamAsync(int teamId, int supervisorId, string title, string message)
         {
-            // Get the student's active team
-            var teamMember = await _context.TeamMembers
-                .Include(tm => tm.Team)
-                .FirstOrDefaultAsync(tm => tm.UserId == studentId && tm.Team.Status == "Active");
+            var memberIds = await _context.TeamMembers
+                .Where(tm => tm.TeamId == teamId)
+                .Select(tm => tm.UserId)
+                .ToListAsync();
 
-            if (teamMember == null)
-                return false;
+            var allIds = memberIds.ToList();
+            if (!allIds.Contains(supervisorId))
+                allIds.Add(supervisorId);
 
-            // Block if there is already a pending appointment for this team
-            var existingPending = await _context.Appointments
-                .AnyAsync(a => a.TeamId == teamMember.Team.Id && a.Status == "Pending");
-
-            if (existingPending)
-                return false;
-
-            var appointment = new Appointment
+            foreach (var uid in allIds)
             {
-                DateTime = DateTime.SpecifyKind(dto.DateTime, DateTimeKind.Utc),
-                Status = "Pending",
-                Link = string.Empty,
-                TeamId = teamMember.Team.Id,
-                SupervisorId = teamMember.Team.SupervisorId
-            };
+                _context.Notifications.Add(new Notification
+                {
+                    Title = title,
+                    Message = message,
+                    CreatedAt = DateTime.UtcNow,
+                    UserId = uid
+                });
+            }
 
-            _context.Appointments.Add(appointment);
+            await _context.SaveChangesAsync();
+        }
+
+        // ── SUPERVISOR: set office hour ────────────────────────────────────────
+
+        public async Task<bool> SetOfficeHourAsync(int supervisorId, SetOfficeHourDto dto)
+        {
+            // Verify this user is actually a supervisor
+            var user = await _context.Users.FindAsync(supervisorId);
+            if (user == null || user.Role != "Supervisor") return false;
+
+            _context.OfficeHours.Add(new OfficeHour
+            {
+                SupervisorId = supervisorId,
+                DayOfWeek = dto.DayOfWeek.Trim(),
+                StartTime = dto.StartTime,
+                EndTime = dto.EndTime
+            });
+
             await _context.SaveChangesAsync();
             return true;
         }
 
-        // Student: get all appointments for their team
-        public async Task<List<AppointmentDto>> GetMyAppointmentsAsync(int studentId)
+        // ── SUPERVISOR: delete office hour ────────────────────────────────────
+
+        public async Task<bool> DeleteOfficeHourAsync(int supervisorId, int officeHourId)
         {
-            var teamMember = await _context.TeamMembers
-                .Include(tm => tm.Team)
-                .FirstOrDefaultAsync(tm => tm.UserId == studentId && tm.Team.Status == "Active");
+            var oh = await _context.OfficeHours
+                .FirstOrDefaultAsync(o => o.Id == officeHourId && o.SupervisorId == supervisorId);
 
-            if (teamMember == null)
-                return new List<AppointmentDto>();
+            if (oh == null) return false;
 
+            _context.OfficeHours.Remove(oh);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        // ── SUPERVISOR: get all their office hours ─────────────────────────────
+
+        public async Task<List<OfficeHourDto>> GetMyOfficeHoursAsync(int supervisorId)
+        {
+            return await _context.OfficeHours
+                .Include(o => o.Supervisor)
+                    .ThenInclude(u => u.UserProfile)
+                .Where(o => o.SupervisorId == supervisorId)
+                .OrderBy(o => o.DayOfWeek)
+                .ThenBy(o => o.StartTime)
+                .Select(o => new OfficeHourDto
+                {
+                    Id = o.Id,
+                    DayOfWeek = o.DayOfWeek,
+                    StartTime = o.StartTime,
+                    EndTime = o.EndTime,
+                    SupervisorName = o.Supervisor.UserProfile != null
+                        ? o.Supervisor.UserProfile.FullName
+                        : o.Supervisor.Username
+                })
+                .ToListAsync();
+        }
+
+        // ── SUPERVISOR: get all appointments (all statuses) ────────────────────
+
+        public async Task<List<AppointmentDto>> GetAllAppointmentsAsync(int supervisorId)
+        {
             return await _context.Appointments
-                .Where(a => a.TeamId == teamMember.Team.Id)
+                .Where(a => a.SupervisorId == supervisorId)
                 .Include(a => a.Team)
                 .Include(a => a.Supervisor)
                     .ThenInclude(s => s.UserProfile)
+                .OrderByDescending(a => a.DateTime)
                 .Select(a => new AppointmentDto
                 {
                     Id = a.Id,
                     DateTime = a.DateTime,
                     Status = a.Status,
                     Link = a.Link,
+                    IsOnline = a.IsOnline,
+                    Excuse = a.Excuse,
                     TeamId = a.TeamId,
                     ProjectName = a.Team.ProjectTitle,
-                    SupervisorName = a.Supervisor.UserProfile.FullName
+                    SupervisorId = a.SupervisorId,
+                    SupervisorName = a.Supervisor.UserProfile != null
+                        ? a.Supervisor.UserProfile.FullName
+                        : a.Supervisor.Username
                 })
                 .ToListAsync();
         }
 
-        // Supervisor: get all pending appointments
+        // ── SUPERVISOR: get pending appointments only ──────────────────────────
+
         public async Task<List<AppointmentDto>> GetPendingAppointmentsAsync(int supervisorId)
         {
             return await _context.Appointments
@@ -84,38 +135,245 @@ namespace GP_BackEnd.Services
                 .Include(a => a.Team)
                 .Include(a => a.Supervisor)
                     .ThenInclude(s => s.UserProfile)
+                .OrderBy(a => a.DateTime)
                 .Select(a => new AppointmentDto
                 {
                     Id = a.Id,
                     DateTime = a.DateTime,
                     Status = a.Status,
                     Link = a.Link,
+                    IsOnline = a.IsOnline,
+                    Excuse = a.Excuse,
                     TeamId = a.TeamId,
                     ProjectName = a.Team.ProjectTitle,
-                    SupervisorName = a.Supervisor.UserProfile.FullName
+                    SupervisorId = a.SupervisorId,
+                    SupervisorName = a.Supervisor.UserProfile != null
+                        ? a.Supervisor.UserProfile.FullName
+                        : a.Supervisor.Username
                 })
                 .ToListAsync();
         }
 
-        // Supervisor: approve or reject an appointment
+        // ── SUPERVISOR: respond to appointment ────────────────────────────────
+
         public async Task<bool> RespondToAppointmentAsync(int supervisorId, RespondToAppointmentDto dto)
         {
             var appointment = await _context.Appointments
+                .Include(a => a.Team)
                 .FirstOrDefaultAsync(a => a.Id == dto.AppointmentId
                                        && a.SupervisorId == supervisorId
                                        && a.Status == "Pending");
 
-            if (appointment == null)
-                return false;
+            if (appointment == null) return false;
 
             appointment.Status = dto.IsApproved ? "Approved" : "Rejected";
 
-            // Add meeting link only if approved
             if (dto.IsApproved && !string.IsNullOrEmpty(dto.Link))
                 appointment.Link = dto.Link;
 
             await _context.SaveChangesAsync();
+
+            var supervisorName = await _context.UserProfiles
+                .Where(p => p.UserId == supervisorId)
+                .Select(p => p.FullName)
+                .FirstOrDefaultAsync() ?? "Your supervisor";
+
+            var msg = dto.IsApproved
+                ? $"{supervisorName} approved your appointment request."
+                : $"{supervisorName} rejected your appointment request.";
+
+            await NotifyTeamAsync(appointment.TeamId, supervisorId, "Appointment Update", msg);
             return true;
+        }
+
+        // ── STUDENT: get supervisor's office hours ─────────────────────────────
+
+        public async Task<List<OfficeHourDto>> GetSupervisorOfficeHoursAsync(int studentId)
+        {
+            // Find the student's active team to get supervisor id
+            var teamMember = await _context.TeamMembers
+                .Include(tm => tm.Team)
+                .FirstOrDefaultAsync(tm => tm.UserId == studentId && tm.Team.Status == "Active");
+
+            if (teamMember == null) return new List<OfficeHourDto>();
+
+            int supervisorId = teamMember.Team.SupervisorId;
+
+            return await _context.OfficeHours
+                .Include(o => o.Supervisor)
+                    .ThenInclude(u => u.UserProfile)
+                .Where(o => o.SupervisorId == supervisorId)
+                .OrderBy(o => o.DayOfWeek)
+                .ThenBy(o => o.StartTime)
+                .Select(o => new OfficeHourDto
+                {
+                    Id = o.Id,
+                    DayOfWeek = o.DayOfWeek,
+                    StartTime = o.StartTime,
+                    EndTime = o.EndTime,
+                    SupervisorName = o.Supervisor.UserProfile != null
+                        ? o.Supervisor.UserProfile.FullName
+                        : o.Supervisor.Username
+                })
+                .ToListAsync();
+        }
+
+        // ── STUDENT: request appointment (must pick an office hour slot) ───────
+
+        public async Task<bool> RequestAppointmentAsync(int studentId, RequestAppointmentDto dto)
+        {
+            // Get the student's active team
+            var teamMember = await _context.TeamMembers
+                .Include(tm => tm.Team)
+                .FirstOrDefaultAsync(tm => tm.UserId == studentId && tm.Team.Status == "Active");
+
+            if (teamMember == null) return false;
+
+            // Block if there is already a pending appointment for this team
+            var existingPending = await _context.Appointments
+                .AnyAsync(a => a.TeamId == teamMember.Team.Id && a.Status == "Pending");
+
+            if (existingPending) return false;
+
+            // Validate the office hour belongs to this team's supervisor
+            var officeHour = await _context.OfficeHours
+                .FirstOrDefaultAsync(o => o.Id == dto.OfficeHourId
+                                       && o.SupervisorId == teamMember.Team.SupervisorId);
+
+            if (officeHour == null) return false;
+
+            // Build the appointment DateTime from the office hour's day + start time
+            // We schedule it for the next occurrence of that day
+            var appointmentDateTime = GetNextOccurrence(officeHour.DayOfWeek, officeHour.StartTime);
+
+            var appointment = new Appointment
+            {
+                DateTime = appointmentDateTime,
+                Status = "Pending",
+                IsOnline = dto.IsOnline,
+                Link = string.Empty,
+                Excuse = null,
+                TeamId = teamMember.Team.Id,
+                SupervisorId = teamMember.Team.SupervisorId
+            };
+
+            _context.Appointments.Add(appointment);
+            await _context.SaveChangesAsync();
+
+            // Notify team + supervisor
+            var studentName = await _context.UserProfiles
+                .Where(p => p.UserId == studentId)
+                .Select(p => p.FullName)
+                .FirstOrDefaultAsync() ?? "A student";
+
+            await NotifyTeamAsync(
+                teamMember.Team.Id,
+                teamMember.Team.SupervisorId,
+                "New Appointment Request",
+                $"{studentName} requested a {(dto.IsOnline ? "online" : "in-person")} appointment on {appointmentDateTime:ddd dd MMM} at {officeHour.StartTime:hh\\:mm}."
+            );
+
+            return true;
+        }
+
+        // ── STUDENT: get all their team appointments ───────────────────────────
+
+        public async Task<List<AppointmentDto>> GetMyAppointmentsAsync(int studentId)
+        {
+            var teamMember = await _context.TeamMembers
+                .Include(tm => tm.Team)
+                .FirstOrDefaultAsync(tm => tm.UserId == studentId && tm.Team.Status == "Active");
+
+            if (teamMember == null) return new List<AppointmentDto>();
+
+            return await _context.Appointments
+                .Where(a => a.TeamId == teamMember.Team.Id)
+                .Include(a => a.Team)
+                .Include(a => a.Supervisor)
+                    .ThenInclude(s => s.UserProfile)
+                .OrderByDescending(a => a.DateTime)
+                .Select(a => new AppointmentDto
+                {
+                    Id = a.Id,
+                    DateTime = a.DateTime,
+                    Status = a.Status,
+                    Link = a.Link,
+                    IsOnline = a.IsOnline,
+                    Excuse = a.Excuse,
+                    TeamId = a.TeamId,
+                    ProjectName = a.Team.ProjectTitle,
+                    SupervisorId = a.SupervisorId,
+                    SupervisorName = a.Supervisor.UserProfile != null
+                        ? a.Supervisor.UserProfile.FullName
+                        : a.Supervisor.Username
+                })
+                .ToListAsync();
+        }
+
+        // ── STUDENT: update appointment time (must provide excuse) ────────────
+
+        public async Task<bool> UpdateAppointmentAsync(int studentId, UpdateAppointmentDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Excuse))
+                return false;
+
+            // Verify student belongs to the team that owns this appointment
+            var appointment = await _context.Appointments
+                .Include(a => a.Team)
+                    .ThenInclude(t => t.TeamMembers)
+                .FirstOrDefaultAsync(a => a.Id == dto.AppointmentId);
+
+            if (appointment == null) return false;
+
+            var isMember = appointment.Team.TeamMembers.Any(tm => tm.UserId == studentId);
+            if (!isMember) return false;
+
+            // Only allow editing Pending or Approved appointments
+            if (appointment.Status == "Rejected") return false;
+
+            // Validate the new office hour belongs to this team's supervisor
+            var officeHour = await _context.OfficeHours
+                .FirstOrDefaultAsync(o => o.Id == dto.OfficeHourId
+                                       && o.SupervisorId == appointment.SupervisorId);
+
+            if (officeHour == null) return false;
+
+            var newDateTime = GetNextOccurrence(officeHour.DayOfWeek, officeHour.StartTime);
+
+            appointment.DateTime = newDateTime;
+            appointment.IsOnline = dto.IsOnline;
+            appointment.Excuse = dto.Excuse;
+            appointment.Status = "Pending"; // reset to pending after change
+
+            await _context.SaveChangesAsync();
+
+            // Notify team + supervisor
+            var studentName = await _context.UserProfiles
+                .Where(p => p.UserId == studentId)
+                .Select(p => p.FullName)
+                .FirstOrDefaultAsync() ?? "A student";
+
+            await NotifyTeamAsync(
+                appointment.TeamId,
+                appointment.SupervisorId,
+                "Appointment Rescheduled",
+                $"{studentName} rescheduled the appointment to {newDateTime:ddd dd MMM} at {officeHour.StartTime:hh\\:mm}. Excuse: {dto.Excuse}"
+            );
+
+            return true;
+        }
+
+        // ── Helper: get next occurrence of a weekday ───────────────────────────
+
+        private static DateTime GetNextOccurrence(string dayName, TimeSpan time)
+        {
+            if (!Enum.TryParse<DayOfWeek>(dayName, true, out var targetDay))
+                targetDay = DayOfWeek.Sunday;
+
+            var today = DateTime.UtcNow.Date;
+            int daysUntil = ((int)targetDay - (int)today.DayOfWeek + 7) % 7;
+            if (daysUntil == 0) daysUntil = 7; // always schedule for a future date
+            return DateTime.SpecifyKind(today.AddDays(daysUntil) + time, DateTimeKind.Utc);
         }
     }
 }

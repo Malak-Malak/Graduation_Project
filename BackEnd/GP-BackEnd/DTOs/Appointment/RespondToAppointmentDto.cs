@@ -4,7 +4,6 @@
     {
         public int AppointmentId { get; set; }
         public bool IsApproved { get; set; }
-        public string? Link { get; set; } 
+        public string? Link { get; set; }
     }
 }
-

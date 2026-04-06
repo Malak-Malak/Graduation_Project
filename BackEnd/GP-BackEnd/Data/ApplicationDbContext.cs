@@ -26,6 +26,7 @@ namespace GP_BackEnd.Data
         public DbSet<TeamJoinRequest> TeamJoinRequests { get; set; }
         public DbSet<TaskAssignment> TaskAssignments { get; set; }
         public DbSet<Requirement> Requirements { get; set; }
+        public DbSet<OfficeHour> OfficeHours { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -50,6 +51,14 @@ namespace GP_BackEnd.Data
                 .WithMany()
                 .HasForeignKey(t => t.CreatedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // OfficeHour -> Supervisor (User)
+            modelBuilder.Entity<OfficeHour>()
+                .HasOne(o => o.Supervisor)
+                .WithMany()
+                .HasForeignKey(o => o.SupervisorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
 
             // TeamMember -> Team
             modelBuilder.Entity<TeamMember>()

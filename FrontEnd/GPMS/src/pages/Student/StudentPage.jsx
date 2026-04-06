@@ -25,7 +25,6 @@ import ProjectRequirements from "../../components/common/student/Requirements/Pr
 import PhaseTransitionOverlay from "../../components/common/shared/PhaseTransitionOverlay";
 
 import { useAuth } from "../../contexts/AuthContext";
-import UserProfilePage from "../UserProfile/UserProfilePage";
 import studentApi from "../../api/handler/endpoints/studentApi";
 
 // ── session storage keys ──────────────────────────────────────────────────────
@@ -223,7 +222,7 @@ export default function StudentPage() {
                     <Route path="analytics" element={<StudentAnalytics />} />
                     <Route path="timeline" element={<ProjectTimeline />} />
                     <Route path="requirements" element={<ProjectRequirements />} />
-                    <Route path="profile" element={<UserProfilePage />} />
+                    <Route path="profile" element={<ProfilePage />} />
                     <Route path="my-team" element={<MyTeamPage />} />
                     <Route path="*" element={<Navigate to="/student" replace />} />
                     <Route path="feedback" element={<Feedback />} />

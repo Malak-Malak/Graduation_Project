@@ -1,23 +1,37 @@
 import axiosInstance from "./../../axiosInstance";
 
+// ── module-level cache ────────────────────────────────────────────────
+let _profileCache = null;
+let _profilePromise = null;
+
 const UserProfileApi = {
 
-    /** GET /api/UserProfile — بروفايل المستخدم الحالي */
-    getProfile: () =>
-        axiosInstance.get("/UserProfile").then((r) => r.data),
+    /** GET /api/UserProfile — مرة وحدة بس، بعدها من الـ cache */
+    getProfile: () => {
+        if (_profileCache) return Promise.resolve(_profileCache);
+        if (_profilePromise) return _profilePromise;
+        _profilePromise = axiosInstance.get("/UserProfile")
+            .then((r) => {
+                _profileCache = r.data;
+                _profilePromise = null;
+                return _profileCache;
+            })
+            .catch((err) => {
+                _profilePromise = null;
+                throw err;
+            });
+        return _profilePromise;
+    },
 
-    /**
-     * GET /api/UserProfile/{userId} — بروفايل طالب معين
-     * بنستخدمه في TeamFinder لعرض بروفايل الطالب الكامل
-     */
+    /** يمسح الـ cache — نستدعيه بعد create أو update */
+    invalidateCache: () => {
+        _profileCache = null;
+        _profilePromise = null;
+    },
+
     getProfileById: (userId) =>
         axiosInstance.get(`/UserProfile/${userId}`).then((r) => r.data),
 
-    /**
-     * POST /api/UserProfile — إنشاء البروفايل لأول مرة
-     * data.department  →  التخصص الأكاديمي  (string)
-     * data.skills      →  مصفوفة الـ skills  → بنحوّلها لـ string مفصول بـ comma → field
-     */
     createProfile: (data) =>
         axiosInstance.post("/UserProfile", {
             phoneNumber: data.phoneNumber ?? "",
@@ -28,11 +42,11 @@ const UserProfileApi = {
             field: (data.skills ?? []).join(","),
             personalEmail: data.email ?? "",
             bio: data.bio ?? "",
-        }).then((r) => r.data),
+        }).then((r) => {
+            UserProfileApi.invalidateCache();
+            return r.data;
+        }),
 
-    /**
-     * PUT /api/UserProfile — تعديل البروفايل
-     */
     updateProfile: (data) =>
         axiosInstance.put("/UserProfile", {
             phoneNumber: data.phoneNumber ?? "",
@@ -44,7 +58,10 @@ const UserProfileApi = {
             totalNumOfCreditCards: 0,
             personalEmail: data.email ?? "",
             bio: data.bio ?? "",
-        }).then((r) => r.data),
+        }).then((r) => {
+            UserProfileApi.invalidateCache();
+            return r.data;
+        }),
 };
 
 export default UserProfileApi;

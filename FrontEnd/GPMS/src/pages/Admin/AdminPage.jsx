@@ -8,7 +8,7 @@ import ActivityLogs from "../../components/common/admin/ActivityLogs/ActivityLog
 import SystemConfiguration from "../../components/common/admin/SystemConfiguration/SystemConfiguration";
 import PendingRequests from "../../components/common/admin/PendingRequests/PendingRequests";
 import AllRequests from "../../components/common/admin/AllRequests/AllRequests";
-import UserProfilePage from "../../pages/UserProfile/UserProfilePage";
+import ProfilePage from "../../components/common/student/Profile/ProfilePage";
 
 export default function AdminPage() {
   return (
@@ -21,7 +21,7 @@ export default function AdminPage() {
         <Route path="settings" element={<SystemConfiguration />} />
         <Route path="pending-requests" element={<PendingRequests />} /> {/* ✅ */}
         <Route path="all-requests" element={<AllRequests />} /> {/* ✅ */}
-        <Route path="profile" element={<UserProfilePage />} />
+        <Route path="profile" element={<ProfilePage />} />
         <Route path="*" element={<Navigate to="/admin" replace />} />
       </Routes>
     </MainLayout>

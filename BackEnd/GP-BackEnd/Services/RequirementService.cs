@@ -36,7 +36,10 @@ namespace GP_BackEnd.Services
                 .Select(r => new RequirementDto
                 {
                     Id = r.Id,
+                    Title = r.Title,
                     Description = r.Description,
+                    Priority = r.Priority,
+                    Type = r.Type,
                     CreatedAt = r.CreatedAt,
                     CreatedByName = r.CreatedBy.UserProfile != null
                         ? r.CreatedBy.UserProfile.FullName
@@ -48,16 +51,20 @@ namespace GP_BackEnd.Services
         // Add a requirement
         public async Task<bool> AddRequirementAsync(int userId, AddRequirementDto dto)
         {
-            var teamId = await GetTeamIdAsync(userId);
+            var teamId = await GetTeamIdAsync(userId);  // ✅ was GetProjectIdAsync
             if (teamId == null) return false;
 
             _context.Requirements.Add(new Requirement
             {
+                Title = dto.Title,
                 Description = dto.Description,
-                TeamId = teamId.Value,
+                Priority = dto.Priority,
+                Type = dto.Type,
+                TeamId = teamId.Value,              // ✅ was ProjectId
                 CreatedByUserId = userId,
                 CreatedAt = DateTime.UtcNow
             });
+
             await _context.SaveChangesAsync();
             return true;
         }
@@ -65,14 +72,19 @@ namespace GP_BackEnd.Services
         // Update a requirement
         public async Task<bool> UpdateRequirementAsync(int userId, int requirementId, UpdateRequirementDto dto)
         {
-            var teamId = await GetTeamIdAsync(userId);
+            var teamId = await GetTeamIdAsync(userId);  // ✅ was GetProjectIdAsync
             if (teamId == null) return false;
 
             var requirement = await _context.Requirements
-                .FirstOrDefaultAsync(r => r.Id == requirementId && r.TeamId == teamId);
+                .FirstOrDefaultAsync(r => r.Id == requirementId && r.TeamId == teamId); // ✅ was ProjectId
+
             if (requirement == null) return false;
 
+            requirement.Title = dto.Title;
             requirement.Description = dto.Description;
+            requirement.Priority = dto.Priority;
+            requirement.Type = dto.Type;
+
             await _context.SaveChangesAsync();
             return true;
         }
@@ -85,6 +97,7 @@ namespace GP_BackEnd.Services
 
             var requirement = await _context.Requirements
                 .FirstOrDefaultAsync(r => r.Id == requirementId && r.TeamId == teamId);
+
             if (requirement == null) return false;
 
             _context.Requirements.Remove(requirement);

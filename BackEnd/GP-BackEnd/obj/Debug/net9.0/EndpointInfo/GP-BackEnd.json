@@ -339,14 +339,14 @@
         }
       }
     },
-    "/api/Feedback/team/{teamId}": {
+    "/api/Feedback/file/{fileId}": {
       "get": {
         "tags": [
           "Feedback"
         ],
         "parameters": [
           {
-            "name": "teamId",
+            "name": "fileId",
             "in": "path",
             "required": true,
             "schema": {
@@ -417,52 +417,6 @@
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/Feedback/delete/{feedbackId}": {
-      "delete": {
-        "tags": [
-          "Feedback"
-        ],
-        "parameters": [
-          {
-            "name": "feedbackId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/Feedback/delete-reply/{replyId}": {
-      "delete": {
-        "tags": [
-          "Feedback"
-        ],
-        "parameters": [
-          {
-            "name": "replyId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "OK"
@@ -554,8 +508,8 @@
         }
       }
     },
-    "/api/Feedback/{feedbackId}": {
-      "get": {
+    "/api/Feedback/delete/{feedbackId}": {
+      "delete": {
         "tags": [
           "Feedback"
         ],
@@ -577,14 +531,14 @@
         }
       }
     },
-    "/api/Feedback/{feedbackId}/replies": {
-      "get": {
+    "/api/Feedback/delete-reply/{replyId}": {
+      "delete": {
         "tags": [
           "Feedback"
         ],
         "parameters": [
           {
-            "name": "feedbackId",
+            "name": "replyId",
             "in": "path",
             "required": true,
             "schema": {
@@ -1856,19 +1810,9 @@
             "type": "string",
             "nullable": true
           },
-          "teamId": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "taskItemId": {
-            "type": "integer",
-            "format": "int32",
-            "nullable": true
-          },
           "projectFileId": {
             "type": "integer",
-            "format": "int32",
-            "nullable": true
+            "format": "int32"
           }
         },
         "additionalProperties": false

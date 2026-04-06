@@ -20,20 +20,61 @@ namespace GP_BackEnd.Services
             return user?.CurrentVersion ?? 0;
         }
 
-        // Get all feedbacks for a team
-        public async Task<List<FeedbackDto>> GetTeamFeedbacksAsync(int userId, int teamId)
+        // Notify all team members + supervisor
+        private async Task NotifyTeamAsync(int teamId, string title, string message)
         {
+            var team = await _context.Teams
+                .Include(t => t.TeamMembers)
+                .FirstOrDefaultAsync(t => t.Id == teamId);
+
+            if (team == null) return;
+
+            // Collect all user IDs: members + supervisor
+            var userIds = team.TeamMembers.Select(m => m.UserId).ToList();
+            if (!userIds.Contains(team.SupervisorId))
+                userIds.Add(team.SupervisorId);
+
+            foreach (var userId in userIds)
+            {
+                _context.Notifications.Add(new Notification
+                {
+                    Title = title,
+                    Message = message,
+                    CreatedAt = DateTime.UtcNow,
+                    UserId = userId
+                });
+            }
+
+            await _context.SaveChangesAsync();
+        }
+
+        // ── GET feedbacks for a file ──────────────────────────────────────────
+
+        public async Task<List<FeedbackDto>> GetFeedbacksByFileAsync(int userId, int fileId)
+        {
+            // Verify user belongs to the team that owns this file
+            var file = await _context.ProjectFiles
+                .FirstOrDefaultAsync(f => f.Id == fileId);
+
+            if (file == null) return new List<FeedbackDto>();
+
+            var isMember = await _context.TeamMembers
+                .AnyAsync(tm => tm.TeamId == file.TeamId && tm.UserId == userId);
+
+            var isSupervisor = await _context.Teams
+                .AnyAsync(t => t.Id == file.TeamId && t.SupervisorId == userId);
+
+            if (!isMember && !isSupervisor) return new List<FeedbackDto>();
+
             var version = await GetUserVersionAsync(userId);
 
             var feedbacks = await _context.Feedbacks
                 .Include(f => f.Sender)
                     .ThenInclude(s => s.UserProfile)
-                .Include(f => f.TaskItem)
-                .Include(f => f.ProjectFile)        // ✅ added
                 .Include(f => f.Replies)
                     .ThenInclude(r => r.Sender)
                         .ThenInclude(s => s.UserProfile)
-                .Where(f => f.TeamId == teamId
+                .Where(f => f.ProjectFileId == fileId
                     && f.ParentFeedbackId == null
                     && f.Version == version)
                 .OrderByDescending(f => f.CreatedAt)
@@ -48,32 +89,34 @@ namespace GP_BackEnd.Services
                     ? f.Sender.UserProfile.FullName
                     : f.Sender.Username,
                 SenderRole = f.Sender.Role,
-                TaskItemId = f.TaskItemId,
-                TaskItemTitle = f.TaskItem != null ? f.TaskItem.Title : null,
-                ProjectFileId = f.ProjectFileId,    // ✅ added
+                ProjectFileId = f.ProjectFileId ?? 0,
                 Version = f.Version,
-                Replies = f.Replies.Select(r => new ReplyDto
-                {
-                    Id = r.Id,
-                    Content = r.Content,
-                    CreatedAt = r.CreatedAt,
-                    SenderName = r.Sender.UserProfile != null
-                        ? r.Sender.UserProfile.FullName
-                        : r.Sender.Username,
-                    SenderRole = r.Sender.Role
-                }).OrderBy(r => r.CreatedAt).ToList()
+                Replies = f.Replies
+                    .OrderBy(r => r.CreatedAt)
+                    .Select(r => new ReplyDto
+                    {
+                        Id = r.Id,
+                        Content = r.Content,
+                        CreatedAt = r.CreatedAt,
+                        SenderName = r.Sender.UserProfile != null
+                            ? r.Sender.UserProfile.FullName
+                            : r.Sender.Username,
+                        SenderRole = r.Sender.Role
+                    }).ToList()
             }).ToList();
         }
 
-        // Supervisor creates feedback
+        // ── CREATE feedback (supervisor only) ─────────────────────────────────
+
         public async Task<bool> CreateFeedbackAsync(int supervisorId, CreateFeedbackDto dto)
         {
-            // Check supervisor owns this team
-            var team = await _context.Teams
-                .Include(t => t.TeamMembers)
-                .FirstOrDefaultAsync(t => t.Id == dto.TeamId && t.SupervisorId == supervisorId);
+            // Verify the file exists and belongs to a team supervised by this supervisor
+            var file = await _context.ProjectFiles
+                .Include(f => f.Team)
+                .FirstOrDefaultAsync(f => f.Id == dto.ProjectFileId
+                    && f.Team.SupervisorId == supervisorId);
 
-            if (team == null) return false;
+            if (file == null) return false;
 
             var version = await GetUserVersionAsync(supervisorId);
 
@@ -81,9 +124,9 @@ namespace GP_BackEnd.Services
             {
                 Content = dto.Content,
                 SenderId = supervisorId,
-                TeamId = dto.TeamId,
-                TaskItemId = dto.TaskItemId,
-                ProjectFileId = dto.ProjectFileId,  // ✅ added
+                TeamId = file.TeamId,
+                ProjectFileId = dto.ProjectFileId,
+                TaskItemId = null,
                 Version = version,
                 CreatedAt = DateTime.UtcNow
             };
@@ -91,30 +134,28 @@ namespace GP_BackEnd.Services
             _context.Feedbacks.Add(feedback);
             await _context.SaveChangesAsync();
 
-            // Notify all team members
-            foreach (var member in team.TeamMembers)
-            {
-                _context.Notifications.Add(new Notification
-                {
-                    Title = "New Feedback",
-                    Message = dto.ProjectFileId != null
-                        ? "Your supervisor added feedback on a file."
-                        : dto.TaskItemId != null
-                            ? "Your supervisor added feedback on a task."
-                            : "Your supervisor added new feedback.",
-                    CreatedAt = DateTime.UtcNow,
-                    UserId = member.UserId
-                });
-            }
+            // Notify everyone
+            var senderName = await _context.UserProfiles
+                .Where(p => p.UserId == supervisorId)
+                .Select(p => p.FullName)
+                .FirstOrDefaultAsync()
+                ?? (await _context.Users.FindAsync(supervisorId))?.Username
+                ?? "Your supervisor";
 
-            await _context.SaveChangesAsync();
+            await NotifyTeamAsync(
+                file.TeamId,
+                "New Feedback",
+                $"{senderName} added feedback on file \"{file.FileName ?? file.FilePath}\"."
+            );
+
             return true;
         }
 
-        // Student adds a reply to a feedback
-        public async Task<bool> AddReplyAsync(int studentId, AddReplyDto dto)
+        // ── ADD reply (any team member or supervisor) ─────────────────────────
+
+        public async Task<bool> AddReplyAsync(int userId, AddReplyDto dto)
         {
-            // Check parent feedback exists
+            // Find parent feedback
             var parentFeedback = await _context.Feedbacks
                 .Include(f => f.Team)
                     .ThenInclude(t => t.TeamMembers)
@@ -123,72 +164,48 @@ namespace GP_BackEnd.Services
 
             if (parentFeedback == null) return false;
 
-            // Check student is in the team
-            var isMember = await _context.TeamMembers
-                .AnyAsync(tm => tm.TeamId == parentFeedback.TeamId && tm.UserId == studentId);
+            // Check user is a team member OR the supervisor
+            var isMember = parentFeedback.Team.TeamMembers.Any(tm => tm.UserId == userId);
+            var isSupervisor = parentFeedback.Team.SupervisorId == userId;
 
-            if (!isMember) return false;
+            if (!isMember && !isSupervisor) return false;
 
-            var version = await GetUserVersionAsync(studentId);
+            var version = await GetUserVersionAsync(userId);
 
             var reply = new Feedback
             {
                 Content = dto.Content,
-                SenderId = studentId,
+                SenderId = userId,
                 TeamId = parentFeedback.TeamId,
-                TaskItemId = parentFeedback.TaskItemId,
-                ProjectFileId = parentFeedback.ProjectFileId,  // ✅ added
+                ProjectFileId = parentFeedback.ProjectFileId,
+                TaskItemId = null,
                 ParentFeedbackId = dto.ParentFeedbackId,
                 Version = version,
                 CreatedAt = DateTime.UtcNow
             };
 
             _context.Feedbacks.Add(reply);
-
-            // Notify supervisor
-            _context.Notifications.Add(new Notification
-            {
-                Title = "New Reply",
-                Message = "A student replied to your feedback.",
-                CreatedAt = DateTime.UtcNow,
-                UserId = parentFeedback.Team.SupervisorId
-            });
-
             await _context.SaveChangesAsync();
+
+            // Notify everyone
+            var senderName = await _context.UserProfiles
+                .Where(p => p.UserId == userId)
+                .Select(p => p.FullName)
+                .FirstOrDefaultAsync()
+                ?? (await _context.Users.FindAsync(userId))?.Username
+                ?? "Someone";
+
+            await NotifyTeamAsync(
+                parentFeedback.TeamId,
+                "New Reply",
+                $"{senderName} replied to a feedback."
+            );
+
             return true;
         }
 
-        // Delete a feedback (supervisor only, deletes replies too via cascade)
-        public async Task<bool> DeleteFeedbackAsync(int supervisorId, int feedbackId)
-        {
-            var feedback = await _context.Feedbacks
-                .FirstOrDefaultAsync(f => f.Id == feedbackId
-                    && f.SenderId == supervisorId
-                    && f.ParentFeedbackId == null);
+        // ── EDIT feedback (supervisor only) ───────────────────────────────────
 
-            if (feedback == null) return false;
-
-            _context.Feedbacks.Remove(feedback);
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
-        // Delete a reply (only the one who wrote it)
-        public async Task<bool> DeleteReplyAsync(int userId, int replyId)
-        {
-            var reply = await _context.Feedbacks
-                .FirstOrDefaultAsync(f => f.Id == replyId
-                    && f.SenderId == userId
-                    && f.ParentFeedbackId != null);
-
-            if (reply == null) return false;
-
-            _context.Feedbacks.Remove(reply);
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
-        // Edit a feedback (supervisor only)
         public async Task<bool> EditFeedbackAsync(int supervisorId, int feedbackId, string newContent)
         {
             var feedback = await _context.Feedbacks
@@ -203,7 +220,8 @@ namespace GP_BackEnd.Services
             return true;
         }
 
-        // Edit a reply (only the one who wrote it)
+        // ── EDIT reply (only the one who wrote it) ────────────────────────────
+
         public async Task<bool> EditReplyAsync(int userId, int replyId, string newContent)
         {
             var reply = await _context.Feedbacks
@@ -217,74 +235,37 @@ namespace GP_BackEnd.Services
             await _context.SaveChangesAsync();
             return true;
         }
-        // Get a single feedback by id
-        public async Task<FeedbackDto?> GetFeedbackByIdAsync(int userId, int feedbackId)
+
+        // ── DELETE feedback (supervisor only, cascade deletes replies) ─────────
+
+        public async Task<bool> DeleteFeedbackAsync(int supervisorId, int feedbackId)
         {
-            var version = await GetUserVersionAsync(userId);
-
-            var f = await _context.Feedbacks
-                .Include(f => f.Sender)
-                    .ThenInclude(s => s.UserProfile)
-                .Include(f => f.TaskItem)
-                .Include(f => f.ProjectFile)
-                .Include(f => f.Replies)
-                    .ThenInclude(r => r.Sender)
-                        .ThenInclude(s => s.UserProfile)
+            var feedback = await _context.Feedbacks
                 .FirstOrDefaultAsync(f => f.Id == feedbackId
-                    && f.ParentFeedbackId == null
-                    && f.Version == version);
+                    && f.SenderId == supervisorId
+                    && f.ParentFeedbackId == null);
 
-            if (f == null) return null;
+            if (feedback == null) return false;
 
-            return new FeedbackDto
-            {
-                Id = f.Id,
-                Content = f.Content,
-                CreatedAt = f.CreatedAt,
-                SenderName = f.Sender.UserProfile != null
-                    ? f.Sender.UserProfile.FullName
-                    : f.Sender.Username,
-                SenderRole = f.Sender.Role,
-                TaskItemId = f.TaskItemId,
-                TaskItemTitle = f.TaskItem != null ? f.TaskItem.Title : null,
-                ProjectFileId = f.ProjectFileId,
-                Version = f.Version,
-                Replies = f.Replies.Select(r => new ReplyDto
-                {
-                    Id = r.Id,
-                    Content = r.Content,
-                    CreatedAt = r.CreatedAt,
-                    SenderName = r.Sender.UserProfile != null
-                        ? r.Sender.UserProfile.FullName
-                        : r.Sender.Username,
-                    SenderRole = r.Sender.Role
-                }).OrderBy(r => r.CreatedAt).ToList()
-            };
+            _context.Feedbacks.Remove(feedback);
+            await _context.SaveChangesAsync();
+            return true;
         }
 
-        // Get replies for a specific feedback
-        public async Task<List<ReplyDto>> GetRepliesAsync(int userId, int feedbackId)
+        // ── DELETE reply (only the one who wrote it) ──────────────────────────
+
+        public async Task<bool> DeleteReplyAsync(int userId, int replyId)
         {
-            var version = await GetUserVersionAsync(userId);
+            var reply = await _context.Feedbacks
+                .FirstOrDefaultAsync(f => f.Id == replyId
+                    && f.SenderId == userId
+                    && f.ParentFeedbackId != null);
 
-            var replies = await _context.Feedbacks
-                .Include(r => r.Sender)
-                    .ThenInclude(s => s.UserProfile)
-                .Where(r => r.ParentFeedbackId == feedbackId
-                    && r.Version == version)
-                .OrderBy(r => r.CreatedAt)
-                .ToListAsync();
+            if (reply == null) return false;
 
-            return replies.Select(r => new ReplyDto
-            {
-                Id = r.Id,
-                Content = r.Content,
-                CreatedAt = r.CreatedAt,
-                SenderName = r.Sender.UserProfile != null
-                    ? r.Sender.UserProfile.FullName
-                    : r.Sender.Username,
-                SenderRole = r.Sender.Role
-            }).ToList();
+            _context.Feedbacks.Remove(reply);
+            await _context.SaveChangesAsync();
+            return true;
         }
     }
 }

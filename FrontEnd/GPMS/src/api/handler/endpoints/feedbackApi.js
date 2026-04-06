@@ -1,80 +1,131 @@
 // src/api/handler/endpoints/feedbackApi.js
 //
-// Endpoints:
-//   GET    /api/Feedback/team/{teamId}
-//   POST   /api/Feedback/create
-//   POST   /api/Feedback/reply
-//   PUT    /api/Feedback/edit/{feedbackId}
-//   PUT    /api/Feedback/edit-reply/{replyId}
+// Correct endpoints (from Swagger):
+//   GET    /api/Feedback/file/{fileId}          ← feedback for a specific file
+//   POST   /api/Feedback/create                 ← { content, teamId, taskItemId, projectFileId }
+//   POST   /api/Feedback/reply                  ← { content, parentFeedbackId }
+//   PUT    /api/Feedback/edit/{feedbackId}       ← { content }
+//   PUT    /api/Feedback/edit-reply/{replyId}    ← { content }
 //   DELETE /api/Feedback/delete/{feedbackId}
 //   DELETE /api/Feedback/delete-reply/{replyId}
+//
+// Mapped shapes used in UI:
+//   MappedFeedback: { feedbackId, content, createdAt, authorName, authorRole, taskItemId, projectFileId, replies[] }
+//   MappedReply:    { replyId, content, createdAt, authorName, authorRole }
 
 import axiosInstance from "../../axiosInstance";
 
-const feedbackApi = {
-    /**
-     * GET /api/Feedback/team/{teamId}
-     * Expected shape per item:
-     * {
-     *   feedbackId, content, teamId, taskItemId?,
-     *   authorName, authorId, createdAt,
-     *   replies: [{ replyId, content, authorName, authorId, createdAt }]
-     * }
-     */
-    getFeedbackByTeam: (teamId) =>
-        axiosInstance.get(`/Feedback/team/${teamId}`).then((r) => {
-            const data = Array.isArray(r.data) ? r.data : [];
-            return data.map((fb) => ({
-                feedbackId: fb.id,
-                content: fb.content,
-                createdAt: fb.createdAt,
-                authorName: fb.senderName,      // ✅ map
-                authorRole: fb.senderRole,
-                taskItemId: fb.taskItemId,
-                replies: (fb.replies ?? []).map((rep) => ({
-                    replyId: rep.id,            // ✅ map
-                    content: rep.content,
-                    createdAt: rep.createdAt,
-                    authorName: rep.senderName, // ✅ map
-                    authorRole: rep.senderRole,
-                })),
-            }));
-        }),
+// ── field mappers ─────────────────────────────────────────────────────────────
 
-    /** POST /api/Feedback/create
-     * @param {{ content: string, teamId: number, taskItemId: number }} body
+const mapReply = (rep) => ({
+    replyId: rep.id ?? rep.replyId ?? null,
+    content: rep.content ?? "",
+    createdAt: rep.createdAt ?? null,
+    authorName: rep.senderName ?? rep.authorName ?? "",
+    authorRole: rep.senderRole ?? rep.authorRole ?? "",
+});
+
+const mapFeedback = (fb) => ({
+    feedbackId: fb.id ?? fb.feedbackId ?? null,
+    content: fb.content ?? "",
+    createdAt: fb.createdAt ?? null,
+    authorName: fb.senderName ?? fb.authorName ?? "",
+    authorRole: fb.senderRole ?? fb.authorRole ?? "",
+    taskItemId: fb.taskItemId ?? null,
+    projectFileId: fb.projectFileId ?? null,
+    replies: Array.isArray(fb.replies) ? fb.replies.map(mapReply) : [],
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+const feedbackApi = {
+
+    // ── READ ──────────────────────────────────────────────────────────────────
+
+    /**
+     * GET /api/Feedback/file/{fileId}
+     * Returns all feedback for a specific file (with nested replies).
+     * Call this once per file card to get feedback + student replies.
+     * @param {number} fileId  ← file.id
+     * @returns {Promise<MappedFeedback[]>}
+     */
+    getFeedbackByFile: (fileId) =>
+        axiosInstance
+            .get(`/Feedback/file/${fileId}`)
+            .then((r) => (Array.isArray(r.data) ? r.data : []).map(mapFeedback)),
+
+    // ── CREATE ────────────────────────────────────────────────────────────────
+
+    /**
+     * POST /api/Feedback/create
+     * Supervisor creates feedback on a student file.
+     * taskItemId = file.id
+     * @param {{ content: string, teamId: number, taskItemId: number, projectFileId?: number }} body
      */
     createFeedback: (body) =>
-        axiosInstance.post("/Feedback/create", {
-            content: body.content ?? "",
-            teamId: body.teamId ?? 0,
-            taskItemId: body.taskItemId ?? 0,
-        }).then((r) => r.data),
+        axiosInstance
+            .post("/Feedback/create", {
+                content: body.content ?? "",
+                teamId: body.teamId,
+                taskItemId: body.taskItemId ?? 0,
+                projectFileId: body.projectFileId ?? 0,
+            })
+            .then((r) => r.data),
 
-    /** POST /api/Feedback/reply
+    /**
+     * POST /api/Feedback/reply
+     * Student replies to a feedback thread.
      * @param {{ content: string, parentFeedbackId: number }} body
      */
     replyToFeedback: (body) =>
-        axiosInstance.post("/Feedback/reply", {
-            content: body.content ?? "",
-            parentFeedbackId: body.parentFeedbackId ?? 0,
-        }).then((r) => r.data),
+        axiosInstance
+            .post("/Feedback/reply", {
+                content: body.content ?? "",
+                parentFeedbackId: body.parentFeedbackId,
+            })
+            .then((r) => r.data),
 
-    /** PUT /api/Feedback/edit/{feedbackId} */
+    // ── UPDATE ────────────────────────────────────────────────────────────────
+
+    /**
+     * PUT /api/Feedback/edit/{feedbackId}
+     * @param {number} feedbackId
+     * @param {string} content
+     */
     editFeedback: (feedbackId, content) =>
-        axiosInstance.put(`/Feedback/edit/${feedbackId}`, { content }).then((r) => r.data),
+        axiosInstance
+            .put(`/Feedback/edit/${feedbackId}`, { content })
+            .then((r) => r.data),
 
-    /** PUT /api/Feedback/edit-reply/{replyId} */
+    /**
+     * PUT /api/Feedback/edit-reply/{replyId}
+     * @param {number} replyId
+     * @param {string} content
+     */
     editReply: (replyId, content) =>
-        axiosInstance.put(`/Feedback/edit-reply/${replyId}`, { content }).then((r) => r.data),
+        axiosInstance
+            .put(`/Feedback/edit-reply/${replyId}`, { content })
+            .then((r) => r.data),
 
-    /** DELETE /api/Feedback/delete/{feedbackId} */
+    // ── DELETE ────────────────────────────────────────────────────────────────
+
+    /**
+     * DELETE /api/Feedback/delete/{feedbackId}
+     * @param {number} feedbackId
+     */
     deleteFeedback: (feedbackId) =>
-        axiosInstance.delete(`/Feedback/delete/${feedbackId}`).then((r) => r.data),
+        axiosInstance
+            .delete(`/Feedback/delete/${feedbackId}`)
+            .then((r) => r.data),
 
-    /** DELETE /api/Feedback/delete-reply/{replyId} */
+    /**
+     * DELETE /api/Feedback/delete-reply/{replyId}
+     * @param {number} replyId
+     */
     deleteReply: (replyId) =>
-        axiosInstance.delete(`/Feedback/delete-reply/${replyId}`).then((r) => r.data),
+        axiosInstance
+            .delete(`/Feedback/delete-reply/${replyId}`)
+            .then((r) => r.data),
 };
 
 export default feedbackApi;

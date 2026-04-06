@@ -1,39 +1,66 @@
 // src/api/handler/endpoints/fileSystemApi.js
 //
-// Endpoints:
-//   GET    /api/FileSystem/supervisor-files
-//   GET    /api/FileSystem/student-files
-//   POST   /api/FileSystem/add
-//   PUT    /api/FileSystem/edit/{id}
-//   DELETE /api/FileSystem/delete/{id}
+// Real response shape from GET /api/FileSystem/student-files and supervisor-files:
+// {
+//   id              : number,   ← use this everywhere (NOT attachmentId)
+//   fileName        : string,
+//   filePath        : string,
+//   description     : string,
+//   uploadedAt      : string (ISO),
+//   uploadedByName  : string,
+//   uploadedByUserId: number,
+// }
 //
-// NOTE: Backend returns { id, filePath, description, uploadedAt, ... }
-//       The path parameter is called "attachmentId" in Swagger but maps to "id" in response.
+// Endpoints:
+//   GET    /api/FileSystem/supervisor-files      → supervisor's own files
+//   GET    /api/FileSystem/student-files         → student files
+//   POST   /api/FileSystem/add                   → { filePath, fileName, description }
+//   PUT    /api/FileSystem/edit/{id}             → { filePath, fileName, description }
+//   DELETE /api/FileSystem/delete/{id}
 
 import axiosInstance from "../../axiosInstance";
 
 const fileSystemApi = {
 
+    /** GET /api/FileSystem/supervisor-files */
     getSupervisorFiles: () =>
         axiosInstance.get("/FileSystem/supervisor-files").then((r) => r.data),
 
+    /** GET /api/FileSystem/student-files */
     getStudentFiles: () =>
         axiosInstance.get("/FileSystem/student-files").then((r) => r.data),
 
+    /**
+     * POST /api/FileSystem/add
+     * @param {{ filePath: string, fileName: string, description: string }} body
+     */
     addFile: (body) =>
-        axiosInstance.post("/FileSystem/add", {
-            filePath: body.filePath ?? "",
-            description: body.description ?? "",
-        }).then((r) => r.data),
+        axiosInstance
+            .post("/FileSystem/add", {
+                filePath: body.filePath ?? "",
+                fileName: body.fileName ?? "",
+                description: body.description ?? "",
+            })
+            .then((r) => r.data),
 
-    // @param {number} id — the file's "id" from GET response
+    /**
+     * PUT /api/FileSystem/edit/{id}
+     * @param {number} id     ← file.id from the response
+     * @param {{ filePath: string, fileName: string, description: string }} body
+     */
     editFile: (id, body) =>
-        axiosInstance.put(`/FileSystem/edit/${id}`, {
-            filePath: body.filePath ?? "",
-            description: body.description ?? "",
-        }).then((r) => r.data),
+        axiosInstance
+            .put(`/FileSystem/edit/${id}`, {
+                filePath: body.filePath ?? "",
+                fileName: body.fileName ?? "",
+                description: body.description ?? "",
+            })
+            .then((r) => r.data),
 
-    // @param {number} id — the file's "id" from GET response
+    /**
+     * DELETE /api/FileSystem/delete/{id}
+     * @param {number} id  ← file.id
+     */
     deleteFile: (id) =>
         axiosInstance.delete(`/FileSystem/delete/${id}`).then((r) => r.data),
 };

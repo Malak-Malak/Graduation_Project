@@ -217,5 +217,74 @@ namespace GP_BackEnd.Services
             await _context.SaveChangesAsync();
             return true;
         }
+        // Get a single feedback by id
+        public async Task<FeedbackDto?> GetFeedbackByIdAsync(int userId, int feedbackId)
+        {
+            var version = await GetUserVersionAsync(userId);
+
+            var f = await _context.Feedbacks
+                .Include(f => f.Sender)
+                    .ThenInclude(s => s.UserProfile)
+                .Include(f => f.TaskItem)
+                .Include(f => f.ProjectFile)
+                .Include(f => f.Replies)
+                    .ThenInclude(r => r.Sender)
+                        .ThenInclude(s => s.UserProfile)
+                .FirstOrDefaultAsync(f => f.Id == feedbackId
+                    && f.ParentFeedbackId == null
+                    && f.Version == version);
+
+            if (f == null) return null;
+
+            return new FeedbackDto
+            {
+                Id = f.Id,
+                Content = f.Content,
+                CreatedAt = f.CreatedAt,
+                SenderName = f.Sender.UserProfile != null
+                    ? f.Sender.UserProfile.FullName
+                    : f.Sender.Username,
+                SenderRole = f.Sender.Role,
+                TaskItemId = f.TaskItemId,
+                TaskItemTitle = f.TaskItem != null ? f.TaskItem.Title : null,
+                ProjectFileId = f.ProjectFileId,
+                Version = f.Version,
+                Replies = f.Replies.Select(r => new ReplyDto
+                {
+                    Id = r.Id,
+                    Content = r.Content,
+                    CreatedAt = r.CreatedAt,
+                    SenderName = r.Sender.UserProfile != null
+                        ? r.Sender.UserProfile.FullName
+                        : r.Sender.Username,
+                    SenderRole = r.Sender.Role
+                }).OrderBy(r => r.CreatedAt).ToList()
+            };
+        }
+
+        // Get replies for a specific feedback
+        public async Task<List<ReplyDto>> GetRepliesAsync(int userId, int feedbackId)
+        {
+            var version = await GetUserVersionAsync(userId);
+
+            var replies = await _context.Feedbacks
+                .Include(r => r.Sender)
+                    .ThenInclude(s => s.UserProfile)
+                .Where(r => r.ParentFeedbackId == feedbackId
+                    && r.Version == version)
+                .OrderBy(r => r.CreatedAt)
+                .ToListAsync();
+
+            return replies.Select(r => new ReplyDto
+            {
+                Id = r.Id,
+                Content = r.Content,
+                CreatedAt = r.CreatedAt,
+                SenderName = r.Sender.UserProfile != null
+                    ? r.Sender.UserProfile.FullName
+                    : r.Sender.Username,
+                SenderRole = r.Sender.Role
+            }).ToList();
+        }
     }
 }

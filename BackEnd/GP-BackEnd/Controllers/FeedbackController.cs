@@ -108,6 +108,23 @@ namespace GP_BackEnd.Controllers
 
             return Ok("Reply updated successfully.");
         }
+        // GET api/feedback/{feedbackId}
+        [HttpGet("{feedbackId}")]
+        public async Task<IActionResult> GetFeedbackById(int feedbackId)
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var feedback = await _feedbackService.GetFeedbackByIdAsync(userId, feedbackId);
+            if (feedback == null) return NotFound("Feedback not found.");
+            return Ok(feedback);
+        }
 
+        // GET api/feedback/{feedbackId}/replies
+        [HttpGet("{feedbackId}/replies")]
+        public async Task<IActionResult> GetReplies(int feedbackId)
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var replies = await _feedbackService.GetRepliesAsync(userId, feedbackId);
+            return Ok(replies);
+        }
     }
 }

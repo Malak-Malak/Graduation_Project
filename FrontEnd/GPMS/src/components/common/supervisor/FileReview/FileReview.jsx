@@ -1,18 +1,4 @@
 // src/components/common/supervisor/FileReview/FileReview.jsx
-//
-// File shape:  { id, fileName, filePath, description, uploadedAt, uploadedByName, uploadedByUserId }
-// Feedback shape (mapped by feedbackApi):
-//   { feedbackId, content, createdAt, authorName, authorRole, taskItemId,
-//     replies: [{ replyId, content, createdAt, authorName, authorRole }] }
-//
-// KEY FLOW:
-//   Supervisor creates feedback → POST /api/Feedback/create { taskItemId: file.id }
-//   Feedback is fetched per file → GET /api/Feedback/file/{fileId}
-//   Student replies are nested inside each feedback's replies[]
-//
-// Tab 0 "My Files":     GET /api/FileSystem/supervisor-files → supervisor's own uploads
-// Tab 1 "Review Teams": GET /api/FileSystem/student-files   → student files per team
-//                        + GET /api/Feedback/file/{fileId}  → per-file feedback with replies
 
 import { useState, useEffect, useCallback } from "react";
 import {
@@ -20,6 +6,7 @@ import {
     CircularProgress, Alert, Dialog, DialogTitle, DialogContent,
     DialogActions, TextField, MenuItem, Select, FormControl,
     InputLabel, Chip, Avatar, Divider, Tabs, Tab, InputAdornment,
+    Collapse,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import LinkOutlinedIcon from "@mui/icons-material/LinkOutlined";
@@ -37,6 +24,8 @@ import RateReviewOutlinedIcon from "@mui/icons-material/RateReviewOutlined";
 import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutlined";
 import DriveFileRenameOutlineOutlinedIcon from "@mui/icons-material/DriveFileRenameOutlineOutlined";
 import ReplyOutlinedIcon from "@mui/icons-material/ReplyOutlined";
+import CheckOutlinedIcon from "@mui/icons-material/CheckOutlined";
+import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
 
 import { getSupervisorTeams } from "../../../../api/handler/endpoints/supervisorApi";
 import fileSystemApi from "../../../../api/handler/endpoints/fileSystemApi";
@@ -100,7 +89,6 @@ export default function FileReview() {
     const [myError, setMyError] = useState(null);
     const [deleteErr, setDeleteErr] = useState(null);
 
-    // add/edit dialog
     const [addOpen, setAddOpen] = useState(false);
     const [editTarget, setEditTarget] = useState(null);
     const [form, setForm] = useState(EMPTY_FORM);
@@ -111,15 +99,13 @@ export default function FileReview() {
     const [teams, setTeams] = useState([]);
     const [selectedTeam, setSelectedTeam] = useState("");
     const [studentFiles, setStudentFiles] = useState([]);
-    // feedbackMap: { [file.id]: MappedFeedback[] }
     const [feedbackMap, setFeedbackMap] = useState({});
     const [teamsLoading, setTeamsLoading] = useState(true);
     const [filesLoading, setFilesLoading] = useState(false);
     const [teamsError, setTeamsError] = useState(null);
     const [filesError, setFilesError] = useState(null);
 
-    // per-file refresh spinner after feedback create/delete
-    const [fileRefreshing, setFileRefreshing] = useState({});   // { [fileId]: bool }
+    const [fileRefreshing, setFileRefreshing] = useState({});
 
     // feedback creation dialog
     const [fbOpen, setFbOpen] = useState(false);
@@ -127,6 +113,12 @@ export default function FileReview() {
     const [fbContent, setFbContent] = useState("");
     const [fbSaving, setFbSaving] = useState(false);
     const [fbError, setFbError] = useState("");
+
+    // ── inline feedback edit state ────────────────────────────────────────────
+    // editFb: { feedbackId, content, fileId }
+    const [editFb, setEditFb] = useState(null);
+    const [editFbSaving, setEditFbSaving] = useState(false);
+    const [editFbError, setEditFbError] = useState("");
 
     // ── fetch supervisor's own files ──────────────────────────────────────────
     const fetchMyFiles = useCallback(async () => {
@@ -166,10 +158,9 @@ export default function FileReview() {
         }
     }, []);
 
-    // ── fetch student files + feedback for selected team ──────────────────────
+    // ── fetch student files + feedback ────────────────────────────────────────
     const loadStudentData = useCallback(async (teamIdStr) => {
         if (!teamIdStr) return;
-
         setFilesLoading(true); setFilesError(null);
         setStudentFiles([]); setFeedbackMap({});
         try {
@@ -177,7 +168,6 @@ export default function FileReview() {
             const files = Array.isArray(filesData) ? filesData : [];
             setStudentFiles(files);
 
-            // Fetch feedback for every file in parallel
             const results = await Promise.allSettled(
                 files.map((f) =>
                     feedbackApi.getFeedbackByFile(f.id).then((list) => ({ fileId: f.id, list }))
@@ -185,9 +175,7 @@ export default function FileReview() {
             );
             const map = {};
             results.forEach((r) => {
-                if (r.status === "fulfilled") {
-                    map[r.value.fileId] = r.value.list;
-                }
+                if (r.status === "fulfilled") map[r.value.fileId] = r.value.list;
             });
             setFeedbackMap(map);
         } catch (err) {
@@ -199,7 +187,6 @@ export default function FileReview() {
         if (selectedTeam) loadStudentData(selectedTeam);
     }, [selectedTeam, loadStudentData]);
 
-    // ── refresh feedback for one file after create/delete ─────────────────────
     const refreshOneFeedback = useCallback(async (fileId) => {
         setFileRefreshing((p) => ({ ...p, [fileId]: true }));
         await fetchFileFeedback(fileId);
@@ -268,18 +255,17 @@ export default function FileReview() {
             await feedbackApi.createFeedback({
                 content: fbContent.trim(),
                 teamId: teamIdNum,
-                taskItemId: fbFile.id,   // ← file.id
+                taskItemId: 0,           // not a task item
+                projectFileId: fbFile.id, // ← the actual file id
             });
             setFbOpen(false);
-            // Refresh only the affected file's feedback
             await refreshOneFeedback(fbFile.id);
         } catch (err) {
-            setFbError(err?.response?.data?.message ?? "Failed to send feedback.");
+            setFbError(err?.response?.data?.message ?? err?.message ?? "Failed to send feedback.");
         } finally { setFbSaving(false); }
     };
 
     const handleDeleteFeedback = async (feedbackId, fileId) => {
-        // Optimistic update
         setFeedbackMap((prev) => ({
             ...prev,
             [fileId]: (prev[fileId] ?? []).filter((f) => f.feedbackId !== feedbackId),
@@ -290,6 +276,30 @@ export default function FileReview() {
             console.error("Delete feedback error:", err);
             await refreshOneFeedback(fileId);
         }
+    };
+
+    // ── inline edit feedback handlers ─────────────────────────────────────────
+    const startEditFb = (fb, fileId) => {
+        setEditFb({ feedbackId: fb.feedbackId, content: fb.content, fileId });
+        setEditFbError("");
+    };
+
+    const cancelEditFb = () => {
+        setEditFb(null);
+        setEditFbError("");
+    };
+
+    const handleSaveEditFb = async () => {
+        if (!editFb?.content.trim()) { setEditFbError("Feedback cannot be empty."); return; }
+        setEditFbSaving(true); setEditFbError("");
+        try {
+            await feedbackApi.editFeedback(editFb.feedbackId, editFb.content.trim());
+            const { fileId } = editFb;
+            setEditFb(null);
+            await refreshOneFeedback(fileId);
+        } catch (err) {
+            setEditFbError(err?.response?.data?.message ?? err?.message ?? "Failed to save changes.");
+        } finally { setEditFbSaving(false); }
     };
 
     // ── render supervisor's own file card ─────────────────────────────────────
@@ -378,7 +388,7 @@ export default function FileReview() {
         );
     };
 
-    // ── render student file card with feedback thread + student replies ────────
+    // ── render student file card with feedback thread ─────────────────────────
 
     const renderStudentFileCard = (file) => {
         const meta = TYPE_META[getFileType(file.filePath)];
@@ -393,11 +403,11 @@ export default function FileReview() {
                 overflow: "hidden",
                 transition: "box-shadow .15s", "&:hover": { boxShadow: theme.shadows[2] },
             }}>
+                {/* ── File info row ── */}
                 <Stack direction={{ xs: "column", sm: "row" }}
                     alignItems={{ sm: "center" }} justifyContent="space-between"
                     gap={1.5} sx={{ p: 2.5 }}>
 
-                    {/* Left */}
                     <Stack direction="row" alignItems="flex-start" gap={1.5} sx={{ minWidth: 0, flex: 1 }}>
                         <Box sx={{
                             p: 0.9, borderRadius: 2, flexShrink: 0, mt: 0.2,
@@ -450,7 +460,6 @@ export default function FileReview() {
                         </Box>
                     </Stack>
 
-                    {/* Right */}
                     <Stack direction="row" alignItems="center" gap={0.5} sx={{ flexShrink: 0 }}>
                         {isRefreshing && <CircularProgress size={14} sx={{ color: t.accentPrimary }} />}
                         {feedbacks.length > 0 && (
@@ -483,20 +492,38 @@ export default function FileReview() {
                     </Stack>
                 </Stack>
 
-                {/* ── Feedback thread with student replies ── */}
+                {/* ── Feedback thread ── */}
                 {feedbacks.length > 0 && (
                     <>
                         <Divider sx={{ borderColor: t.borderLight }} />
-                        <Box sx={{ px: 2.5, py: 2.5, bgcolor: `${t.surfaceHover ?? "#F8F9FA"}80` }}>
-                            <Typography sx={{
-                                fontSize: "0.7rem", fontWeight: 700, color: t.textTertiary,
-                                textTransform: "uppercase", letterSpacing: "0.07em", mb: 1.5,
-                            }}>
-                                Your Feedback ({feedbacks.length})
-                            </Typography>
-                            <Stack spacing={2.5}>
-                                {feedbacks.map((fb) => (
-                                    <Box key={fb.feedbackId}>
+
+                        {/* Section header */}
+                        <Box sx={{ px: 2.5, pt: 2, pb: 0.5, bgcolor: `${t.accentPrimary}06` }}>
+                            <Stack direction="row" alignItems="center" gap={1}>
+                                <ChatBubbleOutlineOutlinedIcon sx={{ fontSize: 13, color: t.accentPrimary }} />
+                                <Typography sx={{
+                                    fontSize: "0.68rem", fontWeight: 700, color: t.accentPrimary,
+                                    textTransform: "uppercase", letterSpacing: "0.08em",
+                                }}>
+                                    Your Feedback
+                                </Typography>
+                                <Chip label={feedbacks.length} size="small" sx={{
+                                    height: 16, fontSize: "0.6rem", fontWeight: 700,
+                                    bgcolor: `${t.accentPrimary}20`, color: t.accentPrimary,
+                                    "& .MuiChip-label": { px: 0.7 },
+                                }} />
+                            </Stack>
+                        </Box>
+
+                        <Stack
+                            spacing={0}
+                            divider={<Divider sx={{ borderColor: `${t.borderLight}80`, mx: 2.5 }} />}
+                            sx={{ bgcolor: `${t.accentPrimary}06`, pb: 2 }}
+                        >
+                            {feedbacks.map((fb) => {
+                                const isEditing = editFb?.feedbackId === fb.feedbackId;
+                                return (
+                                    <Box key={fb.feedbackId} sx={{ px: 2.5, pt: 2 }}>
 
                                         {/* ── Supervisor feedback bubble ── */}
                                         <Stack direction="row" gap={1.5} alignItems="flex-start">
@@ -507,42 +534,105 @@ export default function FileReview() {
                                             }}>
                                                 {initials(fb.authorName)}
                                             </Avatar>
+
                                             <Box sx={{ flex: 1, minWidth: 0 }}>
+                                                {/* Author + action row */}
                                                 <Stack direction="row" justifyContent="space-between"
-                                                    alignItems="center" mb={0.4}>
+                                                    alignItems="center" mb={0.5}>
                                                     <Stack direction="row" gap={1} alignItems="center">
-                                                        <Typography sx={{ fontWeight: 700, fontSize: "0.8rem", color: t.textPrimary }}>
+                                                        <Typography sx={{ fontWeight: 700, fontSize: "0.82rem", color: t.textPrimary }}>
                                                             {fb.authorName || "You"}
                                                         </Typography>
-                                                        <Typography sx={{ fontSize: "0.67rem", color: t.textTertiary }}>
+                                                        <Typography sx={{ fontSize: "0.66rem", color: t.textTertiary }}>
                                                             {fmtDate(fb.createdAt)}
                                                         </Typography>
                                                     </Stack>
-                                                    <Tooltip title="Delete feedback">
-                                                        <IconButton size="small"
-                                                            onClick={() => handleDeleteFeedback(fb.feedbackId, file.id)}
-                                                            sx={{ color: t.textTertiary, "&:hover": { color: t.error ?? "#C47E7E" } }}>
-                                                            <DeleteOutlineIcon sx={{ fontSize: 15 }} />
-                                                        </IconButton>
-                                                    </Tooltip>
+
+                                                    {/* Edit + Delete — hidden while editing */}
+                                                    {!isEditing && (
+                                                        <Stack direction="row" gap={0}>
+                                                            <Tooltip title="Edit feedback">
+                                                                <IconButton size="small"
+                                                                    onClick={() => startEditFb(fb, file.id)}
+                                                                    sx={{ color: t.textTertiary, "&:hover": { color: t.accentPrimary } }}>
+                                                                    <EditOutlinedIcon sx={{ fontSize: 14 }} />
+                                                                </IconButton>
+                                                            </Tooltip>
+                                                            <Tooltip title="Delete feedback">
+                                                                <IconButton size="small"
+                                                                    onClick={() => handleDeleteFeedback(fb.feedbackId, file.id)}
+                                                                    sx={{ color: t.textTertiary, "&:hover": { color: t.error ?? "#C47E7E" } }}>
+                                                                    <DeleteOutlineIcon sx={{ fontSize: 14 }} />
+                                                                </IconButton>
+                                                            </Tooltip>
+                                                        </Stack>
+                                                    )}
                                                 </Stack>
 
-                                                <Paper elevation={0} sx={{
-                                                    p: "8px 12px",
-                                                    borderRadius: "4px 12px 12px 12px",
-                                                    bgcolor: `${t.accentPrimary}08`,
-                                                    border: `1px solid ${t.accentPrimary}20`,
-                                                }}>
-                                                    <Typography sx={{ fontSize: "0.84rem", color: t.textSecondary, lineHeight: 1.55 }}>
-                                                        {fb.content}
-                                                    </Typography>
-                                                </Paper>
+                                                {/* Inline edit form */}
+                                                {isEditing ? (
+                                                    <Stack gap={1}>
+                                                        <TextField
+                                                            fullWidth size="small" multiline minRows={2}
+                                                            value={editFb.content}
+                                                            onChange={(e) =>
+                                                                setEditFb((p) => ({ ...p, content: e.target.value }))
+                                                            }
+                                                            autoFocus
+                                                            sx={{
+                                                                "& .MuiOutlinedInput-root": {
+                                                                    borderRadius: 2, fontSize: "0.84rem",
+                                                                },
+                                                            }}
+                                                        />
+                                                        {editFbError && (
+                                                            <Alert severity="error" sx={{ py: 0.3, fontSize: "0.75rem", borderRadius: 2 }}>
+                                                                {editFbError}
+                                                            </Alert>
+                                                        )}
+                                                        <Stack direction="row" gap={1}>
+                                                            <Button size="small" variant="contained"
+                                                                startIcon={editFbSaving
+                                                                    ? <CircularProgress size={11} color="inherit" />
+                                                                    : <CheckOutlinedIcon sx={{ fontSize: 13 }} />}
+                                                                onClick={handleSaveEditFb}
+                                                                disabled={editFbSaving}
+                                                                sx={{ bgcolor: t.accentPrimary, borderRadius: 2, fontSize: "0.72rem" }}>
+                                                                {editFbSaving ? "Saving…" : "Save"}
+                                                            </Button>
+                                                            <Button size="small"
+                                                                startIcon={<CloseOutlinedIcon sx={{ fontSize: 13 }} />}
+                                                                onClick={cancelEditFb}
+                                                                disabled={editFbSaving}
+                                                                sx={{ color: t.textSecondary, fontSize: "0.72rem" }}>
+                                                                Cancel
+                                                            </Button>
+                                                        </Stack>
+                                                    </Stack>
+                                                ) : (
+                                                    <Paper elevation={0} sx={{
+                                                        p: "9px 13px",
+                                                        borderRadius: "3px 10px 10px 10px",
+                                                        bgcolor: theme.palette.background.paper,
+                                                        border: `1px solid ${t.accentPrimary}25`,
+                                                    }}>
+                                                        <Typography sx={{
+                                                            fontSize: "0.84rem", color: t.textSecondary,
+                                                            lineHeight: 1.65, whiteSpace: "pre-wrap",
+                                                        }}>
+                                                            {fb.content}
+                                                        </Typography>
+                                                    </Paper>
+                                                )}
                                             </Box>
                                         </Stack>
 
                                         {/* ── Student replies ── */}
                                         {(fb.replies ?? []).length > 0 && (
-                                            <Box sx={{ mt: 1.5, ml: 6, pl: 2, borderLeft: `2px solid ${t.borderLight}` }}>
+                                            <Box sx={{
+                                                mt: 1.5, ml: 5.5,
+                                                pl: 2, borderLeft: `2px solid ${t.borderLight}`,
+                                            }}>
                                                 <Stack direction="row" alignItems="center" gap={0.8} mb={1}>
                                                     <ReplyOutlinedIcon sx={{ fontSize: 13, color: t.textTertiary }} />
                                                     <Typography sx={{
@@ -560,9 +650,7 @@ export default function FileReview() {
                                                             <Stack key={rep.replyId} direction="row" gap={1} alignItems="flex-start">
                                                                 <Avatar sx={{
                                                                     width: 26, height: 26, flexShrink: 0,
-                                                                    bgcolor: isStudent
-                                                                        ? "#6D8A7D"
-                                                                        : avatarColor(rep.authorName ?? ""),
+                                                                    bgcolor: isStudent ? "#6D8A7D" : avatarColor(rep.authorName ?? ""),
                                                                     fontSize: "0.6rem", fontWeight: 700,
                                                                 }}>
                                                                     {initials(rep.authorName ?? "")}
@@ -586,13 +674,14 @@ export default function FileReview() {
                                                                     </Stack>
                                                                     <Paper elevation={0} sx={{
                                                                         px: 1.2, py: 0.8,
-                                                                        borderRadius: "4px 10px 10px 10px",
-                                                                        bgcolor: isStudent
-                                                                            ? "#6D8A7D10"
-                                                                            : `${t.surfaceHover ?? "#F5F5F5"}`,
+                                                                        borderRadius: "3px 9px 9px 9px",
+                                                                        bgcolor: isStudent ? "#6D8A7D10" : theme.palette.action.hover,
                                                                         border: `1px solid ${isStudent ? "#6D8A7D25" : t.borderLight}`,
                                                                     }}>
-                                                                        <Typography sx={{ fontSize: "0.78rem", color: t.textSecondary, lineHeight: 1.5 }}>
+                                                                        <Typography sx={{
+                                                                            fontSize: "0.78rem", color: t.textSecondary,
+                                                                            lineHeight: 1.55, whiteSpace: "pre-wrap",
+                                                                        }}>
                                                                             {rep.content}
                                                                         </Typography>
                                                                     </Paper>
@@ -604,18 +693,21 @@ export default function FileReview() {
                                             </Box>
                                         )}
 
-                                        {/* No reply yet indicator */}
+                                        {/* No student reply yet */}
                                         {(fb.replies ?? []).filter((r) => r.authorRole === "Student").length === 0 && (
-                                            <Box sx={{ mt: 1, ml: 6, pl: 1 }}>
-                                                <Typography sx={{ fontSize: "0.67rem", color: t.textTertiary, fontStyle: "italic" }}>
+                                            <Box sx={{ mt: 1, ml: 5.5, pl: 1 }}>
+                                                <Typography sx={{
+                                                    fontSize: "0.67rem", color: t.textTertiary,
+                                                    fontStyle: "italic",
+                                                }}>
                                                     No student reply yet
                                                 </Typography>
                                             </Box>
                                         )}
                                     </Box>
-                                ))}
-                            </Stack>
-                        </Box>
+                                );
+                            })}
+                        </Stack>
                     </>
                 )}
             </Paper>
@@ -808,7 +900,8 @@ export default function FileReview() {
                     {fbFile && (
                         <Paper elevation={0} sx={{
                             p: 1.5, mb: 2, borderRadius: 2,
-                            bgcolor: `${t.surfaceHover ?? "#F5F5F5"}`, border: `1px solid ${t.borderLight}`,
+                            bgcolor: theme.palette.action.hover,
+                            border: `1px solid ${t.borderLight}`,
                         }}>
                             <Stack direction="row" gap={1} alignItems="center">
                                 <LinkOutlinedIcon sx={{ fontSize: 16, color: t.textTertiary, flexShrink: 0 }} />

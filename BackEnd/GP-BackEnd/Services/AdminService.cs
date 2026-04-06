@@ -247,45 +247,7 @@ namespace GP_BackEnd.Services
             return (added, skipped);
         }
 
-        // Submit multiple registration requests at once
-        public async Task<(int submitted, int skipped)> SubmitMultipleRequestsAsync(List<string> emails)
-        {
-            int submitted = 0;
-            int skipped = 0;
-
-            foreach (var email in emails)
-            {
-                var universityRecord = await _context.UniversityRecords
-                    .FirstOrDefaultAsync(u => u.UniversityEmail == email);
-
-                if (universityRecord == null) { skipped++; continue; }
-
-                if (universityRecord.Role == "Student" && !universityRecord.IsGraduate)
-                { skipped++; continue; }
-
-                var existingRequest = await _context.RegistrationRequests
-                    .FirstOrDefaultAsync(r => r.UniversityEmail == email);
-
-                if (existingRequest != null) { skipped++; continue; }
-
-                var existingUser = await _context.Users
-                    .FirstOrDefaultAsync(u => u.Email == email);
-
-                if (existingUser != null) { skipped++; continue; }
-
-                _context.RegistrationRequests.Add(new RegistrationRequest
-                {
-                    UniversityEmail = email,
-                    Status = "Pending",
-                    RequestedAt = DateTime.UtcNow
-                });
-
-                submitted++;
-            }
-
-            await _context.SaveChangesAsync();
-            return (submitted, skipped);
-        }
+      
 
         // Approve all pending requests at once
         public async Task<int> ApproveAllRequestsAsync()

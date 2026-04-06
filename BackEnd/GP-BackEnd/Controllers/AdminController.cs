@@ -92,14 +92,14 @@ namespace GP_BackEnd.Controllers
 
             return Ok("University record deleted successfully.");
         }
-        //// DELETE api/admin/clear-all-data
-        //[HttpDelete("clear-all-data")]
-        //public async Task<IActionResult> ClearAllData()
-        //{
-        //    await _adminService.ClearAllDataAsync();
-        //    return Ok("All data cleared successfully. Admin account preserved.");
-        //}
-        // DELETE api/admin/delete-request/{id}
+        // DELETE api/admin/clear-all-data
+        [HttpDelete("clear-all-data")]
+        public async Task<IActionResult> ClearAllData()
+        {
+            await _adminService.ClearAllDataAsync();
+            return Ok("All data cleared successfully. Admin account preserved.");
+        }
+        //DELETE api/admin/delete-request/{id}
         [HttpDelete("delete-request/{id}")]
         public async Task<IActionResult> DeleteRegistrationRequest(int id)
         {
@@ -118,13 +118,7 @@ namespace GP_BackEnd.Controllers
             return Ok(new { added, skipped });
         }
 
-        // POST api/admin/request-access-bulk
-        [HttpPost("request-access-bulk")]
-        public async Task<IActionResult> RequestAccessBulk([FromBody] BulkEmailsDto dto)
-        {
-            var (submitted, skipped) = await _adminService.SubmitMultipleRequestsAsync(dto.Emails);
-            return Ok(new { submitted, skipped });
-        }
+        
 
         // POST api/admin/approve-all-requests
         [HttpPost("approve-all-requests")]

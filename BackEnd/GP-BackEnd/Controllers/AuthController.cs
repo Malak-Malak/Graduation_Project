@@ -1,4 +1,5 @@
-﻿using GP_BackEnd.DTOs.Auth;
+﻿using GP_BackEnd.DTOs.Admin;
+using GP_BackEnd.DTOs.Auth;
 using GP_BackEnd.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -37,6 +38,13 @@ namespace GP_BackEnd.Controllers
                 return Unauthorized("Invalid username or password.");
 
             return Ok(result);
+        }
+        // POST api/admin/request-access-bulk
+        [HttpPost("request-access-bulk")]
+        public async Task<IActionResult> RequestAccessBulk([FromBody] BulkEmailsDto dto)
+        {
+            var (submitted, skipped) = await _authService.SubmitMultipleRequestsAsync(dto.Emails);
+            return Ok(new { submitted, skipped });
         }
     }
 }

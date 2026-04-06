@@ -53,6 +53,16 @@
   },
   {
     "ContainingType": "GP_BackEnd.Controllers.AdminController",
+    "Method": "ClearAllData",
+    "RelativePath": "api/Admin/clear-all-data",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.AdminController",
     "Method": "DeleteRegistrationRequest",
     "RelativePath": "api/Admin/delete-request/{id}",
     "HttpMethod": "DELETE",
@@ -91,22 +101,6 @@
     "IsController": true,
     "Order": 0,
     "Parameters": [],
-    "ReturnTypes": []
-  },
-  {
-    "ContainingType": "GP_BackEnd.Controllers.AdminController",
-    "Method": "RequestAccessBulk",
-    "RelativePath": "api/Admin/request-access-bulk",
-    "HttpMethod": "POST",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [
-      {
-        "Name": "dto",
-        "Type": "GP_BackEnd.DTOs.Admin.BulkEmailsDto",
-        "IsRequired": true
-      }
-    ],
     "ReturnTypes": []
   },
   {
@@ -188,6 +182,22 @@
       {
         "Name": "dto",
         "Type": "GP_BackEnd.DTOs.Auth.SubmitRegistrationRequestDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.AuthController",
+    "Method": "RequestAccessBulk",
+    "RelativePath": "api/Auth/request-access-bulk",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "GP_BackEnd.DTOs.Admin.BulkEmailsDto",
         "IsRequired": true
       }
     ],

@@ -3,6 +3,5 @@
     public class RequestAppointmentDto
     {
         public int OfficeHourId { get; set; }
-        public bool IsOnline { get; set; }
     }
 }

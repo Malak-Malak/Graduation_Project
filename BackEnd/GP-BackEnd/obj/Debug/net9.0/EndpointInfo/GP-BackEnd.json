@@ -159,18 +159,6 @@
         }
       }
     },
-    "/api/Admin/clear-all-data": {
-      "delete": {
-        "tags": [
-          "Admin"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
     "/api/Admin/delete-request/{id}": {
       "delete": {
         "tags": [
@@ -2093,9 +2081,6 @@
           "officeHourId": {
             "type": "integer",
             "format": "int32"
-          },
-          "isOnline": {
-            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -2200,6 +2185,9 @@
           "endTime": {
             "type": "string",
             "format": "date-span"
+          },
+          "isOnline": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -2224,9 +2212,6 @@
           "officeHourId": {
             "type": "integer",
             "format": "int32"
-          },
-          "isOnline": {
-            "type": "boolean"
           },
           "excuse": {
             "type": "string",

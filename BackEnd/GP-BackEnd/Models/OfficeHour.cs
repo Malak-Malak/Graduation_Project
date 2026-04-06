@@ -11,6 +11,7 @@ namespace GP_BackEnd.Models
 
         [ForeignKey("Supervisor")]
         public int SupervisorId { get; set; }
+        public bool? IsOnline { get; set; } = false;
 
         /// e.g. "Sunday", "Monday" ... or a specific date
         public string DayOfWeek { get; set; }

@@ -4,7 +4,6 @@
     {
         public int AppointmentId { get; set; }
         public int OfficeHourId { get; set; }
-        public bool IsOnline { get; set; }
         public string Excuse { get; set; }
     }
 }

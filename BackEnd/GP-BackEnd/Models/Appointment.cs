@@ -16,7 +16,7 @@ namespace GP_BackEnd.Models
 
         public int Version { get; set; } = 0;
 
-        public bool IsOnline { get; set; } = true;
+        public bool? IsOnline { get; set; } = true;
 
         public string Link { get; set; }
 

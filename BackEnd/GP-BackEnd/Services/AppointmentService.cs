@@ -14,8 +14,6 @@ namespace GP_BackEnd.Services
             _context = context;
         }
 
-        // ── Helper: notify all team members + supervisor ───────────────────────
-
         private async Task NotifyTeamAsync(int teamId, int supervisorId, string title, string message)
         {
             var memberIds = await _context.TeamMembers
@@ -41,11 +39,8 @@ namespace GP_BackEnd.Services
             await _context.SaveChangesAsync();
         }
 
-        // ── SUPERVISOR: set office hour ────────────────────────────────────────
-
         public async Task<bool> SetOfficeHourAsync(int supervisorId, SetOfficeHourDto dto)
         {
-            // Verify this user is actually a supervisor
             var user = await _context.Users.FindAsync(supervisorId);
             if (user == null || user.Role != "Supervisor") return false;
 
@@ -54,14 +49,13 @@ namespace GP_BackEnd.Services
                 SupervisorId = supervisorId,
                 DayOfWeek = dto.DayOfWeek.Trim(),
                 StartTime = dto.StartTime,
-                EndTime = dto.EndTime
+                EndTime = dto.EndTime,
+                IsOnline = dto.IsOnline
             });
 
             await _context.SaveChangesAsync();
             return true;
         }
-
-        // ── SUPERVISOR: delete office hour ────────────────────────────────────
 
         public async Task<bool> DeleteOfficeHourAsync(int supervisorId, int officeHourId)
         {
@@ -74,8 +68,6 @@ namespace GP_BackEnd.Services
             await _context.SaveChangesAsync();
             return true;
         }
-
-        // ── SUPERVISOR: get all their office hours ─────────────────────────────
 
         public async Task<List<OfficeHourDto>> GetMyOfficeHoursAsync(int supervisorId)
         {
@@ -91,14 +83,13 @@ namespace GP_BackEnd.Services
                     DayOfWeek = o.DayOfWeek,
                     StartTime = o.StartTime,
                     EndTime = o.EndTime,
+                    IsOnline = o.IsOnline ?? false,
                     SupervisorName = o.Supervisor.UserProfile != null
                         ? o.Supervisor.UserProfile.FullName
                         : o.Supervisor.Username
                 })
                 .ToListAsync();
         }
-
-        // ── SUPERVISOR: get all appointments (all statuses) ────────────────────
 
         public async Task<List<AppointmentDto>> GetAllAppointmentsAsync(int supervisorId)
         {
@@ -114,7 +105,7 @@ namespace GP_BackEnd.Services
                     DateTime = a.DateTime,
                     Status = a.Status,
                     Link = a.Link,
-                    IsOnline = a.IsOnline,
+                    IsOnline =a.IsOnline,
                     Excuse = a.Excuse,
                     TeamId = a.TeamId,
                     ProjectName = a.Team.ProjectTitle,
@@ -125,8 +116,6 @@ namespace GP_BackEnd.Services
                 })
                 .ToListAsync();
         }
-
-        // ── SUPERVISOR: get pending appointments only ──────────────────────────
 
         public async Task<List<AppointmentDto>> GetPendingAppointmentsAsync(int supervisorId)
         {
@@ -153,8 +142,6 @@ namespace GP_BackEnd.Services
                 })
                 .ToListAsync();
         }
-
-        // ── SUPERVISOR: respond to appointment ────────────────────────────────
 
         public async Task<bool> RespondToAppointmentAsync(int supervisorId, RespondToAppointmentDto dto)
         {
@@ -186,11 +173,8 @@ namespace GP_BackEnd.Services
             return true;
         }
 
-        // ── STUDENT: get supervisor's office hours ─────────────────────────────
-
         public async Task<List<OfficeHourDto>> GetSupervisorOfficeHoursAsync(int studentId)
         {
-            // Find the student's active team to get supervisor id
             var teamMember = await _context.TeamMembers
                 .Include(tm => tm.Team)
                 .FirstOrDefaultAsync(tm => tm.UserId == studentId && tm.Team.Status == "Active");
@@ -211,6 +195,7 @@ namespace GP_BackEnd.Services
                     DayOfWeek = o.DayOfWeek,
                     StartTime = o.StartTime,
                     EndTime = o.EndTime,
+                    IsOnline = o.IsOnline ?? false,
                     SupervisorName = o.Supervisor.UserProfile != null
                         ? o.Supervisor.UserProfile.FullName
                         : o.Supervisor.Username
@@ -218,39 +203,32 @@ namespace GP_BackEnd.Services
                 .ToListAsync();
         }
 
-        // ── STUDENT: request appointment (must pick an office hour slot) ───────
-
         public async Task<bool> RequestAppointmentAsync(int studentId, RequestAppointmentDto dto)
         {
-            // Get the student's active team
             var teamMember = await _context.TeamMembers
                 .Include(tm => tm.Team)
                 .FirstOrDefaultAsync(tm => tm.UserId == studentId && tm.Team.Status == "Active");
 
             if (teamMember == null) return false;
 
-            // Block if there is already a pending appointment for this team
             var existingPending = await _context.Appointments
                 .AnyAsync(a => a.TeamId == teamMember.Team.Id && a.Status == "Pending");
 
             if (existingPending) return false;
 
-            // Validate the office hour belongs to this team's supervisor
             var officeHour = await _context.OfficeHours
                 .FirstOrDefaultAsync(o => o.Id == dto.OfficeHourId
                                        && o.SupervisorId == teamMember.Team.SupervisorId);
 
             if (officeHour == null) return false;
 
-            // Build the appointment DateTime from the office hour's day + start time
-            // We schedule it for the next occurrence of that day
             var appointmentDateTime = GetNextOccurrence(officeHour.DayOfWeek, officeHour.StartTime);
 
             var appointment = new Appointment
             {
                 DateTime = appointmentDateTime,
                 Status = "Pending",
-                IsOnline = dto.IsOnline,
+                IsOnline = officeHour.IsOnline ?? false,
                 Link = string.Empty,
                 Excuse = null,
                 TeamId = teamMember.Team.Id,
@@ -260,7 +238,6 @@ namespace GP_BackEnd.Services
             _context.Appointments.Add(appointment);
             await _context.SaveChangesAsync();
 
-            // Notify team + supervisor
             var studentName = await _context.UserProfiles
                 .Where(p => p.UserId == studentId)
                 .Select(p => p.FullName)
@@ -270,13 +247,11 @@ namespace GP_BackEnd.Services
                 teamMember.Team.Id,
                 teamMember.Team.SupervisorId,
                 "New Appointment Request",
-                $"{studentName} requested a {(dto.IsOnline ? "online" : "in-person")} appointment on {appointmentDateTime:ddd dd MMM} at {officeHour.StartTime:hh\\:mm}."
+                $"{studentName} requested a {(officeHour.IsOnline == true ? "online" : "in-person")} appointment on {appointmentDateTime:ddd dd MMM} at {officeHour.StartTime:hh\\:mm}."
             );
 
             return true;
         }
-
-        // ── STUDENT: get all their team appointments ───────────────────────────
 
         public async Task<List<AppointmentDto>> GetMyAppointmentsAsync(int studentId)
         {
@@ -310,14 +285,11 @@ namespace GP_BackEnd.Services
                 .ToListAsync();
         }
 
-        // ── STUDENT: update appointment time (must provide excuse) ────────────
-
         public async Task<bool> UpdateAppointmentAsync(int studentId, UpdateAppointmentDto dto)
         {
             if (string.IsNullOrWhiteSpace(dto.Excuse))
                 return false;
 
-            // Verify student belongs to the team that owns this appointment
             var appointment = await _context.Appointments
                 .Include(a => a.Team)
                     .ThenInclude(t => t.TeamMembers)
@@ -328,10 +300,8 @@ namespace GP_BackEnd.Services
             var isMember = appointment.Team.TeamMembers.Any(tm => tm.UserId == studentId);
             if (!isMember) return false;
 
-            // Only allow editing Pending or Approved appointments
             if (appointment.Status == "Rejected") return false;
 
-            // Validate the new office hour belongs to this team's supervisor
             var officeHour = await _context.OfficeHours
                 .FirstOrDefaultAsync(o => o.Id == dto.OfficeHourId
                                        && o.SupervisorId == appointment.SupervisorId);
@@ -341,13 +311,12 @@ namespace GP_BackEnd.Services
             var newDateTime = GetNextOccurrence(officeHour.DayOfWeek, officeHour.StartTime);
 
             appointment.DateTime = newDateTime;
-            appointment.IsOnline = dto.IsOnline;
+            appointment.IsOnline = officeHour.IsOnline ?? false;
             appointment.Excuse = dto.Excuse;
-            appointment.Status = "Pending"; // reset to pending after change
+            appointment.Status = "Pending";
 
             await _context.SaveChangesAsync();
 
-            // Notify team + supervisor
             var studentName = await _context.UserProfiles
                 .Where(p => p.UserId == studentId)
                 .Select(p => p.FullName)
@@ -363,8 +332,6 @@ namespace GP_BackEnd.Services
             return true;
         }
 
-        // ── Helper: get next occurrence of a weekday ───────────────────────────
-
         private static DateTime GetNextOccurrence(string dayName, TimeSpan time)
         {
             if (!Enum.TryParse<DayOfWeek>(dayName, true, out var targetDay))
@@ -372,7 +339,7 @@ namespace GP_BackEnd.Services
 
             var today = DateTime.UtcNow.Date;
             int daysUntil = ((int)targetDay - (int)today.DayOfWeek + 7) % 7;
-            if (daysUntil == 0) daysUntil = 7; // always schedule for a future date
+            if (daysUntil == 0) daysUntil = 7;
             return DateTime.SpecifyKind(today.AddDays(daysUntil) + time, DateTimeKind.Utc);
         }
     }

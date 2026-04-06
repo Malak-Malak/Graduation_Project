@@ -5,5 +5,6 @@
         public string Content { get; set; }
         public int TeamId { get; set; }
         public int? TaskItemId { get; set; }
+        public int? ProjectFileId { get; set; }
     }
 }

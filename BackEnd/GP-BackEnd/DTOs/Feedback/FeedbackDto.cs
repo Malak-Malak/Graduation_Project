@@ -6,6 +6,7 @@
         public string Content { get; set; }
         public DateTime CreatedAt { get; set; }
         public string SenderName { get; set; }
+        public int? ProjectFileId { get; set; }
         public string SenderRole { get; set; }
         public int? TaskItemId { get; set; }
         public string? TaskItemTitle { get; set; }

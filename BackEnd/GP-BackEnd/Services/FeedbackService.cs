@@ -29,6 +29,7 @@ namespace GP_BackEnd.Services
                 .Include(f => f.Sender)
                     .ThenInclude(s => s.UserProfile)
                 .Include(f => f.TaskItem)
+                .Include(f => f.ProjectFile)        // ✅ added
                 .Include(f => f.Replies)
                     .ThenInclude(r => r.Sender)
                         .ThenInclude(s => s.UserProfile)
@@ -49,6 +50,7 @@ namespace GP_BackEnd.Services
                 SenderRole = f.Sender.Role,
                 TaskItemId = f.TaskItemId,
                 TaskItemTitle = f.TaskItem != null ? f.TaskItem.Title : null,
+                ProjectFileId = f.ProjectFileId,    // ✅ added
                 Version = f.Version,
                 Replies = f.Replies.Select(r => new ReplyDto
                 {
@@ -81,6 +83,7 @@ namespace GP_BackEnd.Services
                 SenderId = supervisorId,
                 TeamId = dto.TeamId,
                 TaskItemId = dto.TaskItemId,
+                ProjectFileId = dto.ProjectFileId,  // ✅ added
                 Version = version,
                 CreatedAt = DateTime.UtcNow
             };
@@ -94,9 +97,11 @@ namespace GP_BackEnd.Services
                 _context.Notifications.Add(new Notification
                 {
                     Title = "New Feedback",
-                    Message = dto.TaskItemId != null
-                        ? "Your supervisor added feedback on a task."
-                        : "Your supervisor added new feedback.",
+                    Message = dto.ProjectFileId != null
+                        ? "Your supervisor added feedback on a file."
+                        : dto.TaskItemId != null
+                            ? "Your supervisor added feedback on a task."
+                            : "Your supervisor added new feedback.",
                     CreatedAt = DateTime.UtcNow,
                     UserId = member.UserId
                 });
@@ -132,6 +137,7 @@ namespace GP_BackEnd.Services
                 SenderId = studentId,
                 TeamId = parentFeedback.TeamId,
                 TaskItemId = parentFeedback.TaskItemId,
+                ProjectFileId = parentFeedback.ProjectFileId,  // ✅ added
                 ParentFeedbackId = dto.ParentFeedbackId,
                 Version = version,
                 CreatedAt = DateTime.UtcNow
@@ -181,6 +187,7 @@ namespace GP_BackEnd.Services
             await _context.SaveChangesAsync();
             return true;
         }
+
         // Edit a feedback (supervisor only)
         public async Task<bool> EditFeedbackAsync(int supervisorId, int feedbackId, string newContent)
         {

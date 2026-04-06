@@ -217,8 +217,12 @@ namespace GP_BackEnd.Data
                 .HasForeignKey(r => r.CreatedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-   
 
+            modelBuilder.Entity<Feedback>()
+    .HasOne(f => f.ProjectFile)
+    .WithMany()
+    .HasForeignKey(f => f.ProjectFileId)
+    .OnDelete(DeleteBehavior.Restrict);
             // Username must be unique
             modelBuilder.Entity<User>()
                 .HasIndex(u => u.Username)

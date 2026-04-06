@@ -12,6 +12,8 @@ namespace GP_BackEnd.Models
         public int TeamId { get; set; }
         public int? TaskItemId { get; set; }
         public int Version { get; set; } = 0;
+        public int? ProjectFileId { get; set; }
+        public ProjectFile ProjectFile { get; set; }
         public int? ParentFeedbackId { get; set; }
         public User Sender { get; set; }
         public Team Team { get; set; }

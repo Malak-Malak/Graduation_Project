@@ -20,7 +20,6 @@ namespace GP_BackEnd.Services
             return user?.CurrentVersion ?? 0;
         }
 
-        // Notify all team members + supervisor
         private async Task NotifyTeamAsync(int teamId, string title, string message)
         {
             var team = await _context.Teams
@@ -29,7 +28,6 @@ namespace GP_BackEnd.Services
 
             if (team == null) return;
 
-            // Collect all user IDs: members + supervisor
             var userIds = team.TeamMembers.Select(m => m.UserId).ToList();
             if (!userIds.Contains(team.SupervisorId))
                 userIds.Add(team.SupervisorId);
@@ -49,10 +47,22 @@ namespace GP_BackEnd.Services
         }
 
         // ── GET feedbacks for a file ──────────────────────────────────────────
+        //
+        // FIX: Removed the Version filter entirely for file-based feedback.
+        //
+        // WHY: ProjectFile has no Version field — files are shared across both
+        // versions of the website. When the supervisor adds feedback on a file,
+        // the Feedback row gets stamped with the supervisor's CurrentVersion (e.g. 0).
+        // Any student who has switched to version 1 calls this endpoint and the
+        // old filter (f.Version == user.CurrentVersion == 1) returns EMPTY — even
+        // though they're looking at the exact same file.
+        //
+        // Version filtering makes sense for Kanban task feedback (tasks are versioned).
+        // For FILE feedback, the file itself is the version context.
+        // All feedback on a file belongs to that file regardless of who is on which version.
 
         public async Task<List<FeedbackDto>> GetFeedbacksByFileAsync(int userId, int fileId)
         {
-            // Verify user belongs to the team that owns this file
             var file = await _context.ProjectFiles
                 .FirstOrDefaultAsync(f => f.Id == fileId);
 
@@ -66,8 +76,7 @@ namespace GP_BackEnd.Services
 
             if (!isMember && !isSupervisor) return new List<FeedbackDto>();
 
-            var version = await GetUserVersionAsync(userId);
-
+            // No version filter — all feedback on this file is shown to everyone
             var feedbacks = await _context.Feedbacks
                 .Include(f => f.Sender)
                     .ThenInclude(s => s.UserProfile)
@@ -75,8 +84,7 @@ namespace GP_BackEnd.Services
                     .ThenInclude(r => r.Sender)
                         .ThenInclude(s => s.UserProfile)
                 .Where(f => f.ProjectFileId == fileId
-                    && f.ParentFeedbackId == null
-                    && f.Version == version)
+                    && f.ParentFeedbackId == null)
                 .OrderByDescending(f => f.CreatedAt)
                 .ToListAsync();
 
@@ -91,6 +99,7 @@ namespace GP_BackEnd.Services
                 SenderRole = f.Sender.Role,
                 ProjectFileId = f.ProjectFileId ?? 0,
                 Version = f.Version,
+                // No version filter on replies either — all replies belong to their parent
                 Replies = f.Replies
                     .OrderBy(r => r.CreatedAt)
                     .Select(r => new ReplyDto
@@ -110,7 +119,6 @@ namespace GP_BackEnd.Services
 
         public async Task<bool> CreateFeedbackAsync(int supervisorId, CreateFeedbackDto dto)
         {
-            // Verify the file exists and belongs to a team supervised by this supervisor
             var file = await _context.ProjectFiles
                 .Include(f => f.Team)
                 .FirstOrDefaultAsync(f => f.Id == dto.ProjectFileId
@@ -134,7 +142,6 @@ namespace GP_BackEnd.Services
             _context.Feedbacks.Add(feedback);
             await _context.SaveChangesAsync();
 
-            // Notify everyone
             var senderName = await _context.UserProfiles
                 .Where(p => p.UserId == supervisorId)
                 .Select(p => p.FullName)
@@ -152,10 +159,16 @@ namespace GP_BackEnd.Services
         }
 
         // ── ADD reply (any team member or supervisor) ─────────────────────────
+        //
+        // FIX: Removed the version mismatch guard and changed reply.Version
+        // to inherit from the parent feedback (not from the replier's CurrentVersion).
+        //
+        // Since file-based feedback no longer filters by version when reading,
+        // the version field on replies is kept for data consistency but is not
+        // used as a gate. Anyone on any version can reply to any feedback on a file.
 
         public async Task<bool> AddReplyAsync(int userId, AddReplyDto dto)
         {
-            // Find parent feedback
             var parentFeedback = await _context.Feedbacks
                 .Include(f => f.Team)
                     .ThenInclude(t => t.TeamMembers)
@@ -164,13 +177,10 @@ namespace GP_BackEnd.Services
 
             if (parentFeedback == null) return false;
 
-            // Check user is a team member OR the supervisor
             var isMember = parentFeedback.Team.TeamMembers.Any(tm => tm.UserId == userId);
             var isSupervisor = parentFeedback.Team.SupervisorId == userId;
 
             if (!isMember && !isSupervisor) return false;
-
-            var version = await GetUserVersionAsync(userId);
 
             var reply = new Feedback
             {
@@ -180,14 +190,14 @@ namespace GP_BackEnd.Services
                 ProjectFileId = parentFeedback.ProjectFileId,
                 TaskItemId = null,
                 ParentFeedbackId = dto.ParentFeedbackId,
-                Version = version,
+                // Inherit the parent feedback's version for data consistency
+                Version = parentFeedback.Version,
                 CreatedAt = DateTime.UtcNow
             };
 
             _context.Feedbacks.Add(reply);
             await _context.SaveChangesAsync();
 
-            // Notify everyone
             var senderName = await _context.UserProfiles
                 .Where(p => p.UserId == userId)
                 .Select(p => p.FullName)

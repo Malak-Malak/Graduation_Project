@@ -37,7 +37,6 @@ import MarkEmailReadOutlinedIcon from "@mui/icons-material/MarkEmailReadOutlined
 import BlockOutlinedIcon from "@mui/icons-material/BlockOutlined";
 
 import studentApi from "../../../../api/handler/endpoints/studentApi";
-import UserProfileApi from "../../../../api/handler/endpoints/UserProfileApi";
 import JoinOrCreateModal from "../Onboarding/JoinOrCreateModal";
 import CreateTeamFlow from "../Onboarding/CreateTeamFlow";
 import JoinTeamFlow from "../Onboarding/JoinTeamFlow";

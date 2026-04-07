@@ -23,7 +23,6 @@ import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
 
 import studentApi from "../../../../api/handler/endpoints/studentApi";
-import UserProfileApi from "../../../../api/handler/endpoints/UserProfileApi";
 
 /* ─── Tokens ─────────────────────────────────────────────────── */
 const ACCENT = "#C97B4B";

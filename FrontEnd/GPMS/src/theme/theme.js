@@ -1,21 +1,3 @@
-// import { createTheme } from "@mui/material/styles";
-
-// export const getTheme = (mode) =>
-//   createTheme({
-//     palette: {
-//       mode,
-//       primary: {
-//         main: "#d48a63",
-//       },
-//       background: {
-//         default: mode === "dark" ? "#0f172a" : "#f4f4f4",
-//         paper: mode === "dark" ? "#1e293b" : "#ffffff",
-//       },
-//     },
-//     typography: {
-//       fontFamily: "Inter, sans-serif",
-//     },
-//   });
 import { createTheme } from "@mui/material/styles";
 
 // ─── Color Palettes ───────────────────────────────────────────────────────────
@@ -42,24 +24,38 @@ const lightTokens = {
 };
 
 const darkTokens = {
-  bgPrimary: "#1A1D23",
-  bgSecondary: "#262B33",
-  surfaceCard: "#2F3338",
-  surfaceHover: "#3A3F46",
-  textPrimary: "#EDF2F7",
-  textSecondary: "#9AA9B9",
-  textTertiary: "#7A879A",
-  accentPrimary: "#E59873",   // terracotta light
+  // ── Backgrounds ──────────────────────────────────────────────────────────
+  // طبقات واضحة بفرق محسوس بين كل level
+  bgPrimary: "#13161C",   // أغمق — خلفية الصفحة الرئيسية
+  bgSecondary: "#1E2229",   // sidebar / drawer
+  surfaceCard: "#262C35",   // كروت وpapers — فرق واضح عن bgSecondary
+  surfaceHover: "#2F3640",   // hover state — أفتح من surfaceCard
+
+  // ── Text ─────────────────────────────────────────────────────────────────
+  // فرق كافٍ بين المستويات الثلاثة
+  textPrimary: "#EDF2F7",  // نص رئيسي — أبيض دافئ
+  textSecondary: "#9AAABB",  // نص ثانوي — contrast واضح
+  textTertiary: "#627080",  // نص خافت — أغمق من قبل عشان يتميّز
+
+  // ── Accents ──────────────────────────────────────────────────────────────
+  accentPrimary: "#E59873", // terracotta light
   accentSecondary: "#8DA18E", // sage light
-  accentTertiary: "#E5C28E",  // gold light
-  borderLight: "#363C45",
+  accentTertiary: "#E5C28E", // gold light
+
+  // ── Borders ──────────────────────────────────────────────────────────────
+  borderLight: "#404850",    // أوضح من قبل (#363C45) — يبيّن الفواصل
   borderFocus: "#E59873",
+
+  // ── Semantic ─────────────────────────────────────────────────────────────
   success: "#8DA18E",
   warning: "#E5C28E",
-  error: "#C47E7E",
-  shadowSm: "0 2px 8px rgba(0,0,0,0.4)",
-  shadowMd: "0 4px 16px rgba(0,0,0,0.5)",
-  shadowLg: "0 8px 24px rgba(0,0,0,0.6)",
+  error: "#D48A8A",        // أفتح شوية للـ dark mode
+
+  // ── Shadows ──────────────────────────────────────────────────────────────
+  // ظلال أعمق لأن الخلفية أغمق
+  shadowSm: "0 2px 8px rgba(0,0,0,0.45)",
+  shadowMd: "0 4px 16px rgba(0,0,0,0.55)",
+  shadowLg: "0 8px 24px rgba(0,0,0,0.65)",
 };
 
 // ─── Theme Factory ─────────────────────────────────────────────────────────────

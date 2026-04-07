@@ -24,6 +24,19 @@ import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
 
 import studentApi from "../../../../api/handler/endpoints/studentApi";
 
+/* ─── inject global keyframes once ───────────────────────────── */
+if (typeof document !== "undefined" && !document.getElementById("spin-border-kf")) {
+    const s = document.createElement("style");
+    s.id = "spin-border-kf";
+    s.textContent = `
+        @keyframes spinBorder {
+            from { transform: translate(-50%,-50%) rotate(0deg); }
+            to   { transform: translate(-50%,-50%) rotate(360deg); }
+        }
+    `;
+    document.head.appendChild(s);
+}
+
 /* ─── Tokens ─────────────────────────────────────────────────── */
 const ACCENT = "#C97B4B";
 const PALETTE = ["#C97B4B", "#5B8FA8", "#6D8A7D", "#9B7EC8", "#A85B6D", "#7A9E5B"];
@@ -61,6 +74,85 @@ const normProfile = raw => {
 };
 
 /* ═══════════════════════════════════════════════════════════════
+   SPIN CARD WRAPPER
+   ─ الـ outer Box فيه overflow:hidden + الـ ::before هو اللي بيلف
+   ─ الـ ::after هو الـ mask اللي بيخفي الوسط ويبقي بس الحواف
+   ─ المحتوى على zIndex:2 فوق كل شي
+═══════════════════════════════════════════════════════════════ */
+function SpinCard({ color, children }) {
+    const theme = useTheme();
+    const isDark = theme.palette.mode === "dark";
+    const bg = isDark ? "#1A1D22" : "#fff";
+    const [on, setOn] = useState(false);
+
+    return (
+        <Box
+            onMouseEnter={() => setOn(true)}
+            onMouseLeave={() => setOn(false)}
+            sx={{
+                position: "relative",
+                borderRadius: "16px",
+                width: "100%",
+                height: CARD_H,
+                /* الـ overflow يقص الـ spinning disc خارج الكارد */
+                overflow: "hidden",
+                /* ── spinning conic-gradient disc ── */
+                "&::before": {
+                    content: '""',
+                    position: "absolute",
+                    /* 250% × 250% يضمن إن الـ disc يغطي كل الزوايا */
+                    width: "250%",
+                    height: "250%",
+                    top: "50%",
+                    left: "50%",
+                    transform: "translate(-50%,-50%) rotate(0deg)",
+                    background: `conic-gradient(
+                        transparent   0deg,
+                        transparent 190deg,
+                        ${color}44  210deg,
+                        ${color}    240deg,
+                        ${color}FF  270deg,
+                        ${color}    300deg,
+                        ${color}44  330deg,
+                        transparent 350deg,
+                        transparent 360deg
+                    )`,
+                    animation: on ? "spinBorder 2.2s linear infinite" : "none",
+                    opacity: on ? 1 : 0,
+                    transition: "opacity .3s ease",
+                    zIndex: 0,
+                    pointerEvents: "none",
+                    borderRadius: "0",
+                },
+                /* ── inner mask: يأكل الوسط ويبقي الـ border بعرض 2px ── */
+                "&::after": {
+                    content: '""',
+                    position: "absolute",
+                    inset: "2px",           /* سمك الـ border = 2px */
+                    borderRadius: "14px",
+                    background: bg,
+                    zIndex: 1,
+                    pointerEvents: "none",
+                },
+            }}
+        >
+            {/* المحتوى الفعلي فوق كل شي */}
+            <Box sx={{
+                position: "relative",
+                zIndex: 2,
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                transform: on ? "translateY(-3px)" : "translateY(0)",
+                transition: "transform .25s ease",
+            }}>
+                {children}
+            </Box>
+        </Box>
+    );
+}
+
+/* ═══════════════════════════════════════════════════════════════
    STUDENT PROFILE DIALOG
 ═══════════════════════════════════════════════════════════════ */
 function StudentProfileDialog({ open, onClose, student }) {
@@ -80,7 +172,7 @@ function StudentProfileDialog({ open, onClose, student }) {
     useEffect(() => {
         if (!open || !sid) return;
         setProfile(null); setLoading(true);
-        UserProfileApi.getProfileById(sid)
+        studentApi.getProfileById(sid)
             .then(d => setProfile(normProfile(d)))
             .catch(() => setProfile(null))
             .finally(() => setLoading(false));
@@ -442,22 +534,7 @@ function StudentCard({ student, onViewProfile }) {
     const aClr = palette(colorIdx);
 
     return (
-        <Paper elevation={0} sx={{
-            borderRadius: "16px",
-            border: `1px solid ${isDark ? "rgba(255,255,255,.08)" : "rgba(0,0,0,.08)"}`,
-            bgcolor: isDark ? "#1A1D22" : "#fff",
-            overflow: "hidden",
-            width: "100%",
-            height: CARD_H,
-            display: "flex", flexDirection: "column",
-            transition: "box-shadow .22s ease,transform .22s ease,border-color .22s ease",
-            "&:hover": {
-                transform: "translateY(-3px)", borderColor: `${aClr}55`,
-                boxShadow: isDark
-                    ? `0 16px 40px rgba(0,0,0,.5),0 0 0 1px ${aClr}20`
-                    : `0 16px 40px rgba(0,0,0,.1),0 0 0 1px ${aClr}18`,
-            },
-        }}>
+        <SpinCard color={aClr}>
             <Box sx={{ height: 3, flexShrink: 0, background: `linear-gradient(90deg,${aClr} 0%,${aClr}55 100%)` }} />
 
             <Box sx={{ p: "14px 16px", flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -525,7 +602,7 @@ function StudentCard({ student, onViewProfile }) {
                     View Profile
                 </Button>
             </Box>
-        </Paper>
+        </SpinCard>
     );
 }
 
@@ -549,22 +626,7 @@ function TeamCard({ team, onView }) {
     const tClr = palette(colorIdx);
 
     return (
-        <Paper elevation={0} sx={{
-            borderRadius: "16px",
-            border: `1px solid ${isDark ? "rgba(255,255,255,.08)" : "rgba(0,0,0,.08)"}`,
-            bgcolor: isDark ? "#1A1D22" : "#fff",
-            overflow: "hidden",
-            width: "100%",
-            height: CARD_H,
-            display: "flex", flexDirection: "column",
-            transition: "box-shadow .22s ease,transform .22s ease,border-color .22s ease",
-            "&:hover": {
-                transform: "translateY(-3px)", borderColor: `${tClr}55`,
-                boxShadow: isDark
-                    ? `0 16px 40px rgba(0,0,0,.5),0 0 0 1px ${tClr}20`
-                    : `0 16px 40px rgba(0,0,0,.1),0 0 0 1px ${tClr}18`,
-            },
-        }}>
+        <SpinCard color={tClr}>
             <Box sx={{ height: 3, flexShrink: 0, background: `linear-gradient(90deg,${tClr} 0%,${tClr}55 100%)` }} />
 
             <Box sx={{ p: "14px 16px", flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -643,7 +705,7 @@ function TeamCard({ team, onView }) {
                     View Details
                 </Button>
             </Box>
-        </Paper>
+        </SpinCard>
     );
 }
 
@@ -659,58 +721,44 @@ export default function DiscoveryHub() {
     const brd = isDark ? "rgba(255,255,255,.08)" : "rgba(0,0,0,.08)";
 
     const [tab, setTab] = useState(0);
-
     const [students, setStudents] = useState([]);
     const [loadingStudents, setLoadingStudents] = useState(false);
     const [searchStudents, setSearchStudents] = useState("");
     const [studentPage, setStudentPage] = useState(1);
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [profileOpen, setProfileOpen] = useState(false);
-
     const [teams, setTeams] = useState([]);
     const [loadingTeams, setLoadingTeams] = useState(false);
     const [searchTeams, setSearchTeams] = useState("");
     const [teamPage, setTeamPage] = useState(1);
     const [selectedTeam, setSelectedTeam] = useState(null);
     const [teamOpen, setTeamOpen] = useState(false);
-
     const [snack, setSnack] = useState({ open: false, msg: "", sev: "success" });
     const snap = (msg, sev = "success") => setSnack({ open: true, msg, sev });
 
-    /* ── Swipe / Drag refs ── */
     const touchStartX = useRef(null);
     const isDragging = useRef(false);
-
     const handlePointerDown = (e) => {
-        // تجاهل الضغط على الـ input أو الـ buttons
         if (e.target.closest("input, button, a, [role='button']")) return;
         touchStartX.current = e.touches?.[0]?.clientX ?? e.clientX;
         isDragging.current = false;
     };
-
     const handlePointerMove = (e) => {
         if (touchStartX.current === null) return;
         const currentX = e.touches?.[0]?.clientX ?? e.clientX;
-        if (Math.abs(currentX - touchStartX.current) > 10) {
-            isDragging.current = true;
-        }
+        if (Math.abs(currentX - touchStartX.current) > 10) isDragging.current = true;
     };
-
     const handlePointerUp = (e) => {
         if (touchStartX.current === null || !isDragging.current) {
-            touchStartX.current = null;
-            isDragging.current = false;
-            return;
+            touchStartX.current = null; isDragging.current = false; return;
         }
         const endX = e.changedTouches?.[0]?.clientX ?? e.clientX;
         const diff = touchStartX.current - endX;
-
         if (Math.abs(diff) > 50) {
-            if (diff > 0 && tab === 0) setTab(1);   // سحب يسار → Teams
-            if (diff < 0 && tab === 1) setTab(0);   // سحب يمين → Students
+            if (diff > 0 && tab === 0) setTab(1);
+            if (diff < 0 && tab === 1) setTab(0);
         }
-        touchStartX.current = null;
-        isDragging.current = false;
+        touchStartX.current = null; isDragging.current = false;
     };
 
     const fetchStudents = useCallback(async () => {
@@ -729,11 +777,7 @@ export default function DiscoveryHub() {
         finally { setLoadingTeams(false); }
     }, [teams.length]);
 
-    useEffect(() => {
-        if (tab === 0) fetchStudents();
-        if (tab === 1) fetchTeams();
-    }, [tab, fetchStudents, fetchTeams]);
-
+    useEffect(() => { if (tab === 0) fetchStudents(); if (tab === 1) fetchTeams(); }, [tab, fetchStudents, fetchTeams]);
     useEffect(() => { setStudentPage(1); }, [searchStudents]);
     useEffect(() => { setTeamPage(1); }, [searchTeams]);
     useEffect(() => { setStudentPage(1); setTeamPage(1); }, [tab]);
@@ -741,28 +785,18 @@ export default function DiscoveryHub() {
     const filteredStudents = students.filter(s => {
         if (!searchStudents) return true;
         const q = searchStudents.toLowerCase();
-        return (
-            (s.fullName ?? s.name ?? "").toLowerCase().includes(q) ||
-            (s.department ?? "").toLowerCase().includes(q) ||
-            (s.field ?? "").toLowerCase().includes(q)
-        );
+        return (s.fullName ?? s.name ?? "").toLowerCase().includes(q) || (s.department ?? "").toLowerCase().includes(q) || (s.field ?? "").toLowerCase().includes(q);
     });
-
     const filteredTeams = teams.filter(t => {
         if (!searchTeams) return true;
         const q = searchTeams.toLowerCase();
-        return (
-            (t.projectTitle ?? "").toLowerCase().includes(q) ||
-            (t.projectDescription ?? "").toLowerCase().includes(q) ||
-            (t.supervisorName ?? "").toLowerCase().includes(q)
-        );
+        return (t.projectTitle ?? "").toLowerCase().includes(q) || (t.projectDescription ?? "").toLowerCase().includes(q) || (t.supervisorName ?? "").toLowerCase().includes(q);
     });
 
     const totalStudentPages = Math.ceil(filteredStudents.length / CARDS_PER_PAGE);
     const pagedStudents = filteredStudents.slice((studentPage - 1) * CARDS_PER_PAGE, studentPage * CARDS_PER_PAGE);
     const totalTeamPages = Math.ceil(filteredTeams.length / CARDS_PER_PAGE);
     const pagedTeams = filteredTeams.slice((teamPage - 1) * CARDS_PER_PAGE, teamPage * CARDS_PER_PAGE);
-
     const gridCols = { xs: "1fr", sm: "1fr 1fr", md: "1fr 1fr 1fr" };
 
     const searchSx = {
@@ -774,7 +808,6 @@ export default function DiscoveryHub() {
         },
         "& .MuiOutlinedInput-input": { py: "10px" },
     };
-
     const paginationSx = {
         "& .MuiPaginationItem-root": { borderRadius: "8px", fontWeight: 600, fontSize: ".78rem", color: tSec },
         "& .Mui-selected": { bgcolor: `${ACCENT} !important`, color: "#fff !important" },
@@ -783,11 +816,7 @@ export default function DiscoveryHub() {
 
     const EmptyState = ({ msg, sub }) => (
         <Box textAlign="center" py={9}>
-            <Box sx={{
-                width: 60, height: 60, borderRadius: "18px", mx: "auto", mb: 2,
-                bgcolor: `${ACCENT}0F`, border: `1px solid ${ACCENT}25`,
-                display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
+            <Box sx={{ width: 60, height: 60, borderRadius: "18px", mx: "auto", mb: 2, bgcolor: `${ACCENT}0F`, border: `1px solid ${ACCENT}25`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <PersonOutlineIcon sx={{ fontSize: 28, color: ACCENT }} />
             </Box>
             <Typography fontWeight={700} fontSize=".95rem" sx={{ color: tPri }}>{msg}</Typography>
@@ -797,102 +826,44 @@ export default function DiscoveryHub() {
 
     return (
         <Box
-            onTouchStart={handlePointerDown}
-            onTouchMove={handlePointerMove}
-            onTouchEnd={handlePointerUp}
-            onMouseDown={handlePointerDown}
-            onMouseMove={handlePointerMove}
-            onMouseUp={handlePointerUp}
+            onTouchStart={handlePointerDown} onTouchMove={handlePointerMove} onTouchEnd={handlePointerUp}
+            onMouseDown={handlePointerDown} onMouseMove={handlePointerMove} onMouseUp={handlePointerUp}
             sx={{ minHeight: "100%", py: 3.5, bgcolor: "transparent", userSelect: "none" }}
         >
             <Box sx={{ maxWidth: 1050, mx: "auto", px: { xs: 2, sm: 3 } }}>
-
                 <Box sx={{ mb: 4, textAlign: "center" }}>
-                    <Typography variant="h4" sx={{ fontWeight: 800, color: tPri, mb: .5, letterSpacing: "-.5px" }}>
-                        Discovery Hub
-                    </Typography>
-                    <Typography sx={{ color: tSec, fontSize: ".88rem" }}>
-                        Explore students and teams in your program
-                    </Typography>
+                    <Typography variant="h4" sx={{ fontWeight: 800, color: tPri, mb: .5, letterSpacing: "-.5px" }}>Discovery Hub</Typography>
+                    <Typography sx={{ color: tSec, fontSize: ".88rem" }}>Explore students and teams in your program</Typography>
                 </Box>
 
-                {/* Tabs */}
                 <Box sx={{ mb: 3, bgcolor: cardBg, borderRadius: "14px", border: `1px solid ${brd}`, overflow: "hidden" }}>
                     <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{
                         px: 1, minHeight: 50,
-                        "& .MuiTab-root": {
-                            textTransform: "none", fontWeight: 600, fontSize: ".84rem",
-                            minHeight: 50, color: tSec, transition: "color .18s", borderRadius: "10px", mx: .3,
-                        },
+                        "& .MuiTab-root": { textTransform: "none", fontWeight: 600, fontSize: ".84rem", minHeight: 50, color: tSec, transition: "color .18s", borderRadius: "10px", mx: .3 },
                         "& .Mui-selected": { color: ACCENT },
                         "& .MuiTabs-indicator": { bgcolor: ACCENT, height: 2.5, borderRadius: "2px" },
                     }}>
-                        <Tab label={
-                            <Stack direction="row" alignItems="center" gap={.9}>
-                                <PeopleOutlineIcon sx={{ fontSize: 17 }} />
-                                <span>Available Students</span>
-                                {students.length > 0 && (
-                                    <Chip label={filteredStudents.length} size="small"
-                                        sx={{ height: 19, minWidth: 24, bgcolor: `${ACCENT}18`, color: ACCENT, fontWeight: 700, fontSize: ".68rem", border: `1px solid ${ACCENT}25`, borderRadius: "6px" }} />
-                                )}
-                            </Stack>
-                        } />
-                        <Tab label={
-                            <Stack direction="row" alignItems="center" gap={.9}>
-                                <GroupsOutlinedIcon sx={{ fontSize: 17 }} />
-                                <span>Teams</span>
-                                {teams.length > 0 && (
-                                    <Chip label={filteredTeams.length} size="small"
-                                        sx={{ height: 19, minWidth: 24, bgcolor: `${ACCENT}18`, color: ACCENT, fontWeight: 700, fontSize: ".68rem", border: `1px solid ${ACCENT}25`, borderRadius: "6px" }} />
-                                )}
-                            </Stack>
-                        } />
+                        <Tab label={<Stack direction="row" alignItems="center" gap={.9}><PeopleOutlineIcon sx={{ fontSize: 17 }} /><span>Available Students</span>{students.length > 0 && <Chip label={filteredStudents.length} size="small" sx={{ height: 19, minWidth: 24, bgcolor: `${ACCENT}18`, color: ACCENT, fontWeight: 700, fontSize: ".68rem", border: `1px solid ${ACCENT}25`, borderRadius: "6px" }} />}</Stack>} />
+                        <Tab label={<Stack direction="row" alignItems="center" gap={.9}><GroupsOutlinedIcon sx={{ fontSize: 17 }} /><span>Teams</span>{teams.length > 0 && <Chip label={filteredTeams.length} size="small" sx={{ height: 19, minWidth: 24, bgcolor: `${ACCENT}18`, color: ACCENT, fontWeight: 700, fontSize: ".68rem", border: `1px solid ${ACCENT}25`, borderRadius: "6px" }} />}</Stack>} />
                     </Tabs>
                 </Box>
 
-                {/* ══ STUDENTS TAB ══ */}
                 {tab === 0 && (
                     <Box>
-                        <TextField fullWidth size="small"
-                            placeholder="Search by name, department or skill…"
-                            value={searchStudents}
-                            onChange={e => setSearchStudents(e.target.value)}
-                            sx={{ mb: 3, ...searchSx }}
-                            InputProps={{
-                                startAdornment: (
-                                    <InputAdornment position="start">
-                                        <SearchIcon sx={{ fontSize: 17, color: tSec }} />
-                                    </InputAdornment>
-                                ),
-                            }} />
-
+                        <TextField fullWidth size="small" placeholder="Search by name, department or skill…" value={searchStudents} onChange={e => setSearchStudents(e.target.value)} sx={{ mb: 3, ...searchSx }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 17, color: tSec }} /></InputAdornment> }} />
                         {loadingStudents ? (
-                            <Box display="flex" justifyContent="center" py={10}>
-                                <CircularProgress size={36} sx={{ color: ACCENT }} />
-                            </Box>
+                            <Box display="flex" justifyContent="center" py={10}><CircularProgress size={36} sx={{ color: ACCENT }} /></Box>
                         ) : filteredStudents.length === 0 ? (
                             <EmptyState msg="No students found" sub={searchStudents ? "Try a different search term" : "No available students right now"} />
                         ) : (
                             <>
                                 <Box sx={{ display: "grid", gridTemplateColumns: gridCols, gap: "20px", mb: 3 }}>
-                                    {pagedStudents.map((s) => (
-                                        <StudentCard
-                                            key={getId(s) ?? s.fullName ?? s.name}
-                                            student={s}
-                                            onViewProfile={st => { setSelectedStudent(st); setProfileOpen(true); }}
-                                        />
-                                    ))}
+                                    {pagedStudents.map(s => <StudentCard key={getId(s) ?? s.fullName ?? s.name} student={s} onViewProfile={st => { setSelectedStudent(st); setProfileOpen(true); }} />)}
                                 </Box>
                                 {totalStudentPages > 1 && (
                                     <Stack alignItems="center" gap={.8} sx={{ pt: 2.5, borderTop: `1px solid ${brd}` }}>
-                                        <Pagination
-                                            count={totalStudentPages} page={studentPage}
-                                            onChange={(_, v) => { setStudentPage(v); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                                            size="small" sx={paginationSx}
-                                        />
-                                        <Typography fontSize=".71rem" sx={{ color: tSec }}>
-                                            Showing {(studentPage - 1) * CARDS_PER_PAGE + 1}–{Math.min(studentPage * CARDS_PER_PAGE, filteredStudents.length)} of {filteredStudents.length} students
-                                        </Typography>
+                                        <Pagination count={totalStudentPages} page={studentPage} onChange={(_, v) => { setStudentPage(v); window.scrollTo({ top: 0, behavior: "smooth" }); }} size="small" sx={paginationSx} />
+                                        <Typography fontSize=".71rem" sx={{ color: tSec }}>Showing {(studentPage - 1) * CARDS_PER_PAGE + 1}–{Math.min(studentPage * CARDS_PER_PAGE, filteredStudents.length)} of {filteredStudents.length} students</Typography>
                                     </Stack>
                                 )}
                             </>
@@ -900,49 +871,22 @@ export default function DiscoveryHub() {
                     </Box>
                 )}
 
-                {/* ══ TEAMS TAB ══ */}
                 {tab === 1 && (
                     <Box>
-                        <TextField fullWidth size="small"
-                            placeholder="Search by project or supervisor…"
-                            value={searchTeams}
-                            onChange={e => setSearchTeams(e.target.value)}
-                            sx={{ mb: 3, ...searchSx }}
-                            InputProps={{
-                                startAdornment: (
-                                    <InputAdornment position="start">
-                                        <SearchIcon sx={{ fontSize: 17, color: tSec }} />
-                                    </InputAdornment>
-                                ),
-                            }} />
-
+                        <TextField fullWidth size="small" placeholder="Search by project or supervisor…" value={searchTeams} onChange={e => setSearchTeams(e.target.value)} sx={{ mb: 3, ...searchSx }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 17, color: tSec }} /></InputAdornment> }} />
                         {loadingTeams ? (
-                            <Box display="flex" justifyContent="center" py={10}>
-                                <CircularProgress size={36} sx={{ color: ACCENT }} />
-                            </Box>
+                            <Box display="flex" justifyContent="center" py={10}><CircularProgress size={36} sx={{ color: ACCENT }} /></Box>
                         ) : filteredTeams.length === 0 ? (
                             <EmptyState msg="No teams found" sub={searchTeams ? "Try a different search term" : "No teams available right now"} />
                         ) : (
                             <>
                                 <Box sx={{ display: "grid", gridTemplateColumns: gridCols, gap: "20px", mb: 3 }}>
-                                    {pagedTeams.map((team, i) => (
-                                        <TeamCard
-                                            key={team.id ?? team.teamId ?? i}
-                                            team={team}
-                                            onView={t => { setSelectedTeam(t); setTeamOpen(true); }}
-                                        />
-                                    ))}
+                                    {pagedTeams.map((team, i) => <TeamCard key={team.id ?? team.teamId ?? i} team={team} onView={t => { setSelectedTeam(t); setTeamOpen(true); }} />)}
                                 </Box>
                                 {totalTeamPages > 1 && (
                                     <Stack alignItems="center" gap={.8} sx={{ pt: 2.5, borderTop: `1px solid ${brd}` }}>
-                                        <Pagination
-                                            count={totalTeamPages} page={teamPage}
-                                            onChange={(_, v) => { setTeamPage(v); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                                            size="small" sx={paginationSx}
-                                        />
-                                        <Typography fontSize=".71rem" sx={{ color: tSec }}>
-                                            Showing {(teamPage - 1) * CARDS_PER_PAGE + 1}–{Math.min(teamPage * CARDS_PER_PAGE, filteredTeams.length)} of {filteredTeams.length} teams
-                                        </Typography>
+                                        <Pagination count={totalTeamPages} page={teamPage} onChange={(_, v) => { setTeamPage(v); window.scrollTo({ top: 0, behavior: "smooth" }); }} size="small" sx={paginationSx} />
+                                        <Typography fontSize=".71rem" sx={{ color: tSec }}>Showing {(teamPage - 1) * CARDS_PER_PAGE + 1}–{Math.min(teamPage * CARDS_PER_PAGE, filteredTeams.length)} of {filteredTeams.length} teams</Typography>
                                     </Stack>
                                 )}
                             </>
@@ -951,20 +895,9 @@ export default function DiscoveryHub() {
                 )}
             </Box>
 
-            <StudentProfileDialog
-                open={profileOpen}
-                onClose={() => { setProfileOpen(false); setSelectedStudent(null); }}
-                student={selectedStudent}
-            />
-            <TeamDetailDialog
-                open={teamOpen}
-                onClose={() => { setTeamOpen(false); setSelectedTeam(null); }}
-                team={selectedTeam}
-            />
-
-            <Snackbar open={snack.open} autoHideDuration={3500}
-                onClose={() => setSnack(s => ({ ...s, open: false }))}
-                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}>
+            <StudentProfileDialog open={profileOpen} onClose={() => { setProfileOpen(false); setSelectedStudent(null); }} student={selectedStudent} />
+            <TeamDetailDialog open={teamOpen} onClose={() => { setTeamOpen(false); setSelectedTeam(null); }} team={selectedTeam} />
+            <Snackbar open={snack.open} autoHideDuration={3500} onClose={() => setSnack(s => ({ ...s, open: false }))} anchorOrigin={{ vertical: "bottom", horizontal: "right" }}>
                 <Alert severity={snack.sev} variant="filled" sx={{ borderRadius: "12px" }}>{snack.msg}</Alert>
             </Snackbar>
         </Box>

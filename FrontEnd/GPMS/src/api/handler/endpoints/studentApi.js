@@ -105,7 +105,8 @@ const studentApi = {
 
     getProfile: () =>
         axiosInstance.get("/UserProfile").then((r) => r.data),
-
+    getProfileById: (userId) =>
+        axiosInstance.get(`/UserProfile/${userId}`).then((r) => r.data),
     getAllStudents: () =>
         axiosInstance.get("/Student/all-students").then((r) => r.data),
 

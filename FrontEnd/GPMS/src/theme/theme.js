@@ -2,25 +2,45 @@ import { createTheme } from "@mui/material/styles";
 
 // ─── Color Palettes ───────────────────────────────────────────────────────────
 
+// const lightTokens = {
+//   bgPrimary: "#F9F7F4",
+//   bgSecondary: "#FFFFFF",
+//   surfaceCard: "#FFFFFF",
+//   surfaceHover: "#F5F3F0",
+//   textPrimary: "#1F2937",
+//   textSecondary: "#5C6B7E",
+//   textTertiary: "#8B9AAD",
+//   accentPrimary: "#B46F4C",   // terracotta
+//   accentSecondary: "#6D8A7D", // sage
+//   accentTertiary: "#C49A6C",  // gold
+//   borderLight: "#E8E6E1",
+//   borderFocus: "#B46F4C",
+//   success: "#6D8A7D",
+//   warning: "#C49A6C",
+//   error: "#C47E7E",
+//   shadowSm: "0 2px 8px rgba(0,0,0,0.04)",
+//   shadowMd: "0 4px 16px rgba(0,0,0,0.06)",
+//   shadowLg: "0 8px 24px rgba(0,0,0,0.08)",
+// };
 const lightTokens = {
-  bgPrimary: "#F9F7F4",
-  bgSecondary: "#FFFFFF",
-  surfaceCard: "#FFFFFF",
-  surfaceHover: "#F5F3F0",
-  textPrimary: "#1F2937",
-  textSecondary: "#5C6B7E",
-  textTertiary: "#8B9AAD",
-  accentPrimary: "#B46F4C",   // terracotta
-  accentSecondary: "#6D8A7D", // sage
-  accentTertiary: "#C49A6C",  // gold
-  borderLight: "#E8E6E1",
-  borderFocus: "#B46F4C",
+  bgPrimary: "#FAF7F2",   // كريمي دافئ بدل الأبيض البارد
+  bgSecondary: "#FFF9F5",   // أبيض كريمي
+  surfaceCard: "#FFF9F5",   // كروت ناعمة
+  surfaceHover: "#F3EDE6",   // hover دافئ
+  textPrimary: "#2C1F17",   // بني غامق بدل الرمادي
+  textSecondary: "#7A6358",   // بني ناعم بدل الأزرق الرمادي
+  textTertiary: "#A8958A",   // خافت دافئ
+  accentPrimary: "#C47A52", // terracotta أغمض شوي للـ light
+  accentSecondary: "#6D8A7D",
+  accentTertiary: "#C49A6C",
+  borderLight: "#E6DDD4",   // border دافئ بدل الرمادي
+  borderFocus: "#C47A52",
   success: "#6D8A7D",
   warning: "#C49A6C",
   error: "#C47E7E",
-  shadowSm: "0 2px 8px rgba(0,0,0,0.04)",
-  shadowMd: "0 4px 16px rgba(0,0,0,0.06)",
-  shadowLg: "0 8px 24px rgba(0,0,0,0.08)",
+  shadowSm: "0 2px 8px rgba(44,31,23,0.06)",
+  shadowMd: "0 4px 16px rgba(44,31,23,0.08)",
+  shadowLg: "0 8px 24px rgba(44,31,23,0.10)",
 };
 
 const darkTokens = {

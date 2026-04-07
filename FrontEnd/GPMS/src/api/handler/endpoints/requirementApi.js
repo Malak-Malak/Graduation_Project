@@ -2,44 +2,26 @@
 //
 // Endpoints:
 //   GET    /api/Requirement              → list all requirements
-//   POST   /api/Requirement/add          → { description }
-//   PUT    /api/Requirement/update/{id}  → { description }
+//   POST   /api/Requirement/add          → { title, description, priority, type }
+//   PUT    /api/Requirement/update/{id}  → { title, description, priority, type }
 //   DELETE /api/Requirement/delete/{id}
 
 import axiosInstance from "../../axiosInstance";
 
 const requirementApi = {
-    /**
-     * GET /api/Requirement
-     * Expected response shape:
-     * [{ requirementId: number, description: string }]
-     */
     getAll: () =>
         axiosInstance.get("/Requirement").then((r) => r.data),
 
-    /**
-     * POST /api/Requirement/add
-     * @param {string} description
-     */
-    add: (description) =>
+    add: (payload) =>
         axiosInstance
-            .post("/Requirement/add", { description })
+            .post("/Requirement/add", payload)
             .then((r) => r.data),
 
-    /**
-     * PUT /api/Requirement/update/{requirementId}
-     * @param {number} requirementId
-     * @param {string} description
-     */
-    update: (requirementId, description) =>
+    update: (requirementId, payload) =>
         axiosInstance
-            .put(`/Requirement/update/${requirementId}`, { description })
+            .put(`/Requirement/update/${requirementId}`, payload)
             .then((r) => r.data),
 
-    /**
-     * DELETE /api/Requirement/delete/{requirementId}
-     * @param {number} requirementId
-     */
     remove: (requirementId) =>
         axiosInstance
             .delete(`/Requirement/delete/${requirementId}`)

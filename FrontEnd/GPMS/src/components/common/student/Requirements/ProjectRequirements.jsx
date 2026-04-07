@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import {
     Box, Typography, Stack, Paper, Button, IconButton, Tooltip,
     CircularProgress, Alert, Dialog, DialogTitle, DialogContent,
-    DialogActions, TextField, Chip,
+    DialogActions, TextField, Chip, MenuItem, Select, InputLabel,
+    FormControl, FormHelperText,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
@@ -18,7 +19,22 @@ import AssignmentTurnedInOutlinedIcon from "@mui/icons-material/AssignmentTurned
 import requirementApi from "../../../../api/handler/endpoints/requirementApi";
 
 const ACCENT = "#6D8A7D";
-const EMPTY_FORM = { description: "" };
+
+const PRIORITY_OPTIONS = ["Low", "Medium", "High"];
+const TYPE_OPTIONS = ["Functional", "Non-Functional"];
+
+const EMPTY_FORM = { title: "", description: "", priority: "", type: "" };
+
+const PRIORITY_COLORS = {
+    Low: { bg: "#E8F5E9", color: "#388E3C" },
+    Medium: { bg: "#FFF8E1", color: "#F9A825" },
+    High: { bg: "#FFEBEE", color: "#C62828" },
+};
+
+const TYPE_COLORS = {
+    Functional: { bg: "#E3F2FD", color: "#1565C0" },
+    "Non-Functional": { bg: "#F3E5F5", color: "#6A1B9A" },
+};
 
 export default function ProjectRequirements() {
     const theme = useTheme();
@@ -32,12 +48,12 @@ export default function ProjectRequirements() {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editTarget, setEditTarget] = useState(null);
     const [form, setForm] = useState(EMPTY_FORM);
-    const [formError, setFormError] = useState("");
+    const [formErrors, setFormErrors] = useState({});
     const [saving, setSaving] = useState(false);
 
     const [deletingId, setDeletingId] = useState(null);
 
-    // ── fetch ─────────────────────────────────────────────────────────────────
+    // ── fetch ────────────────────────────────────────────────────────────────
     const fetchRequirements = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -55,60 +71,71 @@ export default function ProjectRequirements() {
         }
     }, []);
 
-    useEffect(() => {
-        fetchRequirements();
-    }, [fetchRequirements]);
+    useEffect(() => { fetchRequirements(); }, [fetchRequirements]);
 
-    // ── dialog helpers ────────────────────────────────────────────────────────
+    // ── dialog helpers ───────────────────────────────────────────────────────
     const openAdd = () => {
         setEditTarget(null);
         setForm(EMPTY_FORM);
-        setFormError("");
+        setFormErrors({});
         setDialogOpen(true);
     };
 
     const openEdit = (req) => {
         setEditTarget(req);
-        setForm({ description: req.description ?? "" });
-        setFormError("");
+        setForm({
+            title: req.title ?? "",
+            description: req.description ?? "",
+            priority: req.priority ?? "",
+            type: req.type ?? "",
+        });
+        setFormErrors({});
         setDialogOpen(true);
     };
 
-    const closeDialog = () => {
-        if (!saving) setDialogOpen(false);
+    const closeDialog = () => { if (!saving) setDialogOpen(false); };
+
+    // ── validate ─────────────────────────────────────────────────────────────
+    const validate = () => {
+        const errs = {};
+        if (!form.title.trim()) errs.title = "Title is required.";
+        if (!form.description.trim()) errs.description = "Description is required.";
+        if (!form.priority) errs.priority = "Priority is required.";
+        if (!form.type) errs.type = "Type is required.";
+        return errs;
     };
 
-    // ── save ──────────────────────────────────────────────────────────────────
+    // ── save ─────────────────────────────────────────────────────────────────
     const handleSave = async () => {
-        const desc = form.description.trim();
-        if (!desc) {
-            setFormError("Description is required.");
-            return;
-        }
+        const errs = validate();
+        if (Object.keys(errs).length) { setFormErrors(errs); return; }
+
+        const payload = {
+            title: form.title.trim(),
+            description: form.description.trim(),
+            priority: form.priority,
+            type: form.type,
+        };
 
         setSaving(true);
-        setFormError("");
+        setFormErrors({});
         try {
             if (editTarget) {
-                // ✅ استخدام req.id بدل req.requirementId
-                await requirementApi.update(editTarget.id, desc);
+                await requirementApi.update(editTarget.id, payload);
             } else {
-                await requirementApi.add(desc);
+                await requirementApi.add(payload);
             }
             await fetchRequirements();
             setDialogOpen(false);
         } catch (err) {
-            setFormError(
-                err?.response?.data?.message ?? "Something went wrong."
-            );
+            setFormErrors({ api: err?.response?.data?.message ?? "Something went wrong." });
         } finally {
             setSaving(false);
         }
     };
 
-    // ── delete ────────────────────────────────────────────────────────────────
+    // ── delete ───────────────────────────────────────────────────────────────
     const handleDelete = async (id) => {
-        // ✅ استخدام id بدل requirementId
         setRequirements((prev) => prev.filter((r) => r.id !== id));
         setDeletingId(null);
         try {
@@ -118,16 +145,15 @@ export default function ProjectRequirements() {
         }
     };
 
+    // ── shared field sx ──────────────────────────────────────────────────────
+    const fieldSx = { mt: 1.5 };
+
     // ── render ────────────────────────────────────────────────────────────────
     return (
         <Box sx={{ width: "100%" }}>
+
             {/* Header */}
-            <Stack
-                direction="row"
-                justifyContent="space-between"
-                alignItems="flex-start"
-                mb={3}
-            >
+            <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={3}>
                 <Box>
                     <Typography variant="h2" sx={{ color: t.textPrimary, mb: 0.5 }}>
                         Project Requirements
@@ -141,9 +167,7 @@ export default function ProjectRequirements() {
                     startIcon={<AddOutlinedIcon />}
                     onClick={openAdd}
                     sx={{
-                        bgcolor: accentColor,
-                        borderRadius: 2,
-                        flexShrink: 0,
+                        bgcolor: accentColor, borderRadius: 2, flexShrink: 0,
                         "&:hover": { bgcolor: accentColor, filter: "brightness(0.92)" },
                     }}
                 >
@@ -152,15 +176,11 @@ export default function ProjectRequirements() {
             </Stack>
 
             {/* Banner */}
-            <Paper
-                elevation={0}
-                sx={{
-                    p: 2, mb: 3, borderRadius: 3,
-                    bgcolor: `${accentColor}08`,
-                    border: `1px solid ${accentColor}25`,
-                    display: "flex", alignItems: "flex-start", gap: 1.5,
-                }}
-            >
+            <Paper elevation={0} sx={{
+                p: 2, mb: 3, borderRadius: 3,
+                bgcolor: `${accentColor}08`, border: `1px solid ${accentColor}25`,
+                display: "flex", alignItems: "flex-start", gap: 1.5,
+            }}>
                 <AssignmentOutlinedIcon sx={{ color: accentColor, mt: "2px", flexShrink: 0 }} />
                 <Box>
                     <Typography sx={{ fontSize: "0.875rem", fontWeight: 600, color: t.textPrimary, mb: 0.3 }}>
@@ -214,24 +234,62 @@ export default function ProjectRequirements() {
                                 overflow: "hidden",
                             }}
                         >
-                            <Stack direction="row" alignItems="center" gap={2} sx={{ px: 2.5, py: 2 }}>
+                            <Stack direction="row" alignItems="flex-start" gap={2} sx={{ px: 2.5, py: 2 }}>
+
                                 {/* Index badge */}
                                 <Box sx={{
                                     width: 28, height: 28, borderRadius: "50%",
                                     bgcolor: `${accentColor}15`, color: accentColor,
                                     display: "flex", alignItems: "center", justifyContent: "center",
-                                    fontSize: "0.75rem", fontWeight: 700, flexShrink: 0,
+                                    fontSize: "0.75rem", fontWeight: 700, flexShrink: 0, mt: "2px",
                                 }}>
                                     {index + 1}
                                 </Box>
 
-                                {/* Description */}
-                                <Typography sx={{ flex: 1, fontSize: "0.875rem", color: t.textPrimary, lineHeight: 1.6 }}>
-                                    {req.description}
-                                </Typography>
+                                {/* Content */}
+                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                    <Typography sx={{
+                                        fontSize: "0.875rem", fontWeight: 600,
+                                        color: t.textPrimary, mb: 0.4,
+                                    }}>
+                                        {req.title}
+                                    </Typography>
+                                    <Typography sx={{
+                                        fontSize: "0.82rem", color: t.textSecondary,
+                                        lineHeight: 1.6, mb: 1,
+                                    }}>
+                                        {req.description}
+                                    </Typography>
+
+                                    {/* Chips row */}
+                                    <Stack direction="row" gap={0.8} flexWrap="wrap">
+                                        {req.priority && (
+                                            <Chip
+                                                label={req.priority}
+                                                size="small"
+                                                sx={{
+                                                    bgcolor: PRIORITY_COLORS[req.priority]?.bg ?? "#F5F5F5",
+                                                    color: PRIORITY_COLORS[req.priority]?.color ?? "#555",
+                                                    fontWeight: 600, fontSize: "0.7rem", height: 22,
+                                                }}
+                                            />
+                                        )}
+                                        {req.type && (
+                                            <Chip
+                                                label={req.type}
+                                                size="small"
+                                                sx={{
+                                                    bgcolor: TYPE_COLORS[req.type]?.bg ?? "#F5F5F5",
+                                                    color: TYPE_COLORS[req.type]?.color ?? "#555",
+                                                    fontWeight: 600, fontSize: "0.7rem", height: 22,
+                                                }}
+                                            />
+                                        )}
+                                    </Stack>
+                                </Box>
 
                                 {/* Actions */}
-                                {deletingId === req.id ? (  // ✅ id
+                                {deletingId === req.id ? (
                                     <Stack direction="row" alignItems="center" gap={0.5}>
                                         <Typography sx={{ fontSize: "0.75rem", color: t.error ?? "#C47E7E", mr: 0.5 }}>
                                             Delete?
@@ -239,7 +297,7 @@ export default function ProjectRequirements() {
                                         <Tooltip title="Confirm delete">
                                             <IconButton
                                                 size="small"
-                                                onClick={() => handleDelete(req.id)}  // ✅ id
+                                                onClick={() => handleDelete(req.id)}
                                                 sx={{ color: t.error ?? "#C47E7E", "&:hover": { bgcolor: `${t.error ?? "#C47E7E"}14` } }}
                                             >
                                                 <CheckOutlinedIcon sx={{ fontSize: 16 }} />
@@ -265,7 +323,7 @@ export default function ProjectRequirements() {
                                         <Tooltip title="Delete">
                                             <IconButton
                                                 size="small"
-                                                onClick={() => setDeletingId(req.id)}  // ✅ id
+                                                onClick={() => setDeletingId(req.id)}
                                                 sx={{ color: t.textTertiary, "&:hover": { color: t.error ?? "#C47E7E" } }}
                                             >
                                                 <DeleteOutlineIcon sx={{ fontSize: 17 }} />
@@ -290,12 +348,33 @@ export default function ProjectRequirements() {
                 </Box>
             )}
 
-            {/* Dialog */}
-            <Dialog open={dialogOpen} onClose={closeDialog} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+            {/* ── Dialog ── */}
+            <Dialog
+                open={dialogOpen}
+                onClose={closeDialog}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: 3 } }}
+            >
                 <DialogTitle sx={{ color: t.textPrimary, fontWeight: 700, pb: 1 }}>
                     {editTarget ? "Edit Requirement" : "Add Requirement"}
                 </DialogTitle>
-                <DialogContent sx={{ pt: 1 }}>
+
+                <DialogContent sx={{ pt: 0.5 }}>
+
+                    {/* Title */}
+                    <TextField
+                        fullWidth
+                        label="Title *"
+                        placeholder="e.g. User Authentication"
+                        value={form.title}
+                        onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
+                        error={Boolean(formErrors.title)}
+                        helperText={formErrors.title}
+                        sx={fieldSx}
+                    />
+
+                    {/* Description */}
                     <TextField
                         fullWidth
                         label="Description *"
@@ -305,16 +384,67 @@ export default function ProjectRequirements() {
                         multiline
                         minRows={3}
                         maxRows={8}
-                        error={Boolean(formError)}
-                        sx={{ mt: 1 }}
+                        error={Boolean(formErrors.description)}
+                        helperText={formErrors.description}
+                        sx={fieldSx}
                         onKeyDown={(e) => { if (e.key === "Enter" && e.ctrlKey) handleSave(); }}
                     />
-                    {formError && (
+
+                    {/* Priority + Type — side by side */}
+                    <Stack direction="row" gap={2} sx={fieldSx}>
+                        <FormControl fullWidth error={Boolean(formErrors.priority)}>
+                            <InputLabel>Priority *</InputLabel>
+                            <Select
+                                value={form.priority}
+                                label="Priority *"
+                                onChange={(e) => setForm((p) => ({ ...p, priority: e.target.value }))}
+                            >
+                                {PRIORITY_OPTIONS.map((o) => (
+                                    <MenuItem key={o} value={o}>
+                                        <Stack direction="row" alignItems="center" gap={1}>
+                                            <Box sx={{
+                                                width: 10, height: 10, borderRadius: "50%",
+                                                bgcolor: PRIORITY_COLORS[o]?.color ?? "#999",
+                                            }} />
+                                            {o}
+                                        </Stack>
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                            {formErrors.priority && <FormHelperText>{formErrors.priority}</FormHelperText>}
+                        </FormControl>
+
+                        <FormControl fullWidth error={Boolean(formErrors.type)}>
+                            <InputLabel>Type *</InputLabel>
+                            <Select
+                                value={form.type}
+                                label="Type *"
+                                onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))}
+                            >
+                                {TYPE_OPTIONS.map((o) => (
+                                    <MenuItem key={o} value={o}>
+                                        <Stack direction="row" alignItems="center" gap={1}>
+                                            <Box sx={{
+                                                width: 10, height: 10, borderRadius: "50%",
+                                                bgcolor: TYPE_COLORS[o]?.color ?? "#999",
+                                            }} />
+                                            {o}
+                                        </Stack>
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                            {formErrors.type && <FormHelperText>{formErrors.type}</FormHelperText>}
+                        </FormControl>
+                    </Stack>
+
+                    {/* API error */}
+                    {formErrors.api && (
                         <Alert severity="error" sx={{ mt: 1.5, borderRadius: 2, fontSize: "0.8rem" }}>
-                            {formError}
+                            {formErrors.api}
                         </Alert>
                     )}
                 </DialogContent>
+
                 <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
                     <Button onClick={closeDialog} disabled={saving} sx={{ color: t.textSecondary }}>
                         Cancel
@@ -323,8 +453,13 @@ export default function ProjectRequirements() {
                         variant="contained"
                         onClick={handleSave}
                         disabled={saving}
-                        startIcon={saving ? <CircularProgress size={14} color="inherit" /> : editTarget ? <CheckOutlinedIcon /> : <AddOutlinedIcon />}
-                        sx={{ bgcolor: accentColor, borderRadius: 2, "&:hover": { bgcolor: accentColor, filter: "brightness(0.92)" } }}
+                        startIcon={saving
+                            ? <CircularProgress size={14} color="inherit" />
+                            : editTarget ? <CheckOutlinedIcon /> : <AddOutlinedIcon />}
+                        sx={{
+                            bgcolor: accentColor, borderRadius: 2,
+                            "&:hover": { bgcolor: accentColor, filter: "brightness(0.92)" },
+                        }}
                     >
                         {saving ? "Saving…" : editTarget ? "Save Changes" : "Add"}
                     </Button>

@@ -1,3 +1,4 @@
+// src/components/common/student/Profile/ProfileSetupModal.jsx
 import { useState } from "react";
 import {
     Dialog, DialogContent,
@@ -18,12 +19,7 @@ import IconButton from "@mui/material/IconButton";
 import CheckIcon from "@mui/icons-material/Check";
 import studentApi from "../../../../api/handler/endpoints/studentApi";
 
-// ══════════════════════════════════════════════════════════════════════
-// ✅ FIX #1: كل الثوابت خارج الـ component تماماً
-//    السبب: لو كانت داخل الـ component، كل render بيعملها re-create
-//    وهاي بتسبب إن الـ TextField يخسر الـ focus بعد كل حرف
-// ══════════════════════════════════════════════════════════════════════
-
+// ── ثوابت خارج الـ component ─────────────────────────────────────────────────
 const SUGGESTED_SKILLS = [
     "Frontend", "Backend", "AI / ML", "Data Analysis",
     "UI/UX", "DevOps", "Mobile", "Security",
@@ -43,7 +39,6 @@ const STEPS = [
     { id: "bio", label: "About You", icon: PersonOutlineIcon, desc: "Write a short bio about yourself" },
 ];
 
-// ✅ inputSx ثابت خارج الـ component — مش بيتغير مع الـ theme لأنه بيعتمد على accent فقط
 const INPUT_SX = {
     "& .MuiOutlinedInput-root": {
         borderRadius: 2,
@@ -54,11 +49,7 @@ const INPUT_SX = {
     "& .MuiInputLabel-root": { fontSize: "0.875rem" },
 };
 
-// ══════════════════════════════════════════════════════════════════════
-// ✅ FIX #2: InnerCard كـ component مستقل خارج ProfileSetupModal
-//    السبب: لو معرّف داخله، React بيعتبره component جديد كل render
-//    وبيعمل unmount/remount → بيضيع الـ focus من الـ TextField
-// ══════════════════════════════════════════════════════════════════════
+// ── InnerCard خارج الـ component عشان ما يحصل unmount/remount ──────────────
 function InnerCard({ icon: Icon, title, count, action, children, border, cardAlt, isDark, accent, a10, a22, labelSx }) {
     return (
         <Box sx={{ borderRadius: 2.5, border: `1px solid ${border}`, bgcolor: cardAlt, overflow: "hidden" }}>
@@ -81,6 +72,7 @@ function InnerCard({ icon: Icon, title, count, action, children, border, cardAlt
     );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
 export default function ProfileSetupModal({ open, onDone }) {
     const theme = useTheme();
     const isDark = theme.palette.mode === "dark";
@@ -98,7 +90,7 @@ export default function ProfileSetupModal({ open, onDone }) {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
 
-    /* ── Design tokens ── */
+    // ── Design tokens ───────────────────────────────────────────────────────
     const accent = "#d0895b";
     const a10 = isDark ? "rgba(208,137,91,0.10)" : "rgba(208,137,91,0.07)";
     const a22 = "rgba(208,137,91,0.22)";
@@ -108,16 +100,13 @@ export default function ProfileSetupModal({ open, onDone }) {
     const textPri = theme.palette.text.primary;
     const textSec = theme.palette.text.secondary;
 
-    // ✅ labelSx كـ object ثابت داخل الـ render لكن مش بيسبب مشكلة لأنه مش component
     const labelSx = {
         fontSize: "0.68rem", fontWeight: 700,
         letterSpacing: "0.08em", textTransform: "uppercase", color: textSec,
     };
 
-    // props مشتركة لـ InnerCard — نجمعها بـ object واحد عشان ما نكرر
     const cardProps = { border, cardAlt, isDark, accent, a10, a22, labelSx };
 
-    // ✅ chipSx: دالة عادية (مش component) — مش بتسبب مشكلة
     const chipSx = (sel) => ({
         height: 30, borderRadius: 1.5, fontSize: "0.78rem", fontWeight: sel ? 700 : 400,
         bgcolor: sel ? accent : "transparent", color: sel ? "#fff" : textSec,
@@ -125,7 +114,7 @@ export default function ProfileSetupModal({ open, onDone }) {
         "&:hover": { bgcolor: sel ? "#be7a4f" : a10, borderColor: sel ? "#be7a4f" : a22 },
     });
 
-    /* ── Skills helpers ── */
+    // ── Skills helpers ──────────────────────────────────────────────────────
     const toggleSkill = (s) =>
         setSkills((p) => p.includes(s) ? p.filter((x) => x !== s) : [...p, s]);
 
@@ -137,14 +126,18 @@ export default function ProfileSetupModal({ open, onDone }) {
 
     const removeSkill = (s) => setSkills((p) => p.filter((x) => x !== s));
 
-    /* ── Next / Finish ── */
+    // ── Next / Finish ───────────────────────────────────────────────────────
     const handleNext = async () => {
         if (step < STEPS.length - 1) { setStep((s) => s + 1); return; }
+
         const data = { department, skills, fullName, email, phoneNumber, linkedin, github, bio };
         setSaving(true);
         setError("");
+
         try {
             await studentApi.createProfile(data);
+            // ✅ البروفايل اتحفظ بنجاح → ضع الـ flag عشان ما يظهر Setup مرة ثانية
+            sessionStorage.setItem("gpms_profile_done", "true");
             onDone(data);
         } catch (e) {
             const status = e?.response?.status;
@@ -155,9 +148,11 @@ export default function ProfileSetupModal({ open, onDone }) {
                     message.toLowerCase().includes("exist"));
 
             if (isExists) {
-                // ✅ البروفايل موجود → نعمل UPDATE بدل CREATE
+                // ✅ البروفايل موجود → UPDATE
                 try {
                     await studentApi.updateProfile(data);
+                    // ✅ ضع الـ flag هون كمان
+                    sessionStorage.setItem("gpms_profile_done", "true");
                     onDone(data);
                 } catch (e2) {
                     setError(e2?.response?.data?.message ?? "Failed to update profile.");
@@ -311,7 +306,6 @@ export default function ProfileSetupModal({ open, onDone }) {
                     <Stack spacing={2}>
                         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                             <InnerCard {...cardProps} icon={AddIcon} title="Add Custom Skill">
-                                {/* ✅ value + onChange = controlled input صح */}
                                 <TextField
                                     size="small" fullWidth
                                     placeholder="e.g. Flutter, Figma, PyTorch…"

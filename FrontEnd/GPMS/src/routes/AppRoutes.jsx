@@ -15,7 +15,7 @@ const AdminPage = lazy(() => import("../pages/Admin/AdminPage"));
 const SupervisorPage = lazy(() => import("../pages/Supervisor/SupervisorPage"));
 const StudentPage = lazy(() => import("../pages/Student/StudentPage"));
 const NotFoundPage = lazy(() => import("../pages/NotFound/NotFoundPage"));
-const UserProfilePage = lazy(() => import("./../pages/UserProfile/UserProfilePage"));
+// const UserProfilePage = lazy(() => import("./../pages/UserProfile/UserProfilePage"));
 export default function AppRoutes() {
   return (
     <BrowserRouter>

@@ -103,63 +103,11 @@ const studentApi = {
 
     // ── User Profile ──────────────────────────────────────────────────────────
 
-    // getProfile: () =>
-    //     axiosInstance.get("/UserProfile").then((r) => r.data),
+    getProfile: () =>
+        axiosInstance.get("/UserProfile").then((r) => r.data),
 
     getAllStudents: () =>
         axiosInstance.get("/Student/all-students").then((r) => r.data),
-
-    // createProfile: (data) =>
-    //     axiosInstance.post("/UserProfile", {
-    //         phoneNumber: data.phoneNumber ?? "",
-    //         fullName: data.fullName ?? "",
-    //         department: data.department ?? "",
-    //         gitHubLink: data.github ?? "",
-    //         linkedinLink: data.linkedin ?? "",
-    //         field: (data.skills ?? []).join(","),
-    //         personalEmail: data.email ?? "",
-    //         bio: data.bio ?? "",
-    //     }).then((r) => r.data),
-
-    // updateProfile: (data) =>
-    //     axiosInstance.put("/UserProfile", {
-    //         phoneNumber: data.phoneNumber ?? "",
-    //         fullName: data.fullName ?? "",
-    //         department: data.department ?? "",
-    //         gitHubLink: data.github ?? "",
-    //         linkedinLink: data.linkedin ?? "",
-    //         field: (data.skills ?? []).join(","),
-    //         totalNumOfCreditCards: 0,
-    //         personalEmail: data.email ?? "",
-    //         bio: data.bio ?? "",
-    //     }).then((r) => r.data),
-
-    // ── Appointments ──────────────────────────────────────────────────────────
-    /** GET /api/UserProfile — مرة وحدة بس، بعدها من الـ cache */
-    getProfile: () => {
-        if (_profileCache) return Promise.resolve(_profileCache);
-        if (_profilePromise) return _profilePromise;
-        _profilePromise = axiosInstance.get("/UserProfile")
-            .then((r) => {
-                _profileCache = r.data;
-                _profilePromise = null;
-                return _profileCache;
-            })
-            .catch((err) => {
-                _profilePromise = null;
-                throw err;
-            });
-        return _profilePromise;
-    },
-
-    /** يمسح الـ cache — نستدعيه بعد create أو update */
-    invalidateCache: () => {
-        _profileCache = null;
-        _profilePromise = null;
-    },
-
-    getProfileById: (userId) =>
-        axiosInstance.get(`/UserProfile/${userId}`).then((r) => r.data),
 
     createProfile: (data) =>
         axiosInstance.post("/UserProfile", {
@@ -171,10 +119,7 @@ const studentApi = {
             field: (data.skills ?? []).join(","),
             personalEmail: data.email ?? "",
             bio: data.bio ?? "",
-        }).then((r) => {
-            UserProfileApi.invalidateCache();
-            return r.data;
-        }),
+        }).then((r) => r.data),
 
     updateProfile: (data) =>
         axiosInstance.put("/UserProfile", {
@@ -187,10 +132,10 @@ const studentApi = {
             totalNumOfCreditCards: 0,
             personalEmail: data.email ?? "",
             bio: data.bio ?? "",
-        }).then((r) => {
-            UserProfileApi.invalidateCache();
-            return r.data;
-        }),
+        }).then((r) => r.data),
+
+    // ── Appointments ──────────────────────────────────────────────────────────
+
     /**
      * GET /api/Student/supervisor-office-hours
      * Returns the supervisor's available office hour slots.

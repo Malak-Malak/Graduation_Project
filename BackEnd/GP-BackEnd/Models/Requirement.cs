@@ -9,6 +9,8 @@ namespace GP_BackEnd.Models
         public string Title { get; set; }
         [Required]
         public string Description { get; set; }
+        public string? GithubRepo { get; set; }
+
         public string Priority { get; set; } = "Medium"; // Low, Medium, High
         public string Type { get; set; } = "Functional"; // Functional, Non-Functional
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

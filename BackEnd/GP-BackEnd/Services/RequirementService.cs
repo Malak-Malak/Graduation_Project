@@ -40,6 +40,8 @@ namespace GP_BackEnd.Services
                     Description = r.Description,
                     Priority = r.Priority,
                     Type = r.Type,
+                    GithubRepo = r.GithubRepo,
+
                     CreatedAt = r.CreatedAt,
                     CreatedByName = r.CreatedBy.UserProfile != null
                         ? r.CreatedBy.UserProfile.FullName
@@ -60,6 +62,8 @@ namespace GP_BackEnd.Services
                 Description = dto.Description,
                 Priority = dto.Priority,
                 Type = dto.Type,
+                GithubRepo = dto.GithubRepo,
+
                 TeamId = teamId.Value,              // ✅ was ProjectId
                 CreatedByUserId = userId,
                 CreatedAt = DateTime.UtcNow
@@ -82,6 +86,8 @@ namespace GP_BackEnd.Services
 
             requirement.Title = dto.Title;
             requirement.Description = dto.Description;
+            requirement.GithubRepo = dto.GithubRepo;
+
             requirement.Priority = dto.Priority;
             requirement.Type = dto.Type;
 

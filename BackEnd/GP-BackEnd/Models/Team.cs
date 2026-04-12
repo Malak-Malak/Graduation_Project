@@ -9,6 +9,7 @@ namespace GP_BackEnd.Models
         public string ProjectTitle { get; set; }
         public string Status { get; set; } = "Pending";
         public int SupervisorId { get; set; }
+        public string? GithubRepo { get; set; }
         public int? ProjectId { get; set; }
         public int CreatedByUserId { get; set; }
         public User Supervisor { get; set; }

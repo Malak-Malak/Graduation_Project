@@ -40,7 +40,6 @@ namespace GP_BackEnd.Services
                     Description = r.Description,
                     Priority = r.Priority,
                     Type = r.Type,
-                    GithubRepo = r.GithubRepo,
 
                     CreatedAt = r.CreatedAt,
                     CreatedByName = r.CreatedBy.UserProfile != null
@@ -62,7 +61,6 @@ namespace GP_BackEnd.Services
                 Description = dto.Description,
                 Priority = dto.Priority,
                 Type = dto.Type,
-                GithubRepo = dto.GithubRepo,
 
                 TeamId = teamId.Value,              // ✅ was ProjectId
                 CreatedByUserId = userId,
@@ -86,7 +84,6 @@ namespace GP_BackEnd.Services
 
             requirement.Title = dto.Title;
             requirement.Description = dto.Description;
-            requirement.GithubRepo = dto.GithubRepo;
 
             requirement.Priority = dto.Priority;
             requirement.Type = dto.Type;
@@ -107,6 +104,37 @@ namespace GP_BackEnd.Services
             if (requirement == null) return false;
 
             _context.Requirements.Remove(requirement);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+        // Get github repo
+        public async Task<string?> GetGithubRepoAsync(int userId)
+        {
+            var teamMember = await _context.TeamMembers
+                .FirstOrDefaultAsync(tm => tm.UserId == userId);
+
+            if (teamMember == null) return null;
+
+            var team = await _context.Teams
+                .FirstOrDefaultAsync(t => t.Id == teamMember.TeamId);
+
+            return team?.GithubRepo;
+        }
+
+        // Set github repo
+        public async Task<bool> SetGithubRepoAsync(int userId, string githubRepo)
+        {
+            var teamMember = await _context.TeamMembers
+                .FirstOrDefaultAsync(tm => tm.UserId == userId);
+
+            if (teamMember == null) return false;
+
+            var team = await _context.Teams
+                .FirstOrDefaultAsync(t => t.Id == teamMember.TeamId);
+
+            if (team == null) return false;
+
+            team.GithubRepo = githubRepo;
             await _context.SaveChangesAsync();
             return true;
         }

@@ -65,5 +65,26 @@ namespace GP_BackEnd.Controllers
 
             return Ok("Requirement deleted successfully.");
         }
+        // GET api/requirement/github-repo
+        [HttpGet("github-repo")]
+        public async Task<IActionResult> GetGithubRepo()
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var repo = await _requirementService.GetGithubRepoAsync(userId);
+            return Ok(new { githubRepo = repo });
+        }
+
+        // POST api/requirement/github-repo
+        [HttpPost("github-repo")]
+        public async Task<IActionResult> SetGithubRepo([FromBody] SetGithubRepoDto dto)
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var result = await _requirementService.SetGithubRepoAsync(userId, dto.GithubRepo);
+
+            if (!result)
+                return BadRequest("Could not set GitHub repo. You may not be in a team.");
+
+            return Ok("GitHub repo set successfully.");
+        }
     }
 }

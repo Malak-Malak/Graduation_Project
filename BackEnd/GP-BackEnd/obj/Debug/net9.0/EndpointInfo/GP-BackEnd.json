@@ -980,6 +980,47 @@
         }
       }
     },
+    "/api/Requirement/github-repo": {
+      "get": {
+        "tags": [
+          "Requirement"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Requirement"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetGithubRepoDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetGithubRepoDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetGithubRepoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Student/available-students": {
       "get": {
         "tags": [
@@ -2169,6 +2210,16 @@
           "studentId": {
             "type": "integer",
             "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SetGithubRepoDto": {
+        "type": "object",
+        "properties": {
+          "githubRepo": {
+            "type": "string",
+            "nullable": true
           }
         },
         "additionalProperties": false

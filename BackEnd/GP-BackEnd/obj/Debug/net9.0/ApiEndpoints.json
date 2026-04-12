@@ -567,6 +567,32 @@
   },
   {
     "ContainingType": "GP_BackEnd.Controllers.RequirementController",
+    "Method": "GetGithubRepo",
+    "RelativePath": "api/Requirement/github-repo",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.RequirementController",
+    "Method": "SetGithubRepo",
+    "RelativePath": "api/Requirement/github-repo",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "GP_BackEnd.DTOs.Requirement.SetGithubRepoDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.RequirementController",
     "Method": "UpdateRequirement",
     "RelativePath": "api/Requirement/update/{requirementId}",
     "HttpMethod": "PUT",

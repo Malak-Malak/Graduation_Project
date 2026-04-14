@@ -21,7 +21,7 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import PersonOffOutlinedIcon from "@mui/icons-material/PersonOffOutlined";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
-
+import requirementApi from "../../../../api/handler/endpoints/requirementApi";
 import {
     DndContext, pointerWithin, PointerSensor,
     useSensor, useSensors, DragOverlay, useDroppable,
@@ -52,14 +52,12 @@ const COL_META = {
     done: { label: "Done", color: "#3DB97A" },
 };
 
-// ✅ FIXED: backend returns "To Do" / "In Progress" / "Done" — confirmed from response data
 const COL_TO_STATUS = {
     todo: "To Do",
     inProgress: "In Progress",
     done: "Done",
 };
 
-// ✅ Priority is 100% frontend-only — never in any API payload
 const PRIORITY = {
     high: { color: "#E05C5C", bg: "rgba(224,92,92,0.12)", Icon: KeyboardArrowUpIcon, label: "High" },
     medium: { color: "#E5973D", bg: "rgba(229,151,61,0.12)", Icon: RemoveIcon, label: "Medium" },
@@ -123,9 +121,7 @@ const mapTask = (task) => {
     };
 };
 
-// ✅ FIXED: maps all known backend status strings including "To Do" and "In Progress"
 const normaliseBoardResponse = (data) => {
-    // Shape A: { toDo, inProgress, done } — keys from backend
     if (data && (Array.isArray(data.toDo) || Array.isArray(data.inProgress) || Array.isArray(data.done))) {
         return {
             todo: (data.toDo ?? []).map(mapTask),
@@ -133,16 +129,10 @@ const normaliseBoardResponse = (data) => {
             done: (data.done ?? []).map(mapTask),
         };
     }
-    // Shape B: flat array with .status string
     const S2C = {
-        "To Do": "todo",
-        "Todo": "todo",
-        "todo": "todo",
-        "In Progress": "inProgress",
-        "InProgress": "inProgress",
-        "inProgress": "inProgress",
-        "Done": "done",
-        "done": "done",
+        "To Do": "todo", "Todo": "todo", "todo": "todo",
+        "In Progress": "inProgress", "InProgress": "inProgress", "inProgress": "inProgress",
+        "Done": "done", "done": "done",
     };
     const cols = { todo: [], inProgress: [], done: [] };
     (Array.isArray(data) ? data : data?.tasks ?? []).forEach(t => {
@@ -274,9 +264,9 @@ function OverlayCard({ task, colId }) {
 }
 
 /* =================================================================
-   COLUMN
+   COLUMN — receives hasRepo as prop
 ================================================================= */
-function Column({ colId, tasks, onAdd, onCardClick }) {
+function Column({ colId, tasks, onAdd, onCardClick, hasRepo }) {
     const { surfaceCol, border, textPri, textSec, textMut, dark } = useTokens();
     const c = COL_META[colId];
     const { setNodeRef, isOver } = useDroppable({ id: colId });
@@ -291,10 +281,22 @@ function Column({ colId, tasks, onAdd, onCardClick }) {
                             <Typography sx={{ fontSize: "0.62rem", fontWeight: 700, color: textSec }}>{tasks.length}</Typography>
                         </Box>
                     </Stack>
-                    <Tooltip title="Add task">
-                        <IconButton size="small" onClick={onAdd} sx={{ width: 22, height: 22, color: textMut, "&:hover": { color: c.color, bgcolor: c.color + "18" } }}>
-                            <AddIcon sx={{ fontSize: 14 }} />
-                        </IconButton>
+                    <Tooltip title={!hasRepo ? "Link a GitHub repository first to add tasks" : "Add task"}>
+                        <span>
+                            <IconButton
+                                size="small"
+                                onClick={onAdd}
+                                disabled={!hasRepo}
+                                sx={{
+                                    width: 22, height: 22,
+                                    color: hasRepo ? textMut : (dark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)"),
+                                    "&:hover": hasRepo ? { color: c.color, bgcolor: c.color + "18" } : {},
+                                    "&.Mui-disabled": { opacity: 0.4 },
+                                }}
+                            >
+                                <AddIcon sx={{ fontSize: 14 }} />
+                            </IconButton>
+                        </span>
                     </Tooltip>
                 </Stack>
             </Box>
@@ -376,15 +378,18 @@ function TaskFormFields({ form, setForm, members, inputSx, accent }) {
 export default function KanbanBoard() {
     const { dark, border, textPri, textSec, textMut, dialogBg, surfaceInput } = useTokens();
 
+    // ✅ FIXED: All hooks are now correctly inside the component body
+    const [githubRepo, setGithubRepo] = useState(null);
+    const [repoChecked, setRepoChecked] = useState(false);
+
     const [columns, setColumns] = useState({ todo: [], inProgress: [], done: [] });
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
-    // ✅ useRef for drag tracking — no stale closures, no re-renders
-    const originColRef = useRef(null);   // column where drag started
-    const colsSnapshotRef = useRef(null);   // columns state at drag start
-    const apiCalledRef = useRef(false);  // ✅ prevents multiple API calls
+    const originColRef = useRef(null);
+    const colsSnapshotRef = useRef(null);
+    const apiCalledRef = useRef(false);
 
     const [activeTask, setActiveTask] = useState(null);
     const [activeCol, setActiveCol] = useState(null);
@@ -422,9 +427,19 @@ export default function KanbanBoard() {
 
     const showSnack = (msg, severity = "success") => setSnack({ open: true, msg, severity });
 
-    // Pure helpers that accept cols as param — no stale closure risk
     const findColOf = (taskId, cols) => COL_ORDER.find(c => cols[c].some(t => t.id === taskId));
     const findTaskIn = (taskId, cols) => Object.values(cols).flat().find(t => t.id === taskId);
+
+    // ✅ FIXED: GitHub repo fetch is now correctly inside the component body
+    useEffect(() => {
+        requirementApi.getGithubRepo()
+            .then((data) => {
+                const repo = typeof data === "string" ? data : (data?.githubRepo ?? null);
+                setGithubRepo(repo || null);
+            })
+            .catch(() => setGithubRepo(null))
+            .finally(() => setRepoChecked(true));
+    }, []);
 
     /* ── FETCH ── */
     const fetchBoard = useCallback(async () => {
@@ -448,7 +463,7 @@ export default function KanbanBoard() {
         setColumns(prev => {
             originColRef.current = findColOf(active.id, prev);
             colsSnapshotRef.current = prev;
-            apiCalledRef.current = false;   // reset guard
+            apiCalledRef.current = false;
             setActiveCol(originColRef.current);
             setActiveTask(findTaskIn(active.id, prev));
             return prev;
@@ -482,17 +497,14 @@ export default function KanbanBoard() {
         setActiveTask(null);
         setActiveCol(null);
 
-        // Dropped outside board
         if (!over || !originCol || !snapshot) {
             if (snapshot) setColumns(snapshot);
             return;
         }
 
-        // Read where card ended up after optimistic move
         setColumns(prev => {
             const finalCol = findColOf(active.id, prev);
 
-            // Same-column reorder (card stays in same col)
             if (finalCol === originCol) {
                 if (!isColId(over.id)) {
                     const oi = prev[originCol].findIndex(t => t.id === active.id);
@@ -500,10 +512,9 @@ export default function KanbanBoard() {
                     if (oi !== -1 && ni !== -1 && oi !== ni)
                         return { ...prev, [originCol]: arrayMove(prev[originCol], oi, ni) };
                 }
-                return prev; // no change needed
+                return prev;
             }
 
-            // Cross-column move — call API exactly ONCE
             if (!apiCalledRef.current) {
                 apiCalledRef.current = true;
                 const task = findTaskIn(active.id, prev);
@@ -526,18 +537,17 @@ export default function KanbanBoard() {
         });
     };
 
-    /* ── ADD TASK ── always creates in "To Do" per backend logic ── */
+    /* ── ADD TASK ── */
     const openAdd = (col) => { setAddCol(col); setAddForm(EMPTY_FORM); setAddOpen(true); };
 
     const handleAdd = async () => {
         if (!addForm.title.trim()) return;
         try {
             setSaving(true);
-            // ✅ Swagger: { title, description, status, deadline, assignedUserIds }
             const payload = {
                 title: addForm.title.trim(),
                 description: addForm.description.trim(),
-                status: COL_TO_STATUS[addCol],   // "To Do" / "In Progress" / "Done"
+                status: COL_TO_STATUS[addCol],
                 assignedUserIds: (addForm.assignedUserIds ?? []).map(Number).filter(n => n > 0),
             };
             if (addForm.deadline) payload.deadline = new Date(addForm.deadline).toISOString();
@@ -545,7 +555,6 @@ export default function KanbanBoard() {
             console.log("create-task payload:", payload);
             const res = await createTask(payload);
 
-            // Save priority locally
             const newId = res?.data?.id ?? res?.data?.taskId ?? res?.data;
             if (newId) pSave(newId, addForm.priority);
 
@@ -578,7 +587,6 @@ export default function KanbanBoard() {
         if (!editForm.title.trim()) return;
         try {
             setSaving(true);
-            // ✅ Swagger: { title, description, deadline, assignedUserIds } — NO status, NO priority
             const payload = {
                 title: editForm.title.trim(),
                 description: editForm.description.trim(),
@@ -683,7 +691,14 @@ export default function KanbanBoard() {
             <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
                 <Box sx={{ display: "flex", gap: 1.5, flex: 1, overflowX: "auto", overflowY: "hidden", pb: 1 }}>
                     {COL_ORDER.map(colId => (
-                        <Column key={colId} colId={colId} tasks={columns[colId]} onAdd={() => openAdd(colId)} onCardClick={openDetail} />
+                        <Column
+                            key={colId}
+                            colId={colId}
+                            tasks={columns[colId]}
+                            onAdd={() => openAdd(colId)}
+                            onCardClick={openDetail}
+                            hasRepo={Boolean(githubRepo)}
+                        />
                     ))}
                 </Box>
                 <DragOverlay dropAnimation={{ duration: 130, easing: "ease" }}>

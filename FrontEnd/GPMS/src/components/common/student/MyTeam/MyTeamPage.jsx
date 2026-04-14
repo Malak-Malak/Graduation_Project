@@ -120,7 +120,7 @@ function StudentProfileModal({ open, onClose, student, onInvite, isInviting, sen
         if (!open || !sid) return;
         setProfile(null);
         setLoading(true);
-        UserProfileApi.getProfileById(sid)
+        studentApi.getProfileById(sid)
             .then(d => {
                 if (!d) return;
                 setProfile({

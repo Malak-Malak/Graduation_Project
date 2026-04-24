@@ -232,7 +232,7 @@ function StatBadge({ icon: Icon, label, value, accentColor }) {
 
 // ── How It Works Panel ────────────────────────────────────────────────────────
 
-function HowItWorks({ t }) {
+function HowItWorks({ t, theme }) {
     const steps = [
         {
             Icon: CloudUploadOutlinedIcon,
@@ -261,7 +261,7 @@ function HowItWorks({ t }) {
             borderRadius: 3.5,
             border: `1px solid ${t.accentPrimary}20`,
             overflow: "hidden",
-            bgcolor: "rgba(255,255,255,0.55)",
+            bgcolor: theme.palette.background.paper,
             backdropFilter: "blur(12px)",
         }}>
             <Box sx={{
@@ -480,7 +480,7 @@ function DropZone({ file, analyzing, onFilePick, onDrop, onRemove, fileInputRef,
 
 // ── Section Card ──────────────────────────────────────────────────────────────
 
-function SectionCard({ section, t }) {
+function SectionCard({ section, t, theme }) {
     const [open, setOpen] = useState(section.status !== "present");
     const meta = STATUS_META[section.status] ?? STATUS_META.weak;
     const { Icon } = meta;
@@ -490,7 +490,7 @@ function SectionCard({ section, t }) {
             borderRadius: 3,
             border: `1px solid ${meta.color}22`,
             overflow: "hidden",
-            bgcolor: "rgba(255,255,255,0.5)",
+            bgcolor: theme.palette.background.paper,
             backdropFilter: "blur(10px)",
             transition: "border-color .2s, box-shadow .2s, transform .15s",
             "&:hover": {
@@ -644,7 +644,7 @@ function ReportView({ report, t, theme, onReset }) {
                 borderRadius: 4,
                 border: `1px solid ${scoreColor}25`,
                 overflow: "hidden",
-                bgcolor: "rgba(255,255,255,0.6)",
+                bgcolor: theme.palette.background.paper,
                 backdropFilter: "blur(16px)",
             }}>
                 {/* Top gradient bar */}
@@ -740,7 +740,7 @@ function ReportView({ report, t, theme, onReset }) {
                     borderRadius: 3.5,
                     border: `1px solid ${t.accentPrimary}22`,
                     overflow: "hidden",
-                    bgcolor: "rgba(255,255,255,0.55)",
+                    bgcolor: theme.palette.background.paper,
                     backdropFilter: "blur(12px)",
                 }}>
                     <Box sx={{
@@ -811,7 +811,7 @@ function ReportView({ report, t, theme, onReset }) {
                 </Stack>
                 <Stack spacing={1.2}>
                     {report.sections.map((section, i) => (
-                        <SectionCard key={i} section={section} t={t} />
+                        <SectionCard key={i} section={section} t={t} theme={theme} />
                     ))}
                 </Stack>
             </Box>
@@ -1079,7 +1079,7 @@ Rules:
                                 </Typography>
                             </Box>
 
-                            <HowItWorks t={t} />
+                            <HowItWorks t={t} theme={theme} />
 
                             {/* Upload area with label */}
                             <Box>

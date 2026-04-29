@@ -35,11 +35,13 @@ import AutoStoriesOutlinedIcon from "@mui/icons-material/AutoStoriesOutlined";
 import HourglassEmptyOutlinedIcon from "@mui/icons-material/HourglassEmptyOutlined";
 import MarkEmailReadOutlinedIcon from "@mui/icons-material/MarkEmailReadOutlined";
 import BlockOutlinedIcon from "@mui/icons-material/BlockOutlined";
+import AutoFixHighOutlinedIcon from "@mui/icons-material/AutoFixHighOutlined";
 
 import studentApi from "../../../../api/handler/endpoints/studentApi";
 import JoinOrCreateModal from "../Onboarding/JoinOrCreateModal";
 import CreateTeamFlow from "../Onboarding/CreateTeamFlow";
 import JoinTeamFlow from "../Onboarding/JoinTeamFlow";
+import AIProjectSuggester from "../AIResearchSuggester/AIResearchSuggester.jsx";
 
 /* ════════════════════════════════════════════════════════════════
    DESIGN TOKENS
@@ -479,10 +481,6 @@ function StudentCard({ student, onInvite, onViewProfile, busyId, colorIndex, alr
 /* ════════════════════════════════════════════════════════════════
    ROW COMPONENTS
 ════════════════════════════════════════════════════════════════ */
-
-/* ── InviteRow ───────────────────────────────────────────────────
-   teamState prop: إذا كان ACTIVE → زر القبول معلق مع tooltip
-──────────────────────────────────────────────────────────────── */
 function InviteRow({ inv, onAccept, onDecline, busy, teamState }) {
     const theme = useTheme();
     const isDark = theme.palette.mode === "dark";
@@ -499,8 +497,6 @@ function InviteRow({ inv, onAccept, onDecline, busy, teamState }) {
     const senderName = inv.sender?.fullName ?? inv.senderName ?? null;
     const senderEmail = inv.sender?.email ?? inv.senderEmail ?? null;
     const clr = statusMeta(status);
-
-    // الطالب في فريق active → ممنوع يقبل دعوة ثانية
     const isInActiveTeam = teamState === TEAM_STATE.ACTIVE;
 
     return (
@@ -542,7 +538,6 @@ function InviteRow({ inv, onAccept, onDecline, busy, teamState }) {
                     {sentAt && <Typography fontSize="0.68rem" sx={{ color: tSec }}>{sentAt}</Typography>}
                 </Stack>
 
-                {/* ── تحذير: الطالب في فريق active ── */}
                 {status === "Pending" && isInActiveTeam && (
                     <Stack direction="row" alignItems="center" gap={0.6} mt={0.8}
                         sx={{
@@ -559,9 +554,7 @@ function InviteRow({ inv, onAccept, onDecline, busy, teamState }) {
 
             {status === "Pending" && (
                 <Stack direction="row" gap={0.5} flexShrink={0}>
-                    {/* زر القبول — معلق إذا الطالب في فريق */}
                     <Tooltip title={isInActiveTeam ? "Leave your current team first" : "Accept"}>
-                        {/* span لازمة عشان Tooltip تشتغل مع disabled button */}
                         <span>
                             <IconButton
                                 size="small"
@@ -575,8 +568,6 @@ function InviteRow({ inv, onAccept, onDecline, busy, teamState }) {
                             </IconButton>
                         </span>
                     </Tooltip>
-
-                    {/* زر الرفض — دايماً متاح */}
                     <Tooltip title="Decline">
                         <IconButton size="small" disabled={busy} onClick={() => onDecline(id)}
                             sx={{ color: RED, "&:hover": { bgcolor: `${RED}12` } }}>
@@ -894,6 +885,9 @@ export default function MyTeamPage() {
     const [profileStudent, setProfileStudent] = useState(null);
     const [profileOpen, setProfileOpen] = useState(false);
 
+    /* ── AI Project Suggester ── */
+    const [suggesterOpen, setSuggesterOpen] = useState(false);
+
     /* ── snack ── */
     const [snack, setSnack] = useState({ open: false, msg: "", sev: "success" });
     const snap = (msg, sev = "success") => setSnack({ open: true, msg, sev });
@@ -977,14 +971,12 @@ export default function MyTeamPage() {
         finally { setLoadingAvail(false); }
     }, []);
 
-    /* ── initial load ── */
     useEffect(() => {
         fetchTeam();
         fetchInvitations();
         fetchMyJoinRequests();
     }, [fetchTeam, fetchInvitations, fetchMyJoinRequests]);
 
-    /* ── tab-based load (only when ACTIVE) ── */
     useEffect(() => {
         if (teamState !== TEAM_STATE.ACTIVE) return;
         if (tab === 1) { fetchAvailable(); fetchSentInvitations(); }
@@ -1031,13 +1023,9 @@ export default function MyTeamPage() {
         finally { setEditBusy(false); }
     };
 
-    /* ── GUARD: الطالب في فريق active → ممنوع يقبل دعوة ── */
     const handleAcceptInv = async (id) => {
         if (teamState === TEAM_STATE.ACTIVE) {
-            snap(
-                "You are already in an active team. You must leave your current team before accepting another invitation.",
-                "error"
-            );
+            snap("You are already in an active team. You must leave your current team before accepting another invitation.", "error");
             return;
         }
         try {
@@ -1272,6 +1260,15 @@ export default function MyTeamPage() {
     const teamName = myTeam.teamName ?? myTeam.name ?? null;
     const isTeamFull = members.length >= MAX_TEAM_SIZE;
 
+    /* ── build project context for suggester ── */
+    const suggesterProject = {
+        title: myTeam.projectTitle ?? myTeam.project ?? "",
+        description: myTeam.projectDescription ?? myTeam.description ?? "",
+        field: members.map(m => m.field ?? m.skills).filter(Boolean).join(", "),
+        department: typeof supervisor === "object" ? supervisor?.department ?? "" : "",
+        teamMembers: members,
+    };
+
     return (
         <>
             <Box sx={{ height: "100%", display: "flex", flexDirection: "column", gap: 2.5 }}>
@@ -1284,7 +1281,8 @@ export default function MyTeamPage() {
                             {teamName ? `Team: ${teamName}` : "Your current team & project"}
                         </Typography>
                     </Box>
-                    <Stack direction="row" gap={1}>
+
+                    <Stack direction="row" gap={1} alignItems="center">
                         <Tooltip title="Refresh">
                             <IconButton size="small"
                                 onClick={() => { fetchTeam(); fetchInvitations(); fetchMyJoinRequests(); fetchTeamJoinRequests(); fetchSentInvitations(); }}
@@ -1292,6 +1290,39 @@ export default function MyTeamPage() {
                                 <RefreshOutlinedIcon sx={{ fontSize: 17 }} />
                             </IconButton>
                         </Tooltip>
+
+                        {/* ── AI Project Suggester ── */}
+                        <Tooltip title="Find similar projects & get AI-powered ideas">
+                            <span>
+                                <Button
+                                    size="small"
+                                    variant="outlined"
+                                    startIcon={<AutoFixHighOutlinedIcon sx={{ fontSize: 15 }} />}
+                                    onClick={() => setSuggesterOpen(true)}
+                                    disabled={!suggesterProject.title && !suggesterProject.description}
+                                    sx={{
+                                        borderColor: `${accent}50`,
+                                        color: accent,
+                                        borderRadius: "10px",
+                                        textTransform: "none",
+                                        fontWeight: 600,
+                                        fontSize: "0.78rem",
+                                        "&:hover": {
+                                            bgcolor: `${accent}08`,
+                                            borderColor: accent,
+                                            boxShadow: `0 2px 12px ${accent}20`,
+                                        },
+                                        "&.Mui-disabled": {
+                                            borderColor: `${accent}25`,
+                                            color: `${accent}50`,
+                                        },
+                                    }}
+                                >
+                                    AI Suggest
+                                </Button>
+                            </span>
+                        </Tooltip>
+
                         {leaveRequestPending ? (
                             <Tooltip title="Your leave request is awaiting supervisor approval">
                                 <Box>
@@ -1602,10 +1633,9 @@ export default function MyTeamPage() {
                         </Box>
                     )}
 
-                    {/* TAB 4 — My Invitations (received) — زر القبول معلق إذا في فريق active */}
+                    {/* TAB 4 — My Invitations (received) */}
                     {tab === 4 && (
                         <Box sx={{ p: 2.5, flex: 1, overflowY: "auto" }}>
-                            {/* ── تحذير عام إذا الطالب في فريق ── */}
                             {teamState === TEAM_STATE.ACTIVE && invitations.some(i => (i.status ?? "Pending") === "Pending") && (
                                 <Box sx={{
                                     mb: 2, px: 2, py: 1.4, borderRadius: "12px",
@@ -1646,6 +1676,13 @@ export default function MyTeamPage() {
                     )}
                 </Paper>
             </Box>
+
+            {/* ══ AI PROJECT SUGGESTER DIALOG ══ */}
+            <AIProjectSuggester
+                open={suggesterOpen}
+                onClose={() => setSuggesterOpen(false)}
+                project={suggesterProject}
+            />
 
             {/* ══ PROFILE MODAL ══ */}
             <StudentProfileModal open={profileOpen}

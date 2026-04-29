@@ -30,5 +30,6 @@ namespace GP_BackEnd.Models
 
         public Team Team { get; set; }
         public User Supervisor { get; set; }
+        public DateTime? ReminderSentAt { get; set; }
     }
 }

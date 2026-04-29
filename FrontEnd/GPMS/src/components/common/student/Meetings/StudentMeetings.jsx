@@ -3,6 +3,7 @@ import {
     Box, Typography, Stack, Paper, Chip, Button,
     Dialog, DialogTitle, DialogContent, DialogActions,
     TextField, Divider, alpha, Tab, Tabs, CircularProgress, Alert,
+    Pagination,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
@@ -11,13 +12,15 @@ import PersonOutlinedIcon from "@mui/icons-material/PersonOutlined";
 import VideocamOutlinedIcon from "@mui/icons-material/VideocamOutlined";
 import AddIcon from "@mui/icons-material/Add";
 import ScheduleIcon from "@mui/icons-material/Schedule";
-import WifiOutlinedIcon from "@mui/icons-material/WifiOutlined";
+import SignalWifi4BarRoundedIcon from "@mui/icons-material/SignalWifi4BarRounded";
 import BusinessOutlinedIcon from "@mui/icons-material/BusinessOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import EventBusyOutlinedIcon from "@mui/icons-material/EventBusyOutlined";
 import studentApi from "../../../../api/handler/endpoints/studentApi";
 
 const PRIMARY = "#d0895b";
+const ITEMS_PER_PAGE = 5;
 
 const DAY_COLOR = {
     Sunday: "#C47E7E", Monday: "#7E9FC4", Tuesday: "#9E86C4",
@@ -28,9 +31,11 @@ const STATUS_CONFIG = {
     Pending: { label: "Pending", color: "#C49A6C" },
     Approved: { label: "Approved", color: "#6D8A7D" },
     Rejected: { label: "Rejected", color: "#C47E7E" },
+    Passed: { label: "Passed", color: "#9E86C4" },
     pending: { label: "Pending", color: "#C49A6C" },
     approved: { label: "Approved", color: "#6D8A7D" },
     rejected: { label: "Rejected", color: "#C47E7E" },
+    passed: { label: "Passed", color: "#9E86C4" },
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -52,15 +57,44 @@ function formatDateTime(iso) {
         + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
 }
 
+// ── Online Badge ──────────────────────────────────────────────────────────────
+// Replaced the WiFi icon with a cleaner "video/online" indicator
+function OnlineBadge({ isOnline, size = "medium" }) {
+    const isSmall = size === "small";
+    const color = isOnline ? "#7E9FC4" : "#6D8A7D";
+
+    return (
+        <Stack direction="row" alignItems="center" gap={isSmall ? 0.4 : 0.6}>
+            {isOnline
+                ? <SignalWifi4BarRoundedIcon sx={{ fontSize: isSmall ? 12 : 14, color }} />
+                : <BusinessOutlinedIcon sx={{ fontSize: isSmall ? 12 : 14, color }} />
+            }
+            <Typography
+                variant="caption"
+                sx={{
+                    fontSize: isSmall ? "0.65rem" : "0.72rem",
+                    fontWeight: 600,
+                    color,
+                    lineHeight: 1,
+                }}
+            >
+                {isOnline ? "Online" : "In-person"}
+            </Typography>
+        </Stack>
+    );
+}
+
 // ── Office Hour Slot Selector ─────────────────────────────────────────────────
-// ✅ Each slot shows its type (Online / In-person) as set by the supervisor.
-// The student cannot change the type — they only choose the time slot.
 function SlotSelector({ slots, selectedId, onSelect }) {
     const theme = useTheme();
     const t = theme.palette.custom;
 
     if (!slots.length) return (
-        <Box sx={{ textAlign: "center", py: 3, border: `2px dashed ${alpha(PRIMARY, 0.2)}`, borderRadius: 2 }}>
+        <Box sx={{
+            textAlign: "center", py: 3,
+            border: `2px dashed ${alpha(PRIMARY, 0.2)}`,
+            borderRadius: 2,
+        }}>
             <ScheduleIcon sx={{ fontSize: 32, color: alpha(PRIMARY, 0.3), mb: 0.5 }} />
             <Typography sx={{ fontSize: "0.82rem", color: t?.textTertiary }}>
                 No availability slots from your supervisor yet.
@@ -79,7 +113,10 @@ function SlotSelector({ slots, selectedId, onSelect }) {
             {Object.entries(byDay).map(([day, daySlots]) => (
                 <Box key={day}>
                     <Stack direction="row" alignItems="center" gap={0.8} mb={0.8}>
-                        <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: DAY_COLOR[day] ?? PRIMARY, flexShrink: 0 }} />
+                        <Box sx={{
+                            width: 8, height: 8, borderRadius: "50%",
+                            bgcolor: DAY_COLOR[day] ?? PRIMARY, flexShrink: 0,
+                        }} />
                         <Typography variant="caption" sx={{
                             fontWeight: 700, color: DAY_COLOR[day] ?? PRIMARY,
                             textTransform: "uppercase", letterSpacing: "0.07em", fontSize: "0.65rem",
@@ -91,47 +128,45 @@ function SlotSelector({ slots, selectedId, onSelect }) {
                         {daySlots.map((slot) => {
                             const slotId = slot.officeHourId ?? slot.id;
                             const isSelected = selectedId === slotId;
-                            // ✅ isOnline is set by supervisor — read from slot
                             const isOnline = Boolean(slot.isOnline);
                             const typeColor = isOnline ? "#7E9FC4" : "#6D8A7D";
                             const dayColor = DAY_COLOR[day] ?? PRIMARY;
 
                             return (
-                                <Box key={slotId} onClick={() => onSelect(slotId)} sx={{
-                                    px: 2, py: 1.5, borderRadius: 2, cursor: "pointer",
-                                    border: `1.5px solid ${isSelected ? dayColor : alpha(dayColor, 0.2)}`,
-                                    bgcolor: isSelected ? alpha(dayColor, 0.08) : "transparent",
-                                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                                    transition: "all 0.15s",
-                                    "&:hover": { borderColor: dayColor, bgcolor: alpha(dayColor, 0.05) },
-                                }}>
+                                <Box
+                                    key={slotId}
+                                    onClick={() => onSelect(slotId)}
+                                    sx={{
+                                        px: 2, py: 1.5, borderRadius: 2, cursor: "pointer",
+                                        border: `1.5px solid ${isSelected ? dayColor : alpha(dayColor, 0.2)}`,
+                                        bgcolor: isSelected ? alpha(dayColor, 0.08) : "transparent",
+                                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                                        transition: "all 0.15s",
+                                        "&:hover": { borderColor: dayColor, bgcolor: alpha(dayColor, 0.05) },
+                                    }}
+                                >
                                     <Stack direction="row" alignItems="center" gap={1.5}>
-                                        <AccessTimeOutlinedIcon sx={{ fontSize: 15, color: isSelected ? dayColor : t?.textTertiary }} />
+                                        <AccessTimeOutlinedIcon sx={{
+                                            fontSize: 15,
+                                            color: isSelected ? dayColor : t?.textTertiary,
+                                        }} />
                                         <Box>
-                                            <Typography variant="body2" fontWeight={isSelected ? 700 : 500}
-                                                sx={{ color: isSelected ? dayColor : t?.textPrimary, lineHeight: 1.3 }}>
+                                            <Typography
+                                                variant="body2"
+                                                fontWeight={isSelected ? 700 : 500}
+                                                sx={{ color: isSelected ? dayColor : t?.textPrimary, lineHeight: 1.3 }}
+                                            >
                                                 {formatSlotTime(slot.startTime, slot.endTime)}
                                             </Typography>
-                                            {/* ✅ Meeting type badge — set by supervisor, shown read-only */}
-                                            <Stack direction="row" alignItems="center" gap={0.5} mt={0.3}>
-                                                {isOnline
-                                                    ? <WifiOutlinedIcon sx={{ fontSize: 12, color: typeColor }} />
-                                                    : <BusinessOutlinedIcon sx={{ fontSize: 12, color: typeColor }} />}
-                                                <Typography variant="caption"
-                                                    sx={{ fontSize: "0.65rem", color: typeColor, fontWeight: 600 }}>
-                                                    {isOnline ? "Online Meeting" : "Office Hour (In-person)"}
-                                                </Typography>
-                                            </Stack>
+                                            <Box mt={0.3}>
+                                                <OnlineBadge isOnline={isOnline} size="small" />
+                                            </Box>
                                         </Box>
                                     </Stack>
 
                                     <Stack direction="row" alignItems="center" gap={1}>
-                                        {/* Type badge pill */}
                                         <Chip
                                             size="small"
-                                            icon={isOnline
-                                                ? <WifiOutlinedIcon sx={{ fontSize: "11px !important" }} />
-                                                : <BusinessOutlinedIcon sx={{ fontSize: "11px !important" }} />}
                                             label={isOnline ? "Online" : "In-person"}
                                             sx={{
                                                 height: 18, fontSize: "0.6rem", fontWeight: 600,
@@ -176,7 +211,6 @@ function RequestAppointmentDialog({ open, onClose, onSuccess }) {
             .finally(() => setLoadingSlots(false));
     }, [open]);
 
-    // ✅ isOnline comes from the slot itself — supervisor set it, student can't change it
     const selectedSlot = slots.find((s) => (s.officeHourId ?? s.id) === selectedSlotId);
     const isOnline = Boolean(selectedSlot?.isOnline);
 
@@ -231,7 +265,6 @@ function RequestAppointmentDialog({ open, onClose, onSuccess }) {
                         <Typography variant="body2" fontWeight={700} sx={{ mb: 0.5, color: "text.primary" }}>
                             Available Time Slots
                         </Typography>
-                        {/* ✅ Hint: student knows type is supervisor-defined */}
                         <Typography variant="caption" sx={{ color: "text.disabled", display: "block", mb: 1.2 }}>
                             Meeting type (online / in-person) is set by your supervisor for each slot.
                         </Typography>
@@ -248,7 +281,6 @@ function RequestAppointmentDialog({ open, onClose, onSuccess }) {
                         )}
                     </Box>
 
-                    {/* Summary preview */}
                     {selectedSlot && (
                         <>
                             <Divider />
@@ -270,12 +302,7 @@ function RequestAppointmentDialog({ open, onClose, onSuccess }) {
                                     </Typography>
                                 </Stack>
                                 <Stack direction="row" alignItems="center" gap={1} mt={0.4}>
-                                    {isOnline
-                                        ? <WifiOutlinedIcon sx={{ fontSize: 14, color: "#7E9FC4" }} />
-                                        : <BusinessOutlinedIcon sx={{ fontSize: 14, color: "#6D8A7D" }} />}
-                                    <Typography variant="body2" color="text.secondary">
-                                        {isOnline ? "Online Meeting" : "Office Hour (In-person)"}
-                                    </Typography>
+                                    <OnlineBadge isOnline={isOnline} />
                                 </Stack>
                             </Box>
                         </>
@@ -295,7 +322,8 @@ function RequestAppointmentDialog({ open, onClose, onSuccess }) {
                     sx={{
                         bgcolor: PRIMARY, "&:hover": { bgcolor: "#b06f47" },
                         borderRadius: 2, textTransform: "none", fontWeight: 600, px: 3,
-                    }}>
+                    }}
+                >
                     {loading ? "Sending…" : "Send Request"}
                 </Button>
             </DialogActions>
@@ -324,7 +352,6 @@ function UpdateAppointmentDialog({ appointment, open, onClose, onSuccess }) {
             .finally(() => setLoadingSlots(false));
     }, [open, appointment]);
 
-    // ✅ isOnline derived from selected slot — not chosen by student
     const selectedSlot = slots.find((s) => (s.officeHourId ?? s.id) === selectedSlotId);
     const isOnline = Boolean(selectedSlot?.isOnline);
 
@@ -419,7 +446,8 @@ function UpdateAppointmentDialog({ appointment, open, onClose, onSuccess }) {
                     sx={{
                         bgcolor: "#7E9FC4", "&:hover": { bgcolor: "#6080a0" },
                         borderRadius: 2, textTransform: "none", fontWeight: 600, px: 3,
-                    }}>
+                    }}
+                >
                     {loading ? "Updating…" : "Update Appointment"}
                 </Button>
             </DialogActions>
@@ -431,41 +459,56 @@ function UpdateAppointmentDialog({ appointment, open, onClose, onSuccess }) {
 function AppointmentCard({ appt, onEdit }) {
     const theme = useTheme();
     const t = theme.palette.custom;
-    const cfg = STATUS_CONFIG[appt.status] ?? STATUS_CONFIG.Pending;
-    const isPending = (appt.status ?? "").toLowerCase() === "pending";
+    const statusKey = (appt.status ?? "").toLowerCase();
+    const cfg = STATUS_CONFIG[appt.status] ?? STATUS_CONFIG[statusKey] ?? STATUS_CONFIG.Pending;
+    const isPending = statusKey === "pending";
+    const isPassed = statusKey === "passed";
 
     return (
         <Paper elevation={0} sx={{
             p: 2.5, borderRadius: 3,
             border: `1px solid ${alpha(cfg.color, isPending ? 0.3 : 0.12)}`,
-            bgcolor: theme.palette.background.paper,
+            bgcolor: isPassed
+                ? alpha(cfg.color, 0.03)
+                : theme.palette.background.paper,
+            opacity: isPassed ? 0.75 : 1,
             transition: "all 0.2s ease",
             "&:hover": {
                 borderColor: alpha(cfg.color, 0.4),
                 boxShadow: `0 4px 20px ${alpha(cfg.color, 0.08)}`,
+                opacity: 1,
             },
         }}>
             <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
                 <Stack spacing={1.2} flex={1}>
+                    {/* Title row */}
                     <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
                         <Typography variant="subtitle1" fontWeight={700} sx={{ color: t?.textPrimary }}>
                             Meeting Request
                         </Typography>
-                        <Chip label={cfg.label} size="small" sx={{
-                            bgcolor: alpha(cfg.color, 0.12), color: cfg.color,
-                            fontWeight: 600, fontSize: "0.7rem", height: 22,
-                        }} />
+                        <Chip
+                            label={cfg.label}
+                            size="small"
+                            icon={isPassed
+                                ? <EventBusyOutlinedIcon sx={{ fontSize: "12px !important" }} />
+                                : undefined}
+                            sx={{
+                                bgcolor: alpha(cfg.color, 0.12),
+                                color: cfg.color,
+                                fontWeight: 600,
+                                fontSize: "0.7rem",
+                                height: 22,
+                                "& .MuiChip-label": { pl: isPassed ? 0.5 : 1 },
+                            }}
+                        />
+                        {/* Online/In-person badge — redesigned, no jarring blue WiFi */}
                         <Chip
                             size="small"
-                            icon={appt.isOnline
-                                ? <WifiOutlinedIcon sx={{ fontSize: "11px !important" }} />
-                                : <BusinessOutlinedIcon sx={{ fontSize: "11px !important" }} />}
-                            label={appt.isOnline ? "Online" : "In-person"}
+                            label={<OnlineBadge isOnline={appt.isOnline} size="small" />}
                             sx={{
-                                height: 22, fontSize: "0.68rem", fontWeight: 600,
+                                height: 22,
                                 bgcolor: alpha(appt.isOnline ? "#7E9FC4" : "#6D8A7D", 0.1),
-                                color: appt.isOnline ? "#7E9FC4" : "#6D8A7D",
-                                "& .MuiChip-label": { px: 0.7 },
+                                "& .MuiChip-label": { px: 0.8, display: "flex", alignItems: "center" },
                             }}
                         />
                     </Stack>
@@ -480,21 +523,31 @@ function AppointmentCard({ appt, onEdit }) {
                     )}
 
                     <Stack direction="row" alignItems="center" spacing={0.8}>
-                        <AccessTimeOutlinedIcon sx={{ fontSize: 14, color: PRIMARY }} />
+                        <AccessTimeOutlinedIcon sx={{ fontSize: 14, color: isPassed ? t?.textTertiary : PRIMARY }} />
                         <Typography variant="body2" sx={{ color: t?.textSecondary, fontWeight: 500 }}>
                             {appt.dayOfWeek
                                 ? `${appt.dayOfWeek} · ${appt.startTime ? formatSlotTime(appt.startTime, appt.endTime) : ""}`
                                 : formatDateTime(appt.dateTime)}
                         </Typography>
+                        {isPassed && (
+                            <Typography variant="caption" sx={{
+                                color: STATUS_CONFIG.Passed.color,
+                                fontSize: "0.68rem", fontWeight: 600,
+                                ml: 0.5,
+                            }}>
+                                · Passed
+                            </Typography>
+                        )}
                     </Stack>
 
-                    {appt.link && (
+                    {appt.link && !isPassed && (
                         <Stack direction="row" alignItems="center" spacing={0.8}>
                             <VideocamOutlinedIcon sx={{ fontSize: 14, color: "#7E9FC4" }} />
                             <Typography
                                 variant="body2" component="a" href={appt.link} target="_blank"
                                 onClick={(e) => e.stopPropagation()}
-                                sx={{ color: "#7E9FC4", fontWeight: 500 }}>
+                                sx={{ color: "#7E9FC4", fontWeight: 500 }}
+                            >
                                 Join Meeting
                             </Typography>
                         </Stack>
@@ -519,6 +572,65 @@ function AppointmentCard({ appt, onEdit }) {
                 )}
             </Stack>
         </Paper>
+    );
+}
+
+// ── Paginated List ────────────────────────────────────────────────────────────
+function PaginatedList({ items, onEdit }) {
+    const [page, setPage] = useState(1);
+    const pageCount = Math.ceil(items.length / ITEMS_PER_PAGE);
+    const visible = items.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+
+    // Reset to page 1 when items change (tab switch)
+    useEffect(() => { setPage(1); }, [items.length]);
+
+    if (!items.length) return (
+        <Box sx={{ textAlign: "center", py: 6 }}>
+            <ScheduleIcon sx={{ fontSize: 40, color: alpha(PRIMARY, 0.25), mb: 1 }} />
+            <Typography sx={{ color: "text.disabled" }}>
+                No appointments found.
+            </Typography>
+        </Box>
+    );
+
+    return (
+        <Stack spacing={2}>
+            {visible.map((a) => (
+                <AppointmentCard
+                    key={a.appointmentId ?? a.id}
+                    appt={a}
+                    onEdit={onEdit}
+                />
+            ))}
+
+            {pageCount > 1 && (
+                <Stack alignItems="center" pt={1}>
+                    <Pagination
+                        count={pageCount}
+                        page={page}
+                        onChange={(_, v) => setPage(v)}
+                        size="small"
+                        sx={{
+                            "& .MuiPaginationItem-root": {
+                                borderRadius: 2,
+                                fontWeight: 500,
+                            },
+                            "& .Mui-selected": {
+                                bgcolor: `${alpha(PRIMARY, 0.15)} !important`,
+                                color: PRIMARY,
+                                fontWeight: 700,
+                            },
+                            "& .MuiPaginationItem-root:hover": {
+                                bgcolor: alpha(PRIMARY, 0.08),
+                            },
+                        }}
+                    />
+                    <Typography variant="caption" sx={{ color: "text.disabled", mt: 0.5 }}>
+                        Showing {(page - 1) * ITEMS_PER_PAGE + 1}–{Math.min(page * ITEMS_PER_PAGE, items.length)} of {items.length}
+                    </Typography>
+                </Stack>
+            )}
+        </Stack>
     );
 }
 
@@ -549,24 +661,48 @@ export default function StudentMeetings() {
 
     useEffect(() => { fetchAppointments(); }, [fetchAppointments]);
 
-    const upcoming = appointments.filter(
-        (a) => ["pending", "approved"].includes((a.status ?? "").toLowerCase())
+    const now = new Date();
+
+    const upcoming = appointments.filter((a) => {
+        const s = (a.status ?? "").toLowerCase();
+        return ["pending", "approved"].includes(s);
+    });
+
+    const passed = appointments.filter((a) => {
+        const s = (a.status ?? "").toLowerCase();
+        // Mark as passed if status is "passed", OR if approved but dateTime is in the past
+        if (s === "passed") return true;
+        if (s === "approved" && a.dateTime && new Date(a.dateTime) < now) return true;
+        return false;
+    });
+
+    const rejected = appointments.filter((a) =>
+        (a.status ?? "").toLowerCase() === "rejected"
     );
-    const rejected = appointments.filter(
-        (a) => (a.status ?? "").toLowerCase() === "rejected"
-    );
+
+    const tabLists = [upcoming, passed, rejected];
 
     const nextAppt = appointments.find(
         (a) => (a.status ?? "").toLowerCase() === "approved"
+            && (!a.dateTime || new Date(a.dateTime) >= now)
     );
+
+    const TAB_LABELS = [
+        `Upcoming (${upcoming.length})`,
+        `Passed (${passed.length})`,
+        `Rejected (${rejected.length})`,
+    ];
 
     return (
         <Box sx={{ width: "100%" }}>
+            {/* Header */}
             <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 3 }}>
                 <Box>
-                    <Typography variant="h2" sx={{ color: t?.textPrimary, mb: 0.5 }}>Meetings</Typography>
+                    <Typography variant="h2" sx={{ color: t?.textPrimary, mb: 0.5 }}>
+                        Meetings
+                    </Typography>
                     <Typography sx={{ color: t?.textSecondary, fontSize: "0.9rem" }}>
-                        {upcoming.length} upcoming · {rejected.length} rejected
+                        {upcoming.length} upcoming · {passed.length} passed · {rejected.length} rejected
                     </Typography>
                 </Box>
                 <Button
@@ -576,13 +712,15 @@ export default function StudentMeetings() {
                     sx={{
                         bgcolor: PRIMARY, "&:hover": { bgcolor: "#b06f47" },
                         borderRadius: 2, textTransform: "none", fontWeight: 600,
-                    }}>
+                    }}
+                >
                     Request Meeting
                 </Button>
             </Stack>
 
             {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>}
 
+            {/* Next appointment banner */}
             {nextAppt && (
                 <Paper elevation={0} sx={{
                     p: 2.5, mb: 3, borderRadius: 3,
@@ -595,20 +733,24 @@ export default function StudentMeetings() {
                                 <ScheduleIcon sx={{ color: PRIMARY, fontSize: 24 }} />
                             </Box>
                             <Box>
-                                <Typography variant="caption"
-                                    sx={{ color: PRIMARY, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                                <Typography variant="caption" sx={{
+                                    color: PRIMARY, fontWeight: 700,
+                                    textTransform: "uppercase", letterSpacing: "0.07em",
+                                }}>
                                     Next Appointment
                                 </Typography>
                                 <Typography variant="subtitle1" fontWeight={700} sx={{ color: t?.textPrimary }}>
                                     {nextAppt.supervisorName ?? "Supervisor"}
                                 </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    {nextAppt.dayOfWeek
-                                        ? `${nextAppt.dayOfWeek} · ${formatSlotTime(nextAppt.startTime, nextAppt.endTime)}`
-                                        : formatDateTime(nextAppt.dateTime)}
-                                    {" · "}
-                                    {nextAppt.isOnline ? "🌐 Online" : "🏢 In-person"}
-                                </Typography>
+                                <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap">
+                                    <Typography variant="body2" color="text.secondary">
+                                        {nextAppt.dayOfWeek
+                                            ? `${nextAppt.dayOfWeek} · ${formatSlotTime(nextAppt.startTime, nextAppt.endTime)}`
+                                            : formatDateTime(nextAppt.dateTime)}
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">·</Typography>
+                                    <OnlineBadge isOnline={nextAppt.isOnline} />
+                                </Stack>
                             </Box>
                         </Stack>
                         {nextAppt.link && (
@@ -619,7 +761,8 @@ export default function StudentMeetings() {
                                 sx={{
                                     bgcolor: PRIMARY, "&:hover": { bgcolor: "#b06f47" },
                                     borderRadius: 2, textTransform: "none", fontWeight: 600,
-                                }}>
+                                }}
+                            >
                                 Join
                             </Button>
                         )}
@@ -627,42 +770,35 @@ export default function StudentMeetings() {
                 </Paper>
             )}
 
-            <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{
-                mb: 2.5,
-                "& .MuiTab-root": { textTransform: "none", fontWeight: 600, fontSize: "0.9rem" },
-                "& .Mui-selected": { color: PRIMARY },
-                "& .MuiTabs-indicator": { bgcolor: PRIMARY },
-            }}>
-                <Tab label={`Upcoming (${upcoming.length})`} />
-                <Tab label={`Rejected (${rejected.length})`} />
+            {/* Tabs */}
+            <Tabs
+                value={tab}
+                onChange={(_, v) => setTab(v)}
+                sx={{
+                    mb: 2.5,
+                    "& .MuiTab-root": { textTransform: "none", fontWeight: 600, fontSize: "0.9rem" },
+                    "& .Mui-selected": { color: PRIMARY },
+                    "& .MuiTabs-indicator": { bgcolor: PRIMARY },
+                }}
+            >
+                {TAB_LABELS.map((label) => (
+                    <Tab key={label} label={label} />
+                ))}
             </Tabs>
 
-            {loading && (
+            {/* Content */}
+            {loading ? (
                 <Stack alignItems="center" py={6}>
                     <CircularProgress sx={{ color: PRIMARY }} />
                 </Stack>
+            ) : (
+                <PaginatedList
+                    items={tabLists[tab]}
+                    onEdit={setEditTarget}
+                />
             )}
 
-            {!loading && (
-                <Stack spacing={2}>
-                    {(tab === 0 ? upcoming : rejected).map((a) => (
-                        <AppointmentCard
-                            key={a.appointmentId ?? a.id}
-                            appt={a}
-                            onEdit={setEditTarget}
-                        />
-                    ))}
-                    {(tab === 0 ? upcoming : rejected).length === 0 && (
-                        <Box sx={{ textAlign: "center", py: 6 }}>
-                            <ScheduleIcon sx={{ fontSize: 40, color: alpha(PRIMARY, 0.25), mb: 1 }} />
-                            <Typography sx={{ color: t?.textTertiary }}>
-                                No appointments found.
-                            </Typography>
-                        </Box>
-                    )}
-                </Stack>
-            )}
-
+            {/* Dialogs */}
             <RequestAppointmentDialog
                 open={requestOpen}
                 onClose={() => setRequestOpen(false)}

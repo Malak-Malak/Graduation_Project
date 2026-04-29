@@ -127,4 +127,6 @@ app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+builder.Services.AddScoped<EmailService>();
+builder.Services.AddHostedService<AppointmentReminderService>();
 app.Run();

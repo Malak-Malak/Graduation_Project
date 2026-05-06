@@ -93,6 +93,9 @@ builder.Services.AddScoped<FeedbackService>();
 builder.Services.AddScoped<FileSystemService>();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<RequirementService>();
+builder.Services.AddHttpClient<EmailService>();
+builder.Services.AddHostedService<AppointmentReminderService>();
+
 
 var app = builder.Build();
 
@@ -127,6 +130,4 @@ app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-builder.Services.AddScoped<EmailService>();
-builder.Services.AddHostedService<AppointmentReminderService>();
 app.Run();

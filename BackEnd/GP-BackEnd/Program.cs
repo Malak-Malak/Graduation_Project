@@ -95,7 +95,7 @@ builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<RequirementService>();
 builder.Services.AddHttpClient<EmailService>();
 builder.Services.AddHostedService<AppointmentReminderService>();
-
+builder.Services.AddScoped<ArchiveService>();
 
 var app = builder.Build();
 

@@ -146,6 +146,74 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "GP_BackEnd.Controllers.ArchiveController",
+    "Method": "GetArchivedProjects",
+    "RelativePath": "api/Archive",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.ArchiveController",
+    "Method": "GetArchivedProjectById",
+    "RelativePath": "api/Archive/{teamId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "teamId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.ArchiveController",
+    "Method": "SendToArchive",
+    "RelativePath": "api/Archive/send-to-archive",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "GP_BackEnd.DTOs.Archive.SendToArchiveDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.ArchiveController",
+    "Method": "SubmitProject",
+    "RelativePath": "api/Archive/submit",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "version",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.ArchiveController",
+    "Method": "GetSubmittedTeams",
+    "RelativePath": "api/Archive/submitted-teams",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "GP_BackEnd.Controllers.AuthController",
     "Method": "Login",
     "RelativePath": "api/Auth/login",

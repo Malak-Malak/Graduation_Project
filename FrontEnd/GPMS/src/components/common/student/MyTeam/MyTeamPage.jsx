@@ -36,13 +36,14 @@ import HourglassEmptyOutlinedIcon from "@mui/icons-material/HourglassEmptyOutlin
 import MarkEmailReadOutlinedIcon from "@mui/icons-material/MarkEmailReadOutlined";
 import BlockOutlinedIcon from "@mui/icons-material/BlockOutlined";
 import AutoFixHighOutlinedIcon from "@mui/icons-material/AutoFixHighOutlined";
+import ArchiveOutlinedIcon from "@mui/icons-material/ArchiveOutlined";
 
 import studentApi from "../../../../api/handler/endpoints/studentApi";
+import archiveApi from "../../../../api/handler/endpoints/archiveApi";
 import JoinOrCreateModal from "../Onboarding/JoinOrCreateModal";
 import CreateTeamFlow from "../Onboarding/CreateTeamFlow";
 import JoinTeamFlow from "../Onboarding/JoinTeamFlow";
 import AIProjectSuggester from "../AIResearchSuggester/AIResearchSuggester.jsx";
-import SubmitProject from "../Archive/SubmitProject";
 
 /* ════════════════════════════════════════════════════════════════
    DESIGN TOKENS
@@ -886,6 +887,12 @@ export default function MyTeamPage() {
     const [profileStudent, setProfileStudent] = useState(null);
     const [profileOpen, setProfileOpen] = useState(false);
 
+    /* ── Archive ── */
+    const [archiveOpen, setArchiveOpen] = useState(false);
+    const [archiveGithub, setArchiveGithub] = useState("");
+    const [archiveNotes, setArchiveNotes] = useState("");
+    const [archiveBusy, setArchiveBusy] = useState(false);
+
     /* ── AI Project Suggester ── */
     const [suggesterOpen, setSuggesterOpen] = useState(false);
 
@@ -1114,6 +1121,28 @@ export default function MyTeamPage() {
         finally { setInvitingId(null); }
     };
 
+    /* ── Archive handler ── */
+    const handleSubmitArchive = async () => {
+        if (!archiveGithub.trim()) return;
+        try {
+            setArchiveBusy(true);
+            await archiveApi.submitProject({
+                version: myTeam?.version ?? 0,
+                githubRepo: archiveGithub.trim(),
+                notes: archiveNotes.trim() || undefined,
+            });
+            snap("Project submitted for supervisor review!");
+            setArchiveOpen(false);
+            setArchiveGithub("");
+            setArchiveNotes("");
+            fetchTeam();
+        } catch (e) {
+            snap(extractErrorMsg(e, "Could not submit project. Please try again."), "error");
+        } finally {
+            setArchiveBusy(false);
+        }
+    };
+
     /* ══ LOADING ════════════════════════════════════════════════ */
     if (loadingTeam) return (
         <Box sx={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1292,7 +1321,6 @@ export default function MyTeamPage() {
                             </IconButton>
                         </Tooltip>
 
-                        {/* ── AI Project Suggester ── */}
                         <Tooltip title="Find similar projects & get AI-powered ideas">
                             <span>
                                 <Button
@@ -1302,21 +1330,10 @@ export default function MyTeamPage() {
                                     onClick={() => setSuggesterOpen(true)}
                                     disabled={!suggesterProject.title && !suggesterProject.description}
                                     sx={{
-                                        borderColor: `${accent}50`,
-                                        color: accent,
-                                        borderRadius: "10px",
-                                        textTransform: "none",
-                                        fontWeight: 600,
-                                        fontSize: "0.78rem",
-                                        "&:hover": {
-                                            bgcolor: `${accent}08`,
-                                            borderColor: accent,
-                                            boxShadow: `0 2px 12px ${accent}20`,
-                                        },
-                                        "&.Mui-disabled": {
-                                            borderColor: `${accent}25`,
-                                            color: `${accent}50`,
-                                        },
+                                        borderColor: `${accent}50`, color: accent, borderRadius: "10px",
+                                        textTransform: "none", fontWeight: 600, fontSize: "0.78rem",
+                                        "&:hover": { bgcolor: `${accent}08`, borderColor: accent, boxShadow: `0 2px 12px ${accent}20` },
+                                        "&.Mui-disabled": { borderColor: `${accent}25`, color: `${accent}50` },
                                     }}
                                 >
                                     AI Suggest
@@ -1345,20 +1362,6 @@ export default function MyTeamPage() {
                     </Stack>
                 </Stack>
 
-                {/* ── SUBMIT FOR ARCHIVE ── */}
-                <SubmitProject
-                    teamStatus={{
-                        isActive: (myTeam?.status ?? myTeam?.teamStatus ?? "").toLowerCase() === "active",
-                        isSubmitted: myTeam?.isSubmitted ?? false,
-                        isArchived: myTeam?.isArchived ?? false,
-                    }}
-                    version={myTeam?.version ?? 0}
-                    onSubmitSuccess={() => {
-                        snap("Project submitted for supervisor review!");
-                        fetchTeam();
-                    }}
-                />
-
                 {/* ── Pending Leave Banner ── */}
                 {leaveRequestPending && (
                     <Box sx={{ px: 2, py: 1.4, borderRadius: "12px", bgcolor: `${ORANGE}10`, border: `1px solid ${ORANGE}35`, display: "flex", alignItems: "center", gap: 1.2 }}>
@@ -1374,6 +1377,9 @@ export default function MyTeamPage() {
 
                 {/* ── PROJECT + SUPERVISOR ── */}
                 <Stack direction={{ xs: "column", sm: "row" }} gap={2}>
+
+
+                    {/* PROJECT CARD */}
                     <Paper elevation={0} sx={{ flex: 1, p: 2.5, borderRadius: "18px", border: `1px solid ${brd}`, bgcolor: paperBg }}>
                         <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1.8}>
                             <Stack direction="row" alignItems="center" gap={1.2}>
@@ -1382,13 +1388,32 @@ export default function MyTeamPage() {
                                 </Box>
                                 <Typography fontWeight={700} fontSize="0.78rem" sx={{ color: tSec, textTransform: "uppercase", letterSpacing: "0.08em" }}>Project</Typography>
                             </Stack>
-                            <Tooltip title="Edit project info">
-                                <IconButton size="small" onClick={openEdit}
-                                    sx={{ color: tSec, borderRadius: "8px", "&:hover": { color: accent, bgcolor: `${ACCENT}0D` } }}>
-                                    <EditOutlinedIcon sx={{ fontSize: 16 }} />
-                                </IconButton>
-                            </Tooltip>
+
+                            <Stack direction="row" gap={1}>
+                                <Tooltip title="Final project submission after completing your work - request will be reviewed by your supervisor">
+                                    <Button
+                                        size="small"
+                                        variant="contained"
+                                        startIcon={<ArchiveOutlinedIcon sx={{ fontSize: 14 }} />}
+                                        onClick={() => setArchiveOpen(true)}
+                                        sx={{
+                                            bgcolor: accent, borderRadius: "10px", boxShadow: "none",
+                                            textTransform: "none", fontWeight: 700, fontSize: "0.7rem",
+                                            "&:hover": { bgcolor: accent, filter: "brightness(0.92)", boxShadow: "none" },
+                                        }}
+                                    >
+                                        Submit for Archive
+                                    </Button>
+                                </Tooltip>
+                                <Tooltip title="Edit project info">
+                                    <IconButton size="small" onClick={openEdit}
+                                        sx={{ color: tSec, borderRadius: "8px", "&:hover": { color: accent, bgcolor: `${ACCENT}0D` } }}>
+                                        <EditOutlinedIcon sx={{ fontSize: 16 }} />
+                                    </IconButton>
+                                </Tooltip>
+                            </Stack>
                         </Stack>
+
                         <Typography fontWeight={700} fontSize="1rem" sx={{ color: tPri, mb: 0.5 }}>{project}</Typography>
                         {projectDesc && (
                             <Typography fontSize="0.78rem" sx={{ color: tSec, lineHeight: 1.65, mb: 0.8, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
@@ -1400,7 +1425,7 @@ export default function MyTeamPage() {
                             return <Chip label={teamStatus} size="small" sx={{ height: 20, fontSize: "0.65rem", fontWeight: 700, bgcolor: m.bg, color: m.fg, borderRadius: "7px" }} />;
                         })()}
                     </Paper>
-
+                    {/* SUPERVISOR CARD */}
                     <Paper elevation={0} sx={{ flex: 1, p: 2.5, borderRadius: "18px", border: `1px solid ${brd}`, bgcolor: paperBg }}>
                         <Stack direction="row" alignItems="center" gap={1.2} mb={1.8}>
                             <Box sx={{ width: 36, height: 36, borderRadius: "11px", flexShrink: 0, bgcolor: "rgba(109,138,125,0.12)", border: "1px solid rgba(109,138,125,0.22)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1652,11 +1677,7 @@ export default function MyTeamPage() {
                     {tab === 4 && (
                         <Box sx={{ p: 2.5, flex: 1, overflowY: "auto" }}>
                             {teamState === TEAM_STATE.ACTIVE && invitations.some(i => (i.status ?? "Pending") === "Pending") && (
-                                <Box sx={{
-                                    mb: 2, px: 2, py: 1.4, borderRadius: "12px",
-                                    bgcolor: `${RED}08`, border: `1px solid ${RED}22`,
-                                    display: "flex", alignItems: "center", gap: 1.2
-                                }}>
+                                <Box sx={{ mb: 2, px: 2, py: 1.4, borderRadius: "12px", bgcolor: `${RED}08`, border: `1px solid ${RED}22`, display: "flex", alignItems: "center", gap: 1.2 }}>
                                     <BlockOutlinedIcon sx={{ fontSize: 16, color: RED, flexShrink: 0 }} />
                                     <Typography fontSize="0.78rem" sx={{ color: RED, fontWeight: 600, lineHeight: 1.5 }}>
                                         You are already in an active team. You must leave your current team before accepting any invitation.
@@ -1722,6 +1743,69 @@ export default function MyTeamPage() {
                     <Button variant="contained" disabled={editBusy} onClick={handleSaveProject}
                         sx={{ bgcolor: accent, "&:hover": { bgcolor: isDark ? ACCENT : "#a8622e", boxShadow: "none" }, textTransform: "none", fontWeight: 700, borderRadius: "10px", boxShadow: "none" }}>
                         {editBusy ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : "Save"}
+                    </Button>
+                </Box>
+            </Dialog>
+
+            {/* ══ ARCHIVE DIALOG ══ */}
+            <Dialog open={archiveOpen} onClose={() => !archiveBusy && setArchiveOpen(false)} maxWidth="xs" fullWidth
+                PaperProps={{ sx: { borderRadius: "18px", border: `1px solid ${brd}`, bgcolor: paperBg } }}>
+                <Box sx={{ height: 3, bgcolor: accent, borderRadius: "18px 18px 0 0" }} />
+                <Box sx={{ px: 3, py: 2.5, borderBottom: `1px solid ${brd}` }}>
+                    <Stack direction="row" alignItems="center" gap={1}>
+                        <ArchiveOutlinedIcon sx={{ fontSize: 18, color: accent }} />
+                        <Typography fontWeight={700} fontSize="0.95rem" sx={{ color: tPri }}>Submit Project for Archive - Final Submission</Typography>
+                    </Stack>
+                    <Typography fontSize="0.78rem" sx={{ color: tSec, mt: 0.5 }}>
+                        ⚠️ This is the final submission of your project after completing all work. Your supervisor will be notified for review.
+                    </Typography>
+                </Box>
+                <Box sx={{ px: 3, py: 2.5 }}>
+                    <Stack gap={2}>
+                        <TextField
+                            label="GitHub Repository URL"
+                            size="small"
+                            fullWidth
+                            required
+                            placeholder="https://github.com/username/repo"
+                            value={archiveGithub}
+                            onChange={e => setArchiveGithub(e.target.value)}
+                            sx={inputSx}
+                            InputProps={{
+                                startAdornment: <GitHubIcon sx={{ fontSize: 15, color: tSec, mr: 0.8 }} />,
+                            }}
+                        />
+                        <TextField
+                            label="Additional Notes (Optional)"
+                            size="small"
+                            fullWidth
+                            multiline
+                            rows={2}
+                            placeholder="Any notes you'd like to add for your supervisor..."
+                            value={archiveNotes}
+                            onChange={e => setArchiveNotes(e.target.value)}
+                            sx={inputSx}
+                        />
+                    </Stack>
+                </Box>
+                <Box sx={{ px: 3, pb: 3, display: "flex", justifyContent: "flex-end", gap: 1 }}>
+                    <Button disabled={archiveBusy} onClick={() => setArchiveOpen(false)}
+                        sx={{ color: tSec, textTransform: "none", fontWeight: 500, borderRadius: "10px" }}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        disabled={archiveBusy || !archiveGithub.trim()}
+                        onClick={handleSubmitArchive}
+                        startIcon={archiveBusy ? null : <SendOutlinedIcon sx={{ fontSize: 14 }} />}
+                        sx={{
+                            bgcolor: accent, textTransform: "none", fontWeight: 700,
+                            borderRadius: "10px", boxShadow: "none",
+                            "&:hover": { bgcolor: accent, filter: "brightness(0.92)", boxShadow: "none" },
+                            "&.Mui-disabled": { opacity: 0.5 },
+                        }}
+                    >
+                        {archiveBusy ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : "Submit Archive Request"}
                     </Button>
                 </Box>
             </Dialog>

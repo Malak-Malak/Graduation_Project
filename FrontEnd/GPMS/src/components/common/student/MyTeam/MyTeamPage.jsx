@@ -42,6 +42,7 @@ import JoinOrCreateModal from "../Onboarding/JoinOrCreateModal";
 import CreateTeamFlow from "../Onboarding/CreateTeamFlow";
 import JoinTeamFlow from "../Onboarding/JoinTeamFlow";
 import AIProjectSuggester from "../AIResearchSuggester/AIResearchSuggester.jsx";
+import SubmitProject from "../Archive/SubmitProject";
 
 /* ════════════════════════════════════════════════════════════════
    DESIGN TOKENS
@@ -1343,6 +1344,20 @@ export default function MyTeamPage() {
                         )}
                     </Stack>
                 </Stack>
+
+                {/* ── SUBMIT FOR ARCHIVE ── */}
+                <SubmitProject
+                    teamStatus={{
+                        isActive: (myTeam?.status ?? myTeam?.teamStatus ?? "").toLowerCase() === "active",
+                        isSubmitted: myTeam?.isSubmitted ?? false,
+                        isArchived: myTeam?.isArchived ?? false,
+                    }}
+                    version={myTeam?.version ?? 0}
+                    onSubmitSuccess={() => {
+                        snap("Project submitted for supervisor review!");
+                        fetchTeam();
+                    }}
+                />
 
                 {/* ── Pending Leave Banner ── */}
                 {leaveRequestPending && (

@@ -21,8 +21,11 @@ import CodeOutlinedIcon from "@mui/icons-material/CodeOutlined";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
+import ArchiveOutlinedIcon from "@mui/icons-material/ArchiveOutlined";
+import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
 
 import studentApi from "../../../../api/handler/endpoints/studentApi";
+import archiveApi from "../../../../api/handler/endpoints/archiveApi";
 
 /* ─── inject global keyframes once ───────────────────────────── */
 if (typeof document !== "undefined" && !document.getElementById("spin-border-kf")) {
@@ -149,6 +152,247 @@ function SpinCard({ color, children }) {
                 {children}
             </Box>
         </Box>
+    );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ARCHIVED PROJECT CARD
+═══════════════════════════════════════════════════════════════ */
+function ArchivedProjectCard({ project, onView }) {
+    const theme = useTheme();
+    const isDark = theme.palette.mode === "dark";
+    const tPri = theme.palette.text.primary;
+    const tSec = theme.palette.text.secondary;
+
+    const colorIdx = Math.abs((project.teamId ?? 0) + (project.projectName ?? "").charCodeAt(0)) % PALETTE.length;
+    const aClr = palette(colorIdx);
+    const versionLabel = project.version === 0 ? "Phase 1" : "Phase 2";
+    const archivedDate = project.archivedAt
+        ? new Date(project.archivedAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
+        : null;
+
+    return (
+        <SpinCard color={aClr}>
+            <Box sx={{ height: 3, flexShrink: 0, background: `linear-gradient(90deg,${aClr} 0%,${aClr}55 100%)` }} />
+            <Box sx={{ p: "14px 16px", flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                <Stack direction="row" alignItems="center" gap={1.5} mb={1.2} sx={{ flexShrink: 0 }}>
+                    <Box sx={{
+                        width: 44, height: 44, borderRadius: "13px", flexShrink: 0,
+                        background: isDark ? `linear-gradient(145deg,${aClr}25,${aClr}10)` : `linear-gradient(145deg,${aClr}20,${aClr}08)`,
+                        border: `1.5px solid ${aClr}30`,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: ".95rem", fontWeight: 800, color: aClr,
+                    }}>
+                        {ini(project.projectName)}
+                    </Box>
+                    <Box minWidth={0} flex={1} overflow="hidden">
+                        <Typography fontWeight={700} fontSize=".9rem" noWrap sx={{ color: tPri, lineHeight: 1.3 }}>
+                            {project.projectName}
+                        </Typography>
+                        {project.supervisorName && (
+                            <Typography fontSize=".68rem" noWrap sx={{ color: aClr, fontWeight: 600, mt: .2 }}>
+                                {project.supervisorName}
+                            </Typography>
+                        )}
+                    </Box>
+                </Stack>
+
+                <Box sx={{ height: 38, overflow: "hidden", flexShrink: 0, mb: .8 }}>
+                    {project.projectDescription
+                        ? <Typography fontSize=".72rem" sx={{ color: tSec, lineHeight: 1.55, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                            {project.projectDescription}
+                        </Typography>
+                        : <Typography fontSize=".72rem" sx={{ color: tSec, fontStyle: "italic" }}>No description</Typography>
+                    }
+                </Box>
+
+                <Stack direction="row" gap={.6} mb={.8} flexWrap="wrap">
+                    <Chip label={versionLabel} size="small" sx={{ height: 18, borderRadius: "5px", bgcolor: `${aClr}12`, color: aClr, fontSize: ".6rem", fontWeight: 700, border: `1px solid ${aClr}25` }} />
+                    {project.department && (
+                        <Chip label={project.department} size="small" sx={{ height: 18, borderRadius: "5px", bgcolor: isDark ? "rgba(255,255,255,.06)" : "rgba(0,0,0,.04)", color: tSec, fontSize: ".6rem", fontWeight: 600 }} />
+                    )}
+                    {archivedDate && (
+                        <Chip label={archivedDate} size="small" sx={{ height: 18, borderRadius: "5px", bgcolor: "rgba(61,185,122,.08)", color: "#3DB97A", fontSize: ".6rem", fontWeight: 600, border: "1px solid rgba(61,185,122,.2)" }} />
+                    )}
+                </Stack>
+
+                <Box sx={{ flex: 1 }} />
+
+                <Button variant="outlined" fullWidth size="small"
+                    startIcon={<InfoOutlinedIcon sx={{ fontSize: 13 }} />}
+                    onClick={() => onView(project)}
+                    sx={{
+                        flexShrink: 0, borderRadius: "10px", textTransform: "none",
+                        fontSize: ".72rem", fontWeight: 600, py: .75,
+                        borderColor: isDark ? "rgba(255,255,255,.12)" : "rgba(0,0,0,.12)", color: tSec,
+                        "&:hover": { borderColor: aClr, color: aClr, bgcolor: `${aClr}0A` }, transition: "all .18s",
+                    }}>
+                    View Details
+                </Button>
+            </Box>
+        </SpinCard>
+    );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ARCHIVED PROJECT DETAIL DIALOG
+═══════════════════════════════════════════════════════════════ */
+function ArchiveDetailDialog({ open, onClose, project }) {
+    const theme = useTheme();
+    const isDark = theme.palette.mode === "dark";
+    const tPri = theme.palette.text.primary;
+    const tSec = theme.palette.text.secondary;
+    const brd = isDark ? "rgba(255,255,255,0.09)" : "rgba(0,0,0,0.08)";
+
+    if (!project) return null;
+
+    const colorIdx = Math.abs((project.teamId ?? 0) + (project.projectName ?? "").charCodeAt(0)) % PALETTE.length;
+    const aClr = palette(colorIdx);
+    const versionLabel = project.version === 0 ? "Phase 1" : "Phase 2";
+    const archivedDate = project.archivedAt
+        ? new Date(project.archivedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+        : null;
+
+    return (
+        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth
+            PaperProps={{
+                sx: {
+                    borderRadius: "20px", overflow: "hidden",
+                    border: `1px solid ${brd}`,
+                    bgcolor: isDark ? "#1E2025" : "#fff",
+                    boxShadow: isDark ? "0 40px 100px rgba(0,0,0,.7)" : "0 40px 100px rgba(0,0,0,.15)",
+                }
+            }}>
+            <Box sx={{
+                height: 100, position: "relative", overflow: "hidden",
+                background: isDark
+                    ? `linear-gradient(135deg,${aClr}28 0%,${aClr}0A 100%)`
+                    : `linear-gradient(135deg,${aClr}14 0%,${aClr}05 100%)`,
+            }}>
+                <Box sx={{ position: "absolute", inset: 0, backgroundImage: `radial-gradient(${aClr}25 1.5px,transparent 1.5px)`, backgroundSize: "22px 22px" }} />
+                <IconButton size="small" onClick={onClose} sx={{
+                    position: "absolute", top: 12, right: 12,
+                    bgcolor: isDark ? "rgba(0,0,0,.5)" : "rgba(255,255,255,.9)",
+                    border: `1px solid ${brd}`, color: tSec, width: 28, height: 28,
+                    "&:hover": { color: aClr }, transition: "all .18s", zIndex: 2,
+                }}>
+                    <CloseIcon sx={{ fontSize: 13 }} />
+                </IconButton>
+            </Box>
+
+            <Box sx={{ px: 3, mt: "-28px", mb: 0, position: "relative", zIndex: 1 }}>
+                <Box sx={{
+                    width: 56, height: 56, borderRadius: "16px",
+                    background: `linear-gradient(145deg,${aClr},${aClr}bb)`,
+                    border: `3px solid ${isDark ? "#1E2025" : "#fff"}`,
+                    boxShadow: `0 6px 20px ${aClr}45`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: "1.2rem", fontWeight: 800, color: "#fff",
+                }}>
+                    {ini(project.projectName)}
+                </Box>
+            </Box>
+
+            <Box sx={{ px: 3, pt: 1.5, pb: 1 }}>
+                <Typography fontWeight={800} fontSize="1.1rem" sx={{ color: tPri, mb: .8 }}>
+                    {project.projectName}
+                </Typography>
+                <Stack direction="row" gap={.7} flexWrap="wrap">
+                    {project.supervisorName && (
+                        <Chip
+                            icon={<SchoolOutlinedIcon sx={{ fontSize: "11px !important", color: `${tSec} !important` }} />}
+                            label={project.supervisorName} size="small"
+                            sx={{ height: 24, borderRadius: "8px", bgcolor: isDark ? "rgba(255,255,255,.07)" : "rgba(0,0,0,.06)", color: tSec, fontSize: ".69rem", fontWeight: 600 }}
+                        />
+                    )}
+                    {project.department && (
+                        <Chip label={project.department} size="small"
+                            sx={{ height: 24, borderRadius: "8px", bgcolor: `${aClr}14`, color: aClr, fontSize: ".69rem", fontWeight: 700, border: `1px solid ${aClr}2E` }}
+                        />
+                    )}
+                    <Chip label={versionLabel} size="small"
+                        sx={{ height: 24, borderRadius: "8px", bgcolor: "rgba(61,185,122,.1)", color: "#3DB97A", fontSize: ".69rem", fontWeight: 700, border: "1px solid rgba(61,185,122,.25)" }}
+                    />
+                </Stack>
+            </Box>
+
+            <Divider sx={{ borderColor: brd, mt: 1.5 }} />
+
+            <DialogContent sx={{ px: 3, py: 2.5 }}>
+                <Stack spacing={2.5}>
+                    {project.projectDescription && (
+                        <Box>
+                            <Typography sx={{ fontSize: ".66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".8px", color: tSec, mb: .8 }}>Description</Typography>
+                            <Typography fontSize=".83rem" sx={{ color: tPri, lineHeight: 1.7 }}>{project.projectDescription}</Typography>
+                        </Box>
+                    )}
+
+                    {project.githubRepo && (
+                        <Box>
+                            <Typography sx={{ fontSize: ".66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".8px", color: tSec, mb: .8 }}>Repository</Typography>
+                            <Stack direction="row" alignItems="center" gap={1}
+                                component="a" href={project.githubRepo} target="_blank" rel="noopener noreferrer"
+                                sx={{
+                                    textDecoration: "none", display: "inline-flex",
+                                    p: "8px 12px", borderRadius: "10px",
+                                    border: `1px solid ${brd}`,
+                                    bgcolor: isDark ? "rgba(255,255,255,.04)" : "rgba(0,0,0,.03)",
+                                    "&:hover": { borderColor: aClr, bgcolor: `${aClr}08` },
+                                    transition: "all .18s",
+                                }}>
+                                <GitHubIcon sx={{ fontSize: 15, color: isDark ? "#ccc" : "#333" }} />
+                                <Typography fontSize=".78rem" fontWeight={600} sx={{ color: aClr }}>
+                                    {project.githubRepo.replace(/^https?:\/\/(www\.)?github\.com\//, "")}
+                                </Typography>
+                            </Stack>
+                        </Box>
+                    )}
+
+                    {project.memberNames?.length > 0 && (
+                        <Box>
+                            <Typography sx={{ fontSize: ".66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".8px", color: tSec, mb: 1 }}>
+                                Team Members ({project.memberNames.length})
+                            </Typography>
+                            <Stack gap={.7}>
+                                {project.memberNames.map((mName, i) => (
+                                    <Stack key={i} direction="row" alignItems="center" gap={1.2}
+                                        sx={{
+                                            p: "10px 14px", borderRadius: "12px",
+                                            border: `1px solid ${isDark ? "rgba(255,255,255,.07)" : "rgba(0,0,0,.07)"}`,
+                                            bgcolor: isDark ? "rgba(255,255,255,.025)" : "rgba(0,0,0,.018)",
+                                        }}>
+                                        <Box sx={{
+                                            width: 32, height: 32, borderRadius: "10px",
+                                            bgcolor: palette(i),
+                                            display: "flex", alignItems: "center", justifyContent: "center",
+                                            fontSize: ".72rem", fontWeight: 700, color: "#fff",
+                                        }}>
+                                            {ini(mName)}
+                                        </Box>
+                                        <Typography fontWeight={600} fontSize=".83rem" sx={{ color: tPri }}>{mName}</Typography>
+                                    </Stack>
+                                ))}
+                            </Stack>
+                        </Box>
+                    )}
+
+                    {archivedDate && (
+                        <Box>
+                            <Typography sx={{ fontSize: ".66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".8px", color: tSec, mb: .5 }}>Archived On</Typography>
+                            <Typography fontSize=".83rem" sx={{ color: tPri }}>{archivedDate}</Typography>
+                        </Box>
+                    )}
+                </Stack>
+            </DialogContent>
+
+            <Box sx={{ px: 3, py: 2, borderTop: `1px solid ${brd}`, display: "flex", justifyContent: "flex-end" }}>
+                <Button onClick={onClose} sx={{
+                    color: tSec, textTransform: "none", fontWeight: 600,
+                    borderRadius: "10px", px: 2.5, fontSize: ".8rem",
+                    "&:hover": { bgcolor: isDark ? "rgba(255,255,255,.05)" : "rgba(0,0,0,.04)" },
+                }}>Close</Button>
+            </Box>
+        </Dialog>
     );
 }
 
@@ -733,6 +977,12 @@ export default function DiscoveryHub() {
     const [teamPage, setTeamPage] = useState(1);
     const [selectedTeam, setSelectedTeam] = useState(null);
     const [teamOpen, setTeamOpen] = useState(false);
+    const [archivedProjects, setArchivedProjects] = useState([]);
+    const [loadingArchive, setLoadingArchive] = useState(false);
+    const [searchArchive, setSearchArchive] = useState("");
+    const [archivePage, setArchivePage] = useState(1);
+    const [selectedArchive, setSelectedArchive] = useState(null);
+    const [archiveDetailOpen, setArchiveDetailOpen] = useState(false);
     const [snack, setSnack] = useState({ open: false, msg: "", sev: "success" });
     const snap = (msg, sev = "success") => setSnack({ open: true, msg, sev });
 
@@ -777,10 +1027,29 @@ export default function DiscoveryHub() {
         finally { setLoadingTeams(false); }
     }, [teams.length]);
 
-    useEffect(() => { if (tab === 0) fetchStudents(); if (tab === 1) fetchTeams(); }, [tab, fetchStudents, fetchTeams]);
+    const fetchArchivedProjects = useCallback(async () => {
+        if (archivedProjects.length > 0) return;
+        setLoadingArchive(true);
+        try {
+            const d = await archiveApi.getAllArchivedProjects();
+            setArchivedProjects(Array.isArray(d) ? d : []);
+        } catch {
+            snap("Failed to load archived projects", "error");
+        } finally {
+            setLoadingArchive(false);
+        }
+    }, [archivedProjects.length]);
+
+    useEffect(() => {
+        if (tab === 0) fetchStudents();
+        if (tab === 1) fetchTeams();
+        if (tab === 2) fetchArchivedProjects();
+    }, [tab, fetchStudents, fetchTeams, fetchArchivedProjects]);
+
     useEffect(() => { setStudentPage(1); }, [searchStudents]);
     useEffect(() => { setTeamPage(1); }, [searchTeams]);
-    useEffect(() => { setStudentPage(1); setTeamPage(1); }, [tab]);
+    useEffect(() => { setArchivePage(1); }, [searchArchive]);
+    useEffect(() => { setStudentPage(1); setTeamPage(1); setArchivePage(1); }, [tab]);
 
     const filteredStudents = students.filter(s => {
         if (!searchStudents) return true;
@@ -792,11 +1061,26 @@ export default function DiscoveryHub() {
         const q = searchTeams.toLowerCase();
         return (t.projectTitle ?? "").toLowerCase().includes(q) || (t.projectDescription ?? "").toLowerCase().includes(q) || (t.supervisorName ?? "").toLowerCase().includes(q);
     });
+    const filteredArchive = archivedProjects.filter((p) => {
+        if (!searchArchive) return true;
+        const q = searchArchive.toLowerCase();
+        return (
+            (p.projectName ?? "").toLowerCase().includes(q) ||
+            (p.projectDescription ?? "").toLowerCase().includes(q) ||
+            (p.supervisorName ?? "").toLowerCase().includes(q) ||
+            (p.department ?? "").toLowerCase().includes(q)
+        );
+    });
 
     const totalStudentPages = Math.ceil(filteredStudents.length / CARDS_PER_PAGE);
     const pagedStudents = filteredStudents.slice((studentPage - 1) * CARDS_PER_PAGE, studentPage * CARDS_PER_PAGE);
     const totalTeamPages = Math.ceil(filteredTeams.length / CARDS_PER_PAGE);
     const pagedTeams = filteredTeams.slice((teamPage - 1) * CARDS_PER_PAGE, teamPage * CARDS_PER_PAGE);
+    const totalArchivePages = Math.ceil(filteredArchive.length / CARDS_PER_PAGE);
+    const pagedArchive = filteredArchive.slice(
+        (archivePage - 1) * CARDS_PER_PAGE,
+        archivePage * CARDS_PER_PAGE
+    );
     const gridCols = { xs: "1fr", sm: "1fr 1fr", md: "1fr 1fr 1fr" };
 
     const searchSx = {
@@ -845,6 +1129,7 @@ export default function DiscoveryHub() {
                     }}>
                         <Tab label={<Stack direction="row" alignItems="center" gap={.9}><PeopleOutlineIcon sx={{ fontSize: 17 }} /><span>Available Students</span>{students.length > 0 && <Chip label={filteredStudents.length} size="small" sx={{ height: 19, minWidth: 24, bgcolor: `${ACCENT}18`, color: ACCENT, fontWeight: 700, fontSize: ".68rem", border: `1px solid ${ACCENT}25`, borderRadius: "6px" }} />}</Stack>} />
                         <Tab label={<Stack direction="row" alignItems="center" gap={.9}><GroupsOutlinedIcon sx={{ fontSize: 17 }} /><span>Teams</span>{teams.length > 0 && <Chip label={filteredTeams.length} size="small" sx={{ height: 19, minWidth: 24, bgcolor: `${ACCENT}18`, color: ACCENT, fontWeight: 700, fontSize: ".68rem", border: `1px solid ${ACCENT}25`, borderRadius: "6px" }} />}</Stack>} />
+                        <Tab label={<Stack direction="row" alignItems="center" gap={.9}><ArchiveOutlinedIcon sx={{ fontSize: 17 }} /><span>Archived Projects</span>{archivedProjects.length > 0 && <Chip label={filteredArchive.length} size="small" sx={{ height: 19, minWidth: 24, bgcolor: `${ACCENT}18`, color: ACCENT, fontWeight: 700, fontSize: ".68rem", border: `1px solid ${ACCENT}25`, borderRadius: "6px" }} />}</Stack>} />
                     </Tabs>
                 </Box>
 
@@ -893,10 +1178,63 @@ export default function DiscoveryHub() {
                         )}
                     </Box>
                 )}
+
+                {tab === 2 && (
+                    <Box>
+                        <TextField
+                            fullWidth size="small"
+                            placeholder="Search by project, supervisor or department…"
+                            value={searchArchive}
+                            onChange={e => setSearchArchive(e.target.value)}
+                            sx={{ mb: 3, ...searchSx }}
+                            InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 17, color: tSec }} /></InputAdornment> }}
+                        />
+                        {loadingArchive ? (
+                            <Box display="flex" justifyContent="center" py={10}>
+                                <CircularProgress size={36} sx={{ color: ACCENT }} />
+                            </Box>
+                        ) : filteredArchive.length === 0 ? (
+                            <EmptyState
+                                msg="No archived projects"
+                                sub={searchArchive ? "Try a different search term" : "No projects have been archived yet"}
+                            />
+                        ) : (
+                            <>
+                                <Box sx={{ display: "grid", gridTemplateColumns: gridCols, gap: "20px", mb: 3 }}>
+                                    {pagedArchive.map((project, i) => (
+                                        <ArchivedProjectCard
+                                            key={project.teamId ?? i}
+                                            project={project}
+                                            onView={(p) => { setSelectedArchive(p); setArchiveDetailOpen(true); }}
+                                        />
+                                    ))}
+                                </Box>
+                                {totalArchivePages > 1 && (
+                                    <Stack alignItems="center" gap={.8} sx={{ pt: 2.5, borderTop: `1px solid ${brd}` }}>
+                                        <Pagination
+                                            count={totalArchivePages}
+                                            page={archivePage}
+                                            onChange={(_, v) => { setArchivePage(v); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                                            size="small" sx={paginationSx}
+                                        />
+                                        <Typography fontSize=".71rem" sx={{ color: tSec }}>
+                                            Showing {(archivePage - 1) * CARDS_PER_PAGE + 1}–{Math.min(archivePage * CARDS_PER_PAGE, filteredArchive.length)} of {filteredArchive.length} projects
+                                        </Typography>
+                                    </Stack>
+                                )}
+                            </>
+                        )}
+                    </Box>
+                )}
             </Box>
 
             <StudentProfileDialog open={profileOpen} onClose={() => { setProfileOpen(false); setSelectedStudent(null); }} student={selectedStudent} />
             <TeamDetailDialog open={teamOpen} onClose={() => { setTeamOpen(false); setSelectedTeam(null); }} team={selectedTeam} />
+            <ArchiveDetailDialog
+                open={archiveDetailOpen}
+                onClose={() => { setArchiveDetailOpen(false); setSelectedArchive(null); }}
+                project={selectedArchive}
+            />
             <Snackbar open={snack.open} autoHideDuration={3500} onClose={() => setSnack(s => ({ ...s, open: false }))} anchorOrigin={{ vertical: "bottom", horizontal: "right" }}>
                 <Alert severity={snack.sev} variant="filled" sx={{ borderRadius: "12px" }}>{snack.msg}</Alert>
             </Snackbar>

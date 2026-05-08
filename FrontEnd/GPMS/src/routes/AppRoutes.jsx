@@ -1,4 +1,3 @@
-
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
 
@@ -8,14 +7,15 @@ import RoleRoute from "./RoleRoute";
 import PageLoader from "../components/common/PageLoader";
 
 // ─── Lazy-loaded pages ────────────────────────────────────────────────────────
-const LandingPage = lazy(() => import("../pages/Landing/LandingPage"));        // ✅ الصفحة الرئيسية
+const LandingPage = lazy(() => import("../pages/Landing/LandingPage"));
 const LoginPage = lazy(() => import("../pages/Login/Login"));
 const RequestRegister = lazy(() => import("../pages/Register/RequestRegister"));
 const AdminPage = lazy(() => import("../pages/Admin/AdminPage"));
 const SupervisorPage = lazy(() => import("../pages/Supervisor/SupervisorPage"));
 const StudentPage = lazy(() => import("../pages/Student/StudentPage"));
 const NotFoundPage = lazy(() => import("../pages/NotFound/NotFoundPage"));
-// const UserProfilePage = lazy(() => import("./../pages/UserProfile/UserProfilePage"));
+// const DiscoveryHub = lazy(() => import("../components/common/student/DiscoveryHub/DiscoveryHub")); // ✅ Public archive
+
 export default function AppRoutes() {
   return (
     <BrowserRouter>
@@ -24,9 +24,10 @@ export default function AppRoutes() {
           <Routes>
 
             {/* ── Public ── */}
-            <Route path="/" element={<LandingPage />} />      {/* ✅ الصفحة الرئيسية */}
+            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RequestRegister />} />
+            {/* <Route path="/archive" element={<DiscoveryHub />} /> ✅ Public route — no auth required */}
 
             {/* ── Protected + role-gated ── */}
             <Route element={<PrivateRoute />}>

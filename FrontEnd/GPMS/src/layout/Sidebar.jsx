@@ -54,6 +54,7 @@ const NAV_ITEMS = {
         { label: "Meetings", icon: <CalendarMonthOutlinedIcon />, path: "/supervisor/meetings" },
         { label: "AI Reports", icon: <AutoAwesomeOutlinedIcon />, path: "/supervisor/ai-reports" },
         { label: "Analytics", icon: <QueryStatsOutlinedIcon />, path: "/supervisor/analytics" },
+        { label: "Project Archive", icon: <SearchOutlinedIcon />, path: "/supervisor/archive" },
     ],
     student: [
         { label: "Dashboard", icon: <DashboardOutlinedIcon />, path: "/student" },

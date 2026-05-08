@@ -9,6 +9,8 @@ import SupervisorMeetings from "../../components/common/supervisor/Meetings/Supe
 import AIReports from "../../components/common/supervisor/AIReports/AIReports";
 import SupervisorAnalytics from "../../components/common/supervisor/Analytics/SupervisorAnalytics";
 import ProfilePage from "../../components/common/student/Profile/ProfilePage";
+import SubmittedTeams from "../../components/common/supervisor/Archive/SubmittedTeams"; // ✅ الصحيح
+
 export default function SupervisorPage() {
     return (
         <MainLayout>
@@ -21,6 +23,7 @@ export default function SupervisorPage() {
                 <Route path="ai-reports" element={<AIReports />} />
                 <Route path="analytics" element={<SupervisorAnalytics />} />
                 <Route path="profile" element={<ProfilePage />} />
+                <Route path="archive" element={<SubmittedTeams />} />
                 <Route path="*" element={<Navigate to="/supervisor" replace />} />
             </Routes>
         </MainLayout>

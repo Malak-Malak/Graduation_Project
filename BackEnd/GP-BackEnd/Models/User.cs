@@ -13,6 +13,7 @@ namespace GP_BackEnd.Models
         public string PasswordHash { get; set; }
         [Required]
         public string Role { get; set; }
+        public bool IsHeadOfDepartment { get; set; } = false;
         public int CurrentVersion { get; set; } = 0;
         public DateTime CreatedAt { get; set; }
         public UserProfile UserProfile { get; set; }

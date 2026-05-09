@@ -27,6 +27,8 @@ namespace GP_BackEnd.Data
         public DbSet<TaskAssignment> TaskAssignments { get; set; }
         public DbSet<Requirement> Requirements { get; set; }
         public DbSet<OfficeHour> OfficeHours { get; set; }
+        public DbSet<DiscussionSlot> DiscussionSlots { get; set; }
+        public DbSet<TeamDiscussionSlot> TeamDiscussionSlots { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -228,16 +230,36 @@ namespace GP_BackEnd.Data
 
 
             modelBuilder.Entity<Feedback>()
-    .HasOne(f => f.ProjectFile)
-    .WithMany()
-    .HasForeignKey(f => f.ProjectFileId)
-    .OnDelete(DeleteBehavior.Restrict);
+                .HasOne(f => f.ProjectFile)
+                .WithMany()
+                .HasForeignKey(f => f.ProjectFileId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             // Username must be unique
             modelBuilder.Entity<User>()
                 .HasIndex(u => u.Username)
                 .IsUnique();
+            // DiscussionSlot -> HeadOfDepartment (User)
+            modelBuilder.Entity<DiscussionSlot>()
+                .HasOne(ds => ds.HeadOfDepartment)
+                .WithMany()
+                .HasForeignKey(ds => ds.HeadOfDepartmentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // TeamDiscussionSlot -> Team
+            modelBuilder.Entity<TeamDiscussionSlot>()
+                .HasOne(tds => tds.Team)
+                .WithMany()
+                .HasForeignKey(tds => tds.TeamId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // TeamDiscussionSlot -> DiscussionSlot
+            modelBuilder.Entity<TeamDiscussionSlot>()
+                .HasOne(tds => tds.DiscussionSlot)
+                .WithMany(ds => ds.TeamSlots)
+                .HasForeignKey(tds => tds.DiscussionSlotId)
+                .OnDelete(DeleteBehavior.Cascade);
+
         }
-
-
     }
 }

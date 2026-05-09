@@ -291,5 +291,14 @@ namespace GP_BackEnd.Services
             await _context.SaveChangesAsync();
             return approved;
         }
+        public async Task<bool> SetHeadOfDepartmentAsync(int supervisorId, bool isHead)
+        {
+            var user = await _context.Users.FindAsync(supervisorId);
+            if (user == null || user.Role != "Supervisor") return false;
+
+            user.IsHeadOfDepartment = isHead;
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 }

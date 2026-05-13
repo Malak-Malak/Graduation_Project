@@ -43,6 +43,7 @@ const NAV_ITEMS = {
         { label: "Reports", icon: <AssessmentOutlinedIcon />, path: "/admin/reports" },
         { label: "All Requests", icon: <AssessmentOutlinedIcon />, path: "/admin/all-requests" },
         { label: "Configuration", icon: <SettingsOutlinedIcon />, path: "/admin/settings" },
+        { label: "Manage Supervisors", icon: <SchoolOutlinedIcon />, path: "/admin/manage-supervisors" },
     ],
     supervisor: [
         { label: "Dashboard", icon: <DashboardOutlinedIcon />, path: "/supervisor" },

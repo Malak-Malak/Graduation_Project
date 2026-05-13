@@ -1,3 +1,5 @@
+// src/pages/Admin/AdminPage.jsx
+
 import { Routes, Route, Navigate } from "react-router-dom";
 import MainLayout from "../../layout/MainLayout";
 
@@ -8,6 +10,7 @@ import ActivityLogs from "../../components/common/admin/ActivityLogs/ActivityLog
 import SystemConfiguration from "../../components/common/admin/SystemConfiguration/SystemConfiguration";
 import PendingRequests from "../../components/common/admin/PendingRequests/PendingRequests";
 import AllRequests from "../../components/common/admin/AllRequests/AllRequests";
+import ManageSupervisors from "../../components/common/admin/ManageSupervisors/ManageSupervisors"; // ✅
 import ProfilePage from "../../components/common/student/Profile/ProfilePage";
 
 export default function AdminPage() {
@@ -19,8 +22,9 @@ export default function AdminPage() {
         <Route path="reports" element={<Reports />} />
         <Route path="logs" element={<ActivityLogs />} />
         <Route path="settings" element={<SystemConfiguration />} />
-        <Route path="pending-requests" element={<PendingRequests />} /> {/* ✅ */}
-        <Route path="all-requests" element={<AllRequests />} /> {/* ✅ */}
+        <Route path="pending-requests" element={<PendingRequests />} />
+        <Route path="all-requests" element={<AllRequests />} />
+        <Route path="manage-supervisors" element={<ManageSupervisors />} /> {/* ✅ */}
         <Route path="profile" element={<ProfilePage />} />
         <Route path="*" element={<Navigate to="/admin" replace />} />
       </Routes>

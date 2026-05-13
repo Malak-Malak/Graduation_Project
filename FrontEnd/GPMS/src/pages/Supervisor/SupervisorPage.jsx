@@ -36,7 +36,7 @@ export default function SupervisorPage() {
 
     useEffect(() => {
         // If already stored on the user object, use it directly.
-        if (user?.isHeadOfDepartment != null) {
+        if (user?.isHeadOfDepartment === true) {
             setIsHead(Boolean(user.isHeadOfDepartment));
             return;
         }

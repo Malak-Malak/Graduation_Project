@@ -67,4 +67,6 @@ export const deleteRequest = (id) =>
 // يعين أو يزيل رئيس القسم — Admin only
 // ══════════════════════════════════════════════════════════════════════════════
 export const setHeadOfDepartment = (supervisorId, isHeadOfDepartment) =>
-    axiosInstance.put(`/Admin/set-head-of-department/${supervisorId}`, { isHeadOfDepartment });
+    axiosInstance.put(`/Admin/set-head-of-department/${supervisorId}`, isHeadOfDepartment, {
+        headers: { "Content-Type": "application/json" },
+    });

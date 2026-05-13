@@ -47,7 +47,7 @@ import {
     getSupervisorTeamById,
     getSupervisorTotalTeams,
 } from "../../../../api/handler/endpoints/supervisorApi";
-
+import GroupCard from "./GroupCard";
 /* ─── constants ──────────────────────────────────────────────── */
 const MBR_COLORS = ["#B46F4C", "#6D8A7D", "#C49A6C", "#7E9FC4", "#9B7EC8"];
 const PRIMARY = "#d0895b";
@@ -249,163 +249,163 @@ function RequestRow({ req, onApprove, onReject, busy }) {
 }
 
 /* ─── Group card ──────────────────────────────────────────────── */
-function GroupCard({ g, onOpenDetail, onOpenSize }) {
-    const theme = useTheme();
-    const isDark = theme.palette.mode === "dark";
-    const risk = g.risk ?? "low";
+// function GroupCard({ g, onOpenDetail, onOpenSize }) {
+//     const theme = useTheme();
+//     const isDark = theme.palette.mode === "dark";
+//     const risk = g.risk ?? "low";
 
-    return (
-        <Paper
-            elevation={0}
-            onClick={() => onOpenDetail(g)}
-            sx={{
-                p: 2.5,
-                borderRadius: 3,
-                cursor: "pointer",
-                bgcolor: theme.palette.background.paper,
-                border: `1px solid ${isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)"}`,
-                transition: "all 0.18s ease",
-                "&:hover": {
-                    transform: "translateY(-2px)",
-                    boxShadow: isDark
-                        ? "0 8px 24px rgba(0,0,0,0.3)"
-                        : "0 8px 24px rgba(0,0,0,0.08)",
-                },
-            }}
-        >
-            {/* header */}
-            <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={1}>
-                <Box flex={1} minWidth={0} pr={1}>
-                    <Stack direction="row" alignItems="center" gap={1} mb={0.3}>
-                        {/* project icon */}
-                        <Box sx={{
-                            width: 32, height: 32, borderRadius: "9px", flexShrink: 0,
-                            bgcolor: `${PRIMARY}12`, border: `1px solid ${PRIMARY}25`,
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                        }}>
-                            <FolderOutlinedIcon sx={{ fontSize: 16, color: PRIMARY }} />
-                        </Box>
+//     return (
+//         <Paper
+//             elevation={0}
+//             onClick={() => onOpenDetail(g)}
+//             sx={{
+//                 p: 2.5,
+//                 borderRadius: 3,
+//                 cursor: "pointer",
+//                 bgcolor: theme.palette.background.paper,
+//                 border: `1px solid ${isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)"}`,
+//                 transition: "all 0.18s ease",
+//                 "&:hover": {
+//                     transform: "translateY(-2px)",
+//                     boxShadow: isDark
+//                         ? "0 8px 24px rgba(0,0,0,0.3)"
+//                         : "0 8px 24px rgba(0,0,0,0.08)",
+//                 },
+//             }}
+//         >
+//             {/* header */}
+//             <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={1}>
+//                 <Box flex={1} minWidth={0} pr={1}>
+//                     <Stack direction="row" alignItems="center" gap={1} mb={0.3}>
+//                         {/* project icon */}
+//                         <Box sx={{
+//                             width: 32, height: 32, borderRadius: "9px", flexShrink: 0,
+//                             bgcolor: `${PRIMARY}12`, border: `1px solid ${PRIMARY}25`,
+//                             display: "flex", alignItems: "center", justifyContent: "center",
+//                         }}>
+//                             <FolderOutlinedIcon sx={{ fontSize: 16, color: PRIMARY }} />
+//                         </Box>
 
-                        {/* projectTitle as primary label */}
-                        <Typography
-                            fontSize="0.97rem"
-                            fontWeight={700}
-                            noWrap
-                            sx={{ color: theme.palette.text.primary }}
-                        >
-                            {g.name}
-                        </Typography>
+//                         {/* projectTitle as primary label */}
+//                         <Typography
+//                             fontSize="0.97rem"
+//                             fontWeight={700}
+//                             noWrap
+//                             sx={{ color: theme.palette.text.primary }}
+//                         >
+//                             {g.name}
+//                         </Typography>
 
-                        <Chip label={risk} size="small" sx={{
-                            bgcolor: `${RISK_CLR[risk]}18`,
-                            color: RISK_CLR[risk],
-                            fontWeight: 600,
-                            fontSize: "0.62rem",
-                            height: 19,
-                            textTransform: "capitalize",
-                            flexShrink: 0,
-                        }} />
-                    </Stack>
+//                         <Chip label={risk} size="small" sx={{
+//                             bgcolor: `${RISK_CLR[risk]}18`,
+//                             color: RISK_CLR[risk],
+//                             fontWeight: 600,
+//                             fontSize: "0.62rem",
+//                             height: 19,
+//                             textTransform: "capitalize",
+//                             flexShrink: 0,
+//                         }} />
+//                     </Stack>
 
-                    {/* show teamName as subtitle if different from projectTitle */}
-                    {g.teamName && (
-                        <Typography fontSize="0.74rem" noWrap sx={{ color: theme.palette.text.secondary, ml: "40px" }}>
-                            {g.teamName}
-                        </Typography>
-                    )}
+//                     {/* show teamName as subtitle if different from projectTitle */}
+//                     {g.teamName && (
+//                         <Typography fontSize="0.74rem" noWrap sx={{ color: theme.palette.text.secondary, ml: "40px" }}>
+//                             {g.teamName}
+//                         </Typography>
+//                     )}
 
-                    {g.projectDescription && (
-                        <Typography
-                            fontSize="0.72rem"
-                            sx={{
-                                color: theme.palette.text.secondary,
-                                mt: 0.4,
-                                ml: "40px",
-                                display: "-webkit-box",
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: "vertical",
-                                overflow: "hidden",
-                            }}
-                        >
-                            {g.projectDescription}
-                        </Typography>
-                    )}
-                </Box>
+//                     {g.projectDescription && (
+//                         <Typography
+//                             fontSize="0.72rem"
+//                             sx={{
+//                                 color: theme.palette.text.secondary,
+//                                 mt: 0.4,
+//                                 ml: "40px",
+//                                 display: "-webkit-box",
+//                                 WebkitLineClamp: 2,
+//                                 WebkitBoxOrient: "vertical",
+//                                 overflow: "hidden",
+//                             }}
+//                         >
+//                             {g.projectDescription}
+//                         </Typography>
+//                     )}
+//                 </Box>
 
-                <Tooltip title="Edit team size">
-                    <Button
-                        size="small"
-                        startIcon={<SettingsOutlinedIcon sx={{ fontSize: 13 }} />}
-                        onClick={(e) => { e.stopPropagation(); onOpenSize(g); }}
-                        sx={{
-                            fontSize: "0.7rem",
-                            color: theme.palette.text.secondary,
-                            textTransform: "none",
-                            minWidth: "auto",
-                            px: 1,
-                            py: 0.5,
-                            borderRadius: 1.5,
-                            "&:hover": { color: PRIMARY, bgcolor: `${PRIMARY}10` },
-                        }}
-                    >
-                        {g.members.length}/{g.maxMembers ?? "?"}
-                    </Button>
-                </Tooltip>
-            </Stack>
+//                 <Tooltip title="Edit team size">
+//                     <Button
+//                         size="small"
+//                         startIcon={<SettingsOutlinedIcon sx={{ fontSize: 13 }} />}
+//                         onClick={(e) => { e.stopPropagation(); onOpenSize(g); }}
+//                         sx={{
+//                             fontSize: "0.7rem",
+//                             color: theme.palette.text.secondary,
+//                             textTransform: "none",
+//                             minWidth: "auto",
+//                             px: 1,
+//                             py: 0.5,
+//                             borderRadius: 1.5,
+//                             "&:hover": { color: PRIMARY, bgcolor: `${PRIMARY}10` },
+//                         }}
+//                     >
+//                         {g.members.length}/{g.maxMembers ?? "?"}
+//                     </Button>
+//                 </Tooltip>
+//             </Stack>
 
-            {/* progress */}
-            <Box mb={1.5}>
-                <Stack direction="row" justifyContent="space-between" mb={0.5}>
-                    <Typography fontSize="0.7rem" sx={{ color: theme.palette.text.secondary }}>
-                        Progress
-                    </Typography>
-                    <Typography fontSize="0.7rem" fontWeight={700} sx={{ color: theme.palette.text.primary }}>
-                        {g.progress ?? 0}%
-                    </Typography>
-                </Stack>
-                <LinearProgress
-                    variant="determinate"
-                    value={g.progress ?? 0}
-                    sx={{
-                        height: 5,
-                        borderRadius: 3,
-                        bgcolor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
-                        "& .MuiLinearProgress-bar": { bgcolor: RISK_CLR[risk], borderRadius: 3 },
-                    }}
-                />
-            </Box>
+//             {/* progress */}
+//             <Box mb={1.5}>
+//                 <Stack direction="row" justifyContent="space-between" mb={0.5}>
+//                     <Typography fontSize="0.7rem" sx={{ color: theme.palette.text.secondary }}>
+//                         Progress
+//                     </Typography>
+//                     <Typography fontSize="0.7rem" fontWeight={700} sx={{ color: theme.palette.text.primary }}>
+//                         {g.progress ?? 0}%
+//                     </Typography>
+//                 </Stack>
+//                 <LinearProgress
+//                     variant="determinate"
+//                     value={g.progress ?? 0}
+//                     sx={{
+//                         height: 5,
+//                         borderRadius: 3,
+//                         bgcolor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
+//                         "& .MuiLinearProgress-bar": { bgcolor: RISK_CLR[risk], borderRadius: 3 },
+//                     }}
+//                 />
+//             </Box>
 
-            {/* footer */}
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <AvatarGroup max={4} sx={{
-                    "& .MuiAvatar-root": { width: 26, height: 26, fontSize: "0.62rem", fontWeight: 700 },
-                }}>
-                    {g.members.map((m, j) => (
-                        <Tooltip key={j} title={m.fullName ?? "?"}>
-                            <Avatar sx={{ bgcolor: MBR_COLORS[j % MBR_COLORS.length] }}>
-                                {initials(m.fullName)}
-                            </Avatar>
-                        </Tooltip>
-                    ))}
-                </AvatarGroup>
-                <Stack direction="row" gap={0.8}>
-                    {g.tasks?.inProgress != null && (
-                        <Chip label={`${g.tasks.inProgress} active`} size="small" sx={{
-                            bgcolor: `${PRIMARY}12`, color: PRIMARY,
-                            fontSize: "0.65rem", fontWeight: 600, height: 20,
-                        }} />
-                    )}
-                    {g.files?.pending != null && (
-                        <Chip label={`${g.files.pending} files`} size="small" sx={{
-                            bgcolor: "rgba(126,159,196,0.12)", color: "#7E9FC4",
-                            fontSize: "0.65rem", fontWeight: 600, height: 20,
-                        }} />
-                    )}
-                </Stack>
-            </Stack>
-        </Paper>
-    );
-}
+//             {/* footer */}
+//             <Stack direction="row" justifyContent="space-between" alignItems="center">
+//                 <AvatarGroup max={4} sx={{
+//                     "& .MuiAvatar-root": { width: 26, height: 26, fontSize: "0.62rem", fontWeight: 700 },
+//                 }}>
+//                     {g.members.map((m, j) => (
+//                         <Tooltip key={j} title={m.fullName ?? "?"}>
+//                             <Avatar sx={{ bgcolor: MBR_COLORS[j % MBR_COLORS.length] }}>
+//                                 {initials(m.fullName)}
+//                             </Avatar>
+//                         </Tooltip>
+//                     ))}
+//                 </AvatarGroup>
+//                 <Stack direction="row" gap={0.8}>
+//                     {g.tasks?.inProgress != null && (
+//                         <Chip label={`${g.tasks.inProgress} active`} size="small" sx={{
+//                             bgcolor: `${PRIMARY}12`, color: PRIMARY,
+//                             fontSize: "0.65rem", fontWeight: 600, height: 20,
+//                         }} />
+//                     )}
+//                     {g.files?.pending != null && (
+//                         <Chip label={`${g.files.pending} files`} size="small" sx={{
+//                             bgcolor: "rgba(126,159,196,0.12)", color: "#7E9FC4",
+//                             fontSize: "0.65rem", fontWeight: 600, height: 20,
+//                         }} />
+//                     )}
+//                 </Stack>
+//             </Stack>
+//         </Paper>
+//     );
+// }
 
 /* ═══════════════════════════════════════════════════════════════ */
 /*  MAIN                                                           */
@@ -862,12 +862,12 @@ export default function GroupsList() {
                                     <Stack direction="row" justifyContent="space-between" mb={0.6}>
                                         <Typography fontSize="0.84rem" sx={{ color: tSec }}>Completion</Typography>
                                         <Typography fontSize="0.84rem" fontWeight={700} sx={{ color: tPri }}>
-                                            {selected.progress ?? 0}%
+                                            {"N/A"}
                                         </Typography>
                                     </Stack>
                                     <LinearProgress
                                         variant="determinate"
-                                        value={selected.progress ?? 0}
+                                        value={0}
                                         sx={{
                                             height: 6, borderRadius: 3,
                                             bgcolor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
@@ -878,12 +878,11 @@ export default function GroupsList() {
                                     />
                                 </Box>
 
+                                {/* التغيير 1: stats grid الجديد */}
                                 <Grid container spacing={1.5}>
                                     {[
-                                        { label: "To Do", val: selected.tasks?.todo, color: tSec },
-                                        { label: "In Progress", val: selected.tasks?.inProgress, color: PRIMARY },
-                                        { label: "Done", val: selected.tasks?.done, color: "#3DB97A" },
-                                        { label: "Files", val: selected.files?.total, color: "#7E9FC4" },
+                                        { label: "Members", val: (selected.members ?? []).length, color: "#6366f1" },
+                                        { label: "Max Size", val: selected.maxMembers ?? "?", color: tSec },
                                     ].map((item) => (
                                         <Grid item xs={6} key={item.label}>
                                             <Box sx={{
@@ -892,7 +891,7 @@ export default function GroupsList() {
                                                 bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.015)",
                                             }}>
                                                 <Typography fontSize="1.5rem" fontWeight={700} sx={{ color: item.color }}>
-                                                    {item.val ?? "—"}
+                                                    {item.val ?? "0"}
                                                 </Typography>
                                                 <Typography fontSize="0.7rem" sx={{ color: tSec }}>{item.label}</Typography>
                                             </Box>
@@ -988,7 +987,7 @@ export default function GroupsList() {
                                         }}
                                     >
                                         <Typography fontSize="0.86rem" sx={{ color: tSec }}>{item.label}</Typography>
-                                        <Chip label={item.val ?? "—"} size="small" sx={{
+                                        <Chip label={item.val ?? "0"} size="small" sx={{
                                             bgcolor: `${item.color}18`, color: item.color,
                                             fontWeight: 700, height: 22, fontSize: "0.75rem",
                                         }} />

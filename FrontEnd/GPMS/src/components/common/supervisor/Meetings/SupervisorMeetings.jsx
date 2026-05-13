@@ -23,6 +23,7 @@ import PeopleOutlinedIcon from "@mui/icons-material/PeopleOutlined";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import FilterListOutlinedIcon from "@mui/icons-material/FilterListOutlined";
+import TodayOutlinedIcon from "@mui/icons-material/TodayOutlined";
 import {
     getPendingAppointments,
     respondToAppointment,
@@ -32,7 +33,7 @@ import {
     getAllAppointments,
 } from "../../../../api/handler/endpoints/supervisorApi";
 
-// ── ثوابت خارج الـ component ─────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────────────────────
 const PRIMARY = "#d0895b";
 const PAGE_SIZE = 5;
 
@@ -41,6 +42,11 @@ const DAYS_OF_WEEK = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "F
 const DAY_SHORT = {
     Sunday: "Sun", Monday: "Mon", Tuesday: "Tue",
     Wednesday: "Wed", Thursday: "Thu", Friday: "Fri", Saturday: "Sat",
+};
+
+const DAY_INDEX = {
+    Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3,
+    Thursday: 4, Friday: 5, Saturday: 6,
 };
 
 const DAY_COLOR = {
@@ -73,6 +79,43 @@ function formatDateTime(iso) {
         + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
 }
 
+/**
+ * Get the next upcoming date for a given day-of-week name.
+ * e.g. "Monday" → returns Date object of this coming Monday
+ */
+function getNextDateForDay(dayName) {
+    const today = new Date();
+    const todayIdx = today.getDay(); // 0=Sun
+    const targetIdx = DAY_INDEX[dayName];
+    if (targetIdx === undefined) return null;
+    let diff = targetIdx - todayIdx;
+    if (diff < 0) diff += 7;
+    // If diff === 0 it's today — show today's date
+    const result = new Date(today);
+    result.setDate(today.getDate() + diff);
+    return result;
+}
+
+/**
+ * Format a Date to "Mon, 19 May" style
+ */
+function formatNextDate(date) {
+    if (!date) return "";
+    return date.toLocaleDateString("en-GB", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+    });
+}
+
+/**
+ * Returns true if the next occurrence of dayName is today
+ */
+function isToday(dayName) {
+    const today = new Date();
+    return today.getDay() === DAY_INDEX[dayName];
+}
+
 // ── Pagination Component ──────────────────────────────────────────────────────
 function Pagination({ page, totalPages, onPageChange, totalItems, pageSize, isDark, accentColor }) {
     if (totalPages <= 1) return null;
@@ -80,7 +123,6 @@ function Pagination({ page, totalPages, onPageChange, totalItems, pageSize, isDa
     const start = (page - 1) * pageSize + 1;
     const end = Math.min(page * pageSize, totalItems);
 
-    // بناء قائمة أرقام الصفحات مع ...
     const getPageNumbers = () => {
         if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1);
         const pages = [];
@@ -107,20 +149,14 @@ function Pagination({ page, totalPages, onPageChange, totalItems, pageSize, isDa
     return (
         <Stack direction="row" alignItems="center" justifyContent="space-between"
             sx={{ mt: 2, pt: 2, borderTop: `1px solid ${border}` }}>
-
-            {/* Info */}
             <Typography sx={{ fontSize: "0.72rem", color: isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)" }}>
                 Showing {start}–{end} of {totalItems}
             </Typography>
-
-            {/* Controls */}
             <Stack direction="row" alignItems="center" gap={0.5}>
-                {/* Prev */}
                 <Box
                     onClick={() => page > 1 && onPageChange(page - 1)}
                     sx={{
-                        ...btnBase,
-                        px: 0.5,
+                        ...btnBase, px: 0.5,
                         opacity: page === 1 ? 0.35 : 1,
                         cursor: page === 1 ? "not-allowed" : "pointer",
                         bgcolor: "transparent",
@@ -129,8 +165,6 @@ function Pagination({ page, totalPages, onPageChange, totalItems, pageSize, isDa
                 >
                     <ChevronLeftIcon sx={{ fontSize: 18 }} />
                 </Box>
-
-                {/* Page numbers */}
                 {getPageNumbers().map((p, i) =>
                     p === "..." ? (
                         <Typography key={`dots-${i}`} sx={{ fontSize: "0.75rem", px: 0.5, color: isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.3)" }}>
@@ -141,8 +175,7 @@ function Pagination({ page, totalPages, onPageChange, totalItems, pageSize, isDa
                             key={p}
                             onClick={() => onPageChange(p)}
                             sx={{
-                                ...btnBase,
-                                px: 1,
+                                ...btnBase, px: 1,
                                 bgcolor: page === p ? accentColor : "transparent",
                                 color: page === p ? "#fff" : isDark ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.65)",
                                 borderColor: page === p ? accentColor : border,
@@ -154,13 +187,10 @@ function Pagination({ page, totalPages, onPageChange, totalItems, pageSize, isDa
                         </Box>
                     )
                 )}
-
-                {/* Next */}
                 <Box
                     onClick={() => page < totalPages && onPageChange(page + 1)}
                     sx={{
-                        ...btnBase,
-                        px: 0.5,
+                        ...btnBase, px: 0.5,
                         opacity: page === totalPages ? 0.35 : 1,
                         cursor: page === totalPages ? "not-allowed" : "pointer",
                         bgcolor: "transparent",
@@ -178,18 +208,13 @@ function Pagination({ page, totalPages, onPageChange, totalItems, pageSize, isDa
 function AllAppointmentsSection({ appointments, loading }) {
     const theme = useTheme();
     const isDark = theme.palette.mode === "dark";
-    const t = theme.palette.custom ?? {};
     const [filter, setFilter] = useState("All");
     const [page, setPage] = useState(1);
 
     const border = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)";
-    const cardBg = isDark ? "rgba(255,255,255,0.025)" : "#fff";
+    const cardBg = isDark ? "rgba(255,255,255,0.025)" : "#fafafa";
 
-    // إعادة تعيين الصفحة لما يتغير الـ filter
-    const handleFilterChange = (f) => {
-        setFilter(f);
-        setPage(1);
-    };
+    const handleFilterChange = (f) => { setFilter(f); setPage(1); };
 
     const filtered = filter === "All"
         ? appointments
@@ -206,8 +231,7 @@ function AllAppointmentsSection({ appointments, loading }) {
 
     return (
         <Stack spacing={2}>
-
-            {/* Filter + Count row */}
+            {/* Filter row */}
             <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
                 <Stack direction="row" alignItems="center" gap={0.5}>
                     <FilterListOutlinedIcon sx={{ fontSize: 15, color: isDark ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.35)" }} />
@@ -235,11 +259,9 @@ function AllAppointmentsSection({ appointments, loading }) {
                         })}
                     </Stack>
                 </Stack>
-
-                {/* Badge عدد النتائج */}
                 <Box sx={{
                     px: 1.2, py: 0.3, borderRadius: 99,
-                    bgcolor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)",
+                    bgcolor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
                     border: `1px solid ${border}`,
                 }}>
                     <Typography sx={{ fontSize: "0.68rem", fontWeight: 700, color: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.4)" }}>
@@ -251,23 +273,27 @@ function AllAppointmentsSection({ appointments, loading }) {
             {/* Empty state */}
             {filtered.length === 0 && (
                 <Box sx={{
-                    textAlign: "center", py: 4,
+                    textAlign: "center", py: 5,
                     border: `1.5px dashed ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}`,
                     borderRadius: 2.5,
                 }}>
-                    <PeopleOutlinedIcon sx={{ fontSize: 28, color: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)", mb: 0.8 }} />
+                    <PeopleOutlinedIcon sx={{ fontSize: 30, color: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.12)", mb: 1 }} />
                     <Typography sx={{ fontSize: "0.82rem", color: isDark ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.35)" }}>
                         No {filter !== "All" ? filter.toLowerCase() : ""} appointments found.
                     </Typography>
                 </Box>
             )}
 
-            {/* Appointment cards */}
+            {/* Cards */}
             <Stack spacing={1}>
                 {paginated.map((appt) => {
                     const apptId = appt.appointmentId ?? appt.id;
                     const statusColor = STATUS_COLOR[appt.status] ?? "#9E9E9E";
                     const typeColor = appt.isOnline ? "#7E9FC4" : "#6D8A7D";
+
+                    // Compute the next actual date if dayOfWeek is present
+                    const nextDate = appt.dayOfWeek ? getNextDateForDay(appt.dayOfWeek) : null;
+                    const todayFlag = appt.dayOfWeek ? isToday(appt.dayOfWeek) : false;
 
                     return (
                         <Box key={apptId} sx={{
@@ -277,13 +303,13 @@ function AllAppointmentsSection({ appointments, loading }) {
                             borderLeft: `3px solid ${statusColor}`,
                             transition: "box-shadow 0.15s",
                             "&:hover": {
-                                boxShadow: isDark ? "0 4px 16px rgba(0,0,0,0.2)" : "0 4px 12px rgba(0,0,0,0.06)",
+                                boxShadow: isDark ? "0 4px 16px rgba(0,0,0,0.2)" : "0 4px 14px rgba(0,0,0,0.07)",
                             },
                         }}>
                             <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1}>
                                 <Box flex={1} minWidth={0}>
 
-                                    {/* Row 1: Project name + badges */}
+                                    {/* Row 1: Project + badges */}
                                     <Stack direction="row" alignItems="center" gap={0.8} flexWrap="wrap" mb={0.5}>
                                         <FolderOutlinedIcon sx={{ fontSize: 13, color: PRIMARY, flexShrink: 0 }} />
                                         <Typography sx={{
@@ -313,8 +339,7 @@ function AllAppointmentsSection({ appointments, loading }) {
                                         }}>
                                             {appt.isOnline
                                                 ? <WifiOutlinedIcon sx={{ fontSize: 10, color: typeColor }} />
-                                                : <BusinessOutlinedIcon sx={{ fontSize: 10, color: typeColor }} />
-                                            }
+                                                : <BusinessOutlinedIcon sx={{ fontSize: 10, color: typeColor }} />}
                                             <Typography sx={{ fontSize: "0.62rem", fontWeight: 700, color: typeColor }}>
                                                 {appt.isOnline ? "Online" : "In-person"}
                                             </Typography>
@@ -323,7 +348,7 @@ function AllAppointmentsSection({ appointments, loading }) {
 
                                     {/* Row 2: Student */}
                                     {appt.studentName && (
-                                        <Stack direction="row" alignItems="center" gap={0.5} mb={0.3}>
+                                        <Stack direction="row" alignItems="center" gap={0.5} mb={0.35}>
                                             <PersonOutlinedIcon sx={{ fontSize: 12, color: isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.3)", flexShrink: 0 }} />
                                             <Typography sx={{ fontSize: "0.72rem", color: isDark ? "rgba(255,255,255,0.45)" : "rgba(0,0,0,0.45)" }}>
                                                 {appt.studentName}
@@ -331,7 +356,7 @@ function AllAppointmentsSection({ appointments, loading }) {
                                         </Stack>
                                     )}
 
-                                    {/* Row 3: Time */}
+                                    {/* Row 3: Time + Date */}
                                     <Stack direction="row" alignItems="center" gap={0.5} mb={appt.excuse || appt.link ? 0.4 : 0}>
                                         <AccessTimeOutlinedIcon sx={{ fontSize: 12, color: isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.3)", flexShrink: 0 }} />
                                         <Typography sx={{ fontSize: "0.75rem", color: isDark ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.5)" }}>
@@ -339,6 +364,26 @@ function AllAppointmentsSection({ appointments, loading }) {
                                                 ? `${appt.dayOfWeek} · ${formatSlotTime(appt.startTime, appt.endTime)}`
                                                 : formatDateTime(appt.dateTime)}
                                         </Typography>
+
+                                        {/* Actual date pill */}
+                                        {nextDate && (
+                                            <Box sx={{
+                                                display: "flex", alignItems: "center", gap: 0.4,
+                                                px: 0.9, py: 0.1, borderRadius: 1,
+                                                bgcolor: todayFlag
+                                                    ? alpha(PRIMARY, 0.12)
+                                                    : isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
+                                                border: `1px solid ${todayFlag ? alpha(PRIMARY, 0.3) : border}`,
+                                            }}>
+                                                <TodayOutlinedIcon sx={{ fontSize: 10, color: todayFlag ? PRIMARY : isDark ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.35)" }} />
+                                                <Typography sx={{
+                                                    fontSize: "0.62rem", fontWeight: todayFlag ? 700 : 500,
+                                                    color: todayFlag ? PRIMARY : isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)",
+                                                }}>
+                                                    {todayFlag ? "Today" : formatNextDate(nextDate)}
+                                                </Typography>
+                                            </Box>
+                                        )}
                                     </Stack>
 
                                     {/* Excuse */}
@@ -364,7 +409,6 @@ function AllAppointmentsSection({ appointments, loading }) {
                 })}
             </Stack>
 
-            {/* Pagination */}
             <Pagination
                 page={page}
                 totalPages={totalPages}
@@ -391,17 +435,14 @@ function AddOfficeHourDialog({ open, onClose, onSuccess }) {
     const handleSave = async () => {
         if (!day || !startTime || !endTime) { setError("Please fill all fields."); return; }
         if (startTime >= endTime) { setError("End time must be after start time."); return; }
-        setLoading(true);
-        setError("");
+        setLoading(true); setError("");
         try {
             await createOfficeHour({ dayOfWeek: day, startTime, endTime, isOnline });
             onSuccess?.();
             handleClose();
         } catch (err) {
             setError(err?.response?.data?.message ?? err?.response?.data ?? "Failed to add slot.");
-        } finally {
-            setLoading(false);
-        }
+        } finally { setLoading(false); }
     };
 
     const handleClose = () => {
@@ -414,6 +455,10 @@ function AddOfficeHourDialog({ open, onClose, onSuccess }) {
     const officeColor = "#6D8A7D";
     const isDark = theme.palette.mode === "dark";
     const border = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)";
+
+    // Compute preview date for selected day
+    const previewDate = getNextDateForDay(day);
+    const todayFlag = isToday(day);
 
     return (
         <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth
@@ -442,14 +487,27 @@ function AddOfficeHourDialog({ open, onClose, onSuccess }) {
                         <Select value={day} label="Day of Week"
                             onChange={(e) => setDay(e.target.value)}
                             sx={{ borderRadius: 2 }}>
-                            {DAYS_OF_WEEK.map((d) => (
-                                <MenuItem key={d} value={d}>
-                                    <Stack direction="row" alignItems="center" gap={1}>
-                                        <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: DAY_COLOR[d] }} />
-                                        {d}
-                                    </Stack>
-                                </MenuItem>
-                            ))}
+                            {DAYS_OF_WEEK.map((d) => {
+                                const nd = getNextDateForDay(d);
+                                const td = isToday(d);
+                                return (
+                                    <MenuItem key={d} value={d}>
+                                        <Stack direction="row" alignItems="center" justifyContent="space-between" width="100%">
+                                            <Stack direction="row" alignItems="center" gap={1}>
+                                                <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: DAY_COLOR[d] }} />
+                                                {d}
+                                            </Stack>
+                                            <Typography sx={{
+                                                fontSize: "0.68rem",
+                                                color: td ? PRIMARY : "text.disabled",
+                                                fontWeight: td ? 700 : 400,
+                                            }}>
+                                                {td ? "Today" : formatNextDate(nd)}
+                                            </Typography>
+                                        </Stack>
+                                    </MenuItem>
+                                );
+                            })}
                         </Select>
                     </FormControl>
 
@@ -501,18 +559,34 @@ function AddOfficeHourDialog({ open, onClose, onSuccess }) {
                         </Stack>
                     </Box>
 
-                    {/* Preview */}
+                    {/* Preview — now includes the actual date */}
                     {startTime && endTime && startTime < endTime && (
                         <Box sx={{
                             p: 1.5, borderRadius: 2,
                             bgcolor: alpha(DAY_COLOR[day] ?? PRIMARY, 0.08),
                             border: `1px solid ${alpha(DAY_COLOR[day] ?? PRIMARY, 0.2)}`,
                         }}>
-                            <Stack direction="row" alignItems="center" gap={1}>
+                            <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap">
                                 <ScheduleOutlinedIcon sx={{ fontSize: 15, color: DAY_COLOR[day] ?? PRIMARY }} />
                                 <Typography variant="body2" fontWeight={600} sx={{ color: DAY_COLOR[day] ?? PRIMARY }}>
                                     {day} · {formatSlotTime(startTime, endTime)}
                                 </Typography>
+
+                                {/* Date pill inside preview */}
+                                {previewDate && (
+                                    <Box sx={{
+                                        display: "flex", alignItems: "center", gap: 0.4,
+                                        px: 0.9, py: 0.15, borderRadius: 1,
+                                        bgcolor: alpha(DAY_COLOR[day] ?? PRIMARY, 0.12),
+                                        border: `1px solid ${alpha(DAY_COLOR[day] ?? PRIMARY, 0.25)}`,
+                                    }}>
+                                        <TodayOutlinedIcon sx={{ fontSize: 10, color: DAY_COLOR[day] ?? PRIMARY }} />
+                                        <Typography sx={{ fontSize: "0.62rem", fontWeight: 700, color: DAY_COLOR[day] ?? PRIMARY }}>
+                                            {todayFlag ? "Today" : formatNextDate(previewDate)}
+                                        </Typography>
+                                    </Box>
+                                )}
+
                                 <Box sx={{ ml: "auto" }}>
                                     <Box sx={{
                                         px: 1, py: 0.15, borderRadius: 1,
@@ -522,8 +596,7 @@ function AddOfficeHourDialog({ open, onClose, onSuccess }) {
                                     }}>
                                         {isOnline
                                             ? <WifiOutlinedIcon sx={{ fontSize: 10, color: onlineColor }} />
-                                            : <BusinessOutlinedIcon sx={{ fontSize: 10, color: officeColor }} />
-                                        }
+                                            : <BusinessOutlinedIcon sx={{ fontSize: 10, color: officeColor }} />}
                                         <Typography sx={{ fontSize: "0.62rem", fontWeight: 700, color: isOnline ? onlineColor : officeColor }}>
                                             {isOnline ? "Online" : "In-person"}
                                         </Typography>
@@ -578,6 +651,10 @@ function ApproveDialog({ appointment, open, onClose, onConfirm }) {
 
     if (!appointment) return null;
 
+    // Date info for the approve dialog
+    const nextDate = appointment.dayOfWeek ? getNextDateForDay(appointment.dayOfWeek) : null;
+    const todayFlag = appointment.dayOfWeek ? isToday(appointment.dayOfWeek) : false;
+
     return (
         <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth
             PaperProps={{ sx: { borderRadius: 3, border: `1px solid ${border}`, overflow: "hidden" } }}>
@@ -617,13 +694,30 @@ function ApproveDialog({ appointment, open, onClose, onConfirm }) {
                                 <Typography variant="caption" color="text.secondary">{appointment.studentName}</Typography>
                             </Stack>
                         )}
-                        <Stack direction="row" alignItems="center" gap={0.8}>
+                        <Stack direction="row" alignItems="center" gap={0.8} flexWrap="wrap">
                             <CalendarMonthOutlinedIcon sx={{ fontSize: 14, color: PRIMARY }} />
                             <Typography variant="body2" fontWeight={500}>
                                 {appointment.dayOfWeek
                                     ? `${appointment.dayOfWeek} · ${formatSlotTime(appointment.startTime, appointment.endTime)}`
                                     : formatDateTime(appointment.dateTime)}
                             </Typography>
+                            {/* Date pill in approve dialog */}
+                            {nextDate && (
+                                <Box sx={{
+                                    display: "flex", alignItems: "center", gap: 0.4,
+                                    px: 0.9, py: 0.1, borderRadius: 1,
+                                    bgcolor: todayFlag ? alpha(PRIMARY, 0.12) : alpha("#6D8A7D", 0.08),
+                                    border: `1px solid ${todayFlag ? alpha(PRIMARY, 0.3) : alpha("#6D8A7D", 0.2)}`,
+                                }}>
+                                    <TodayOutlinedIcon sx={{ fontSize: 10, color: todayFlag ? PRIMARY : "#6D8A7D" }} />
+                                    <Typography sx={{
+                                        fontSize: "0.62rem", fontWeight: 700,
+                                        color: todayFlag ? PRIMARY : "#6D8A7D",
+                                    }}>
+                                        {todayFlag ? "Today" : formatNextDate(nextDate)}
+                                    </Typography>
+                                </Box>
+                            )}
                         </Stack>
                         <Stack direction="row" alignItems="center" gap={0.8}>
                             {appointment.isOnline
@@ -678,59 +772,101 @@ function OfficeHourCard({ slot, onDelete, deleting }) {
     const typeColor = slot.isOnline ? "#7E9FC4" : "#6D8A7D";
     const border = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)";
 
+    // Compute next occurrence date
+    const nextDate = getNextDateForDay(slot.dayOfWeek);
+    const todayFlag = isToday(slot.dayOfWeek);
+
     return (
         <Box sx={{
             p: 1.6, borderRadius: 2.5,
             border: `1px solid ${alpha(color, 0.2)}`,
             bgcolor: alpha(color, 0.04),
-            display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1,
             transition: "box-shadow 0.15s",
-            "&:hover": { boxShadow: isDark ? "0 2px 12px rgba(0,0,0,0.2)" : "0 2px 8px rgba(0,0,0,0.06)" },
+            "&:hover": { boxShadow: isDark ? "0 2px 12px rgba(0,0,0,0.2)" : "0 2px 10px rgba(0,0,0,0.07)" },
         }}>
-            <Stack direction="row" alignItems="center" gap={1.5}>
-                <Box sx={{
-                    width: 34, height: 34, borderRadius: 2, flexShrink: 0,
-                    bgcolor: alpha(color, 0.15),
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
-                    <Typography sx={{ fontWeight: 800, fontSize: "0.66rem", color, letterSpacing: "0.03em" }}>
-                        {DAY_SHORT[slot.dayOfWeek] ?? slot.dayOfWeek?.slice(0, 3)}
-                    </Typography>
-                </Box>
-                <Box>
-                    <Typography variant="body2" fontWeight={700} sx={{ color: t?.textPrimary ?? "text.primary", fontSize: "0.82rem" }}>
-                        {slot.dayOfWeek}
-                    </Typography>
-                    <Stack direction="row" alignItems="center" gap={0.5}>
-                        <AccessTimeOutlinedIcon sx={{ fontSize: 11, color: t?.textTertiary ?? "text.disabled" }} />
-                        <Typography variant="caption" sx={{ color: t?.textSecondary ?? "text.secondary", fontSize: "0.7rem" }}>
-                            {formatSlotTime(slot.startTime, slot.endTime)}
+            <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
+                <Stack direction="row" alignItems="center" gap={1.5} flex={1} minWidth={0}>
+                    {/* Day avatar */}
+                    <Box sx={{
+                        width: 36, height: 36, borderRadius: 2, flexShrink: 0,
+                        bgcolor: alpha(color, 0.15),
+                        display: "flex", flexDirection: "column",
+                        alignItems: "center", justifyContent: "center",
+                    }}>
+                        <Typography sx={{ fontWeight: 800, fontSize: "0.6rem", color, letterSpacing: "0.03em", lineHeight: 1.1 }}>
+                            {DAY_SHORT[slot.dayOfWeek] ?? slot.dayOfWeek?.slice(0, 3)}
                         </Typography>
-                    </Stack>
-                </Box>
-                <Box sx={{
-                    px: 1, py: 0.2, borderRadius: 1,
-                    bgcolor: alpha(typeColor, 0.12), border: `1px solid ${alpha(typeColor, 0.25)}`,
-                    display: "flex", alignItems: "center", gap: 0.4,
-                }}>
-                    {slot.isOnline
-                        ? <WifiOutlinedIcon sx={{ fontSize: 10, color: typeColor }} />
-                        : <BusinessOutlinedIcon sx={{ fontSize: 10, color: typeColor }} />
-                    }
-                    <Typography sx={{ fontSize: "0.62rem", fontWeight: 700, color: typeColor }}>
-                        {slot.isOnline ? "Online" : "In-person"}
-                    </Typography>
-                </Box>
+                        {/* Day number inside avatar */}
+                        {nextDate && (
+                            <Typography sx={{ fontWeight: 700, fontSize: "0.68rem", color, lineHeight: 1.1 }}>
+                                {nextDate.getDate()}
+                            </Typography>
+                        )}
+                    </Box>
+
+                    <Box flex={1} minWidth={0}>
+                        {/* Day name + "Today" badge */}
+                        <Stack direction="row" alignItems="center" gap={0.6} mb={0.2}>
+                            <Typography variant="body2" fontWeight={700} sx={{ color: t?.textPrimary ?? "text.primary", fontSize: "0.82rem" }}>
+                                {slot.dayOfWeek}
+                            </Typography>
+                            {todayFlag && (
+                                <Box sx={{
+                                    px: 0.7, py: 0.05, borderRadius: 0.8,
+                                    bgcolor: alpha(PRIMARY, 0.12), border: `1px solid ${alpha(PRIMARY, 0.3)}`,
+                                }}>
+                                    <Typography sx={{ fontSize: "0.58rem", fontWeight: 800, color: PRIMARY }}>
+                                        TODAY
+                                    </Typography>
+                                </Box>
+                            )}
+                        </Stack>
+
+                        {/* Time */}
+                        <Stack direction="row" alignItems="center" gap={0.5}>
+                            <AccessTimeOutlinedIcon sx={{ fontSize: 11, color: t?.textTertiary ?? "text.disabled" }} />
+                            <Typography variant="caption" sx={{ color: t?.textSecondary ?? "text.secondary", fontSize: "0.7rem" }}>
+                                {formatSlotTime(slot.startTime, slot.endTime)}
+                            </Typography>
+                        </Stack>
+
+                        {/* Full date below time */}
+                        {nextDate && !todayFlag && (
+                            <Stack direction="row" alignItems="center" gap={0.4} mt={0.2}>
+                                <TodayOutlinedIcon sx={{ fontSize: 10, color: "text.disabled" }} />
+                                <Typography sx={{ fontSize: "0.65rem", color: isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.35)" }}>
+                                    Next: {formatNextDate(nextDate)}
+                                </Typography>
+                            </Stack>
+                        )}
+                    </Box>
+
+                    {/* Type badge */}
+                    <Box sx={{
+                        px: 1, py: 0.2, borderRadius: 1, flexShrink: 0,
+                        bgcolor: alpha(typeColor, 0.12), border: `1px solid ${alpha(typeColor, 0.25)}`,
+                        display: "flex", alignItems: "center", gap: 0.4,
+                    }}>
+                        {slot.isOnline
+                            ? <WifiOutlinedIcon sx={{ fontSize: 10, color: typeColor }} />
+                            : <BusinessOutlinedIcon sx={{ fontSize: 10, color: typeColor }} />}
+                        <Typography sx={{ fontSize: "0.62rem", fontWeight: 700, color: typeColor }}>
+                            {slot.isOnline ? "Online" : "In-person"}
+                        </Typography>
+                    </Box>
+                </Stack>
+
+                {/* Delete */}
+                <Tooltip title="Delete slot">
+                    <IconButton size="small" onClick={() => onDelete(slot.officeHourId ?? slot.id)}
+                        disabled={deleting}
+                        sx={{ color: "text.disabled", flexShrink: 0, "&:hover": { color: "#C47E7E", bgcolor: alpha("#C47E7E", 0.08) } }}>
+                        {deleting
+                            ? <CircularProgress size={13} color="inherit" />
+                            : <DeleteOutlineIcon sx={{ fontSize: 16 }} />}
+                    </IconButton>
+                </Tooltip>
             </Stack>
-            <Tooltip title="Delete slot">
-                <IconButton size="small" onClick={() => onDelete(slot.officeHourId ?? slot.id)}
-                    disabled={deleting}
-                    sx={{ color: "text.disabled", "&:hover": { color: "#C47E7E", bgcolor: alpha("#C47E7E", 0.08) } }}>
-                    {deleting
-                        ? <CircularProgress size={13} color="inherit" />
-                        : <DeleteOutlineIcon sx={{ fontSize: 16 }} />}
-                </IconButton>
-            </Tooltip>
         </Box>
     );
 }
@@ -742,7 +878,11 @@ function PendingApptCard({ appt, onApprove, onReject, rejectingId }) {
     const t = theme.palette.custom ?? {};
     const apptId = appt.appointmentId ?? appt.id;
     const border = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)";
-    const cardBg = isDark ? "rgba(255,255,255,0.025)" : "#fff";
+    const cardBg = isDark ? "rgba(255,255,255,0.025)" : "#fafafa";
+
+    // Date info
+    const nextDate = appt.dayOfWeek ? getNextDateForDay(appt.dayOfWeek) : null;
+    const todayFlag = appt.dayOfWeek ? isToday(appt.dayOfWeek) : false;
 
     return (
         <Box sx={{
@@ -750,10 +890,11 @@ function PendingApptCard({ appt, onApprove, onReject, rejectingId }) {
             bgcolor: cardBg, border: `1px solid ${border}`,
             borderLeft: `3px solid ${PRIMARY}`,
             transition: "box-shadow 0.15s",
-            "&:hover": { boxShadow: isDark ? "0 4px 16px rgba(0,0,0,0.2)" : "0 4px 12px rgba(0,0,0,0.06)" },
+            "&:hover": { boxShadow: isDark ? "0 4px 16px rgba(0,0,0,0.2)" : "0 4px 14px rgba(0,0,0,0.07)" },
         }}>
             <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1}>
                 <Box flex={1} minWidth={0}>
+                    {/* Row 1: Project + type */}
                     <Stack direction="row" alignItems="center" gap={0.8} flexWrap="wrap" mb={0.4}>
                         <FolderOutlinedIcon sx={{ fontSize: 13, color: PRIMARY }} />
                         <Typography sx={{ fontWeight: 700, fontSize: "0.85rem", color: isDark ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.85)" }} noWrap>
@@ -767,14 +908,14 @@ function PendingApptCard({ appt, onApprove, onReject, rejectingId }) {
                         }}>
                             {appt.isOnline
                                 ? <WifiOutlinedIcon sx={{ fontSize: 10, color: "#7E9FC4" }} />
-                                : <BusinessOutlinedIcon sx={{ fontSize: 10, color: "#6D8A7D" }} />
-                            }
+                                : <BusinessOutlinedIcon sx={{ fontSize: 10, color: "#6D8A7D" }} />}
                             <Typography sx={{ fontSize: "0.62rem", fontWeight: 700, color: appt.isOnline ? "#7E9FC4" : "#6D8A7D" }}>
                                 {appt.isOnline ? "Online" : "In-person"}
                             </Typography>
                         </Box>
                     </Stack>
 
+                    {/* Student */}
                     {appt.studentName && (
                         <Stack direction="row" alignItems="center" gap={0.5} mb={0.3}>
                             <PersonOutlinedIcon sx={{ fontSize: 12, color: isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.3)" }} />
@@ -784,13 +925,34 @@ function PendingApptCard({ appt, onApprove, onReject, rejectingId }) {
                         </Stack>
                     )}
 
-                    <Stack direction="row" alignItems="center" gap={0.5}>
+                    {/* Time + Date */}
+                    <Stack direction="row" alignItems="center" gap={0.5} flexWrap="wrap">
                         <AccessTimeOutlinedIcon sx={{ fontSize: 12, color: isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.3)" }} />
                         <Typography sx={{ fontSize: "0.75rem", color: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)" }}>
                             {appt.dayOfWeek
                                 ? `${appt.dayOfWeek} · ${formatSlotTime(appt.startTime, appt.endTime)}`
                                 : formatDateTime(appt.dateTime)}
                         </Typography>
+
+                        {/* Date pill */}
+                        {nextDate && (
+                            <Box sx={{
+                                display: "flex", alignItems: "center", gap: 0.4,
+                                px: 0.9, py: 0.1, borderRadius: 1,
+                                bgcolor: todayFlag
+                                    ? alpha(PRIMARY, 0.12)
+                                    : isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.04)",
+                                border: `1px solid ${todayFlag ? alpha(PRIMARY, 0.3) : border}`,
+                            }}>
+                                <TodayOutlinedIcon sx={{ fontSize: 10, color: todayFlag ? PRIMARY : isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.3)" }} />
+                                <Typography sx={{
+                                    fontSize: "0.62rem", fontWeight: todayFlag ? 700 : 500,
+                                    color: todayFlag ? PRIMARY : isDark ? "rgba(255,255,255,0.38)" : "rgba(0,0,0,0.38)",
+                                }}>
+                                    {todayFlag ? "Today" : formatNextDate(nextDate)}
+                                </Typography>
+                            </Box>
+                        )}
                     </Stack>
 
                     {appt.excuse && (
@@ -800,6 +962,7 @@ function PendingApptCard({ appt, onApprove, onReject, rejectingId }) {
                     )}
                 </Box>
 
+                {/* Action buttons */}
                 <Stack direction="column" gap={0.8} flexShrink={0}>
                     <Button size="small" variant="contained"
                         onClick={() => onApprove(appt)}
@@ -1006,11 +1169,11 @@ export default function SupervisorMeetings() {
                                 ))}
                                 {pending.length === 0 && (
                                     <Box sx={{
-                                        textAlign: "center", py: 4,
+                                        textAlign: "center", py: 5,
                                         border: `1.5px dashed ${isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)"}`,
                                         borderRadius: 2.5,
                                     }}>
-                                        <CalendarMonthOutlinedIcon sx={{ fontSize: 28, color: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.12)", mb: 0.8 }} />
+                                        <CalendarMonthOutlinedIcon sx={{ fontSize: 30, color: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.1)", mb: 1 }} />
                                         <Typography sx={{ fontSize: "0.82rem", color: isDark ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.35)" }}>
                                             No pending requests
                                         </Typography>
@@ -1095,10 +1258,10 @@ export default function SupervisorMeetings() {
                             </Stack>
                         ) : officeHours.length === 0 ? (
                             <Box sx={{
-                                textAlign: "center", py: 4,
+                                textAlign: "center", py: 5,
                                 border: `1.5px dashed ${alpha(PRIMARY, 0.2)}`, borderRadius: 2.5,
                             }}>
-                                <ScheduleOutlinedIcon sx={{ fontSize: 32, color: alpha(PRIMARY, 0.28), mb: 1 }} />
+                                <ScheduleOutlinedIcon sx={{ fontSize: 32, color: alpha(PRIMARY, 0.25), mb: 1 }} />
                                 <Typography sx={{ color: isDark ? "rgba(255,255,255,0.35)" : "rgba(0,0,0,0.4)", fontSize: "0.82rem" }}>
                                     No office hours set yet
                                 </Typography>
@@ -1107,13 +1270,29 @@ export default function SupervisorMeetings() {
                             <Stack spacing={1.5}>
                                 {Object.entries(slotsByDay).map(([day, slots]) => (
                                     <Box key={day}>
-                                        <Typography sx={{
-                                            fontWeight: 700, color: DAY_COLOR[day],
-                                            textTransform: "uppercase", letterSpacing: "0.08em",
-                                            fontSize: "0.62rem", mb: 0.8, display: "block",
-                                        }}>
-                                            {day}
-                                        </Typography>
+                                        <Stack direction="row" alignItems="center" gap={1} mb={0.8}>
+                                            <Typography sx={{
+                                                fontWeight: 700, color: DAY_COLOR[day],
+                                                textTransform: "uppercase", letterSpacing: "0.08em",
+                                                fontSize: "0.62rem",
+                                            }}>
+                                                {day}
+                                            </Typography>
+                                            {/* Date next to the day heading */}
+                                            {(() => {
+                                                const nd = getNextDateForDay(day);
+                                                const td = isToday(day);
+                                                return nd ? (
+                                                    <Typography sx={{
+                                                        fontSize: "0.62rem",
+                                                        color: td ? PRIMARY : isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.35)",
+                                                        fontWeight: td ? 700 : 400,
+                                                    }}>
+                                                        {td ? "· Today" : `· ${formatNextDate(nd)}`}
+                                                    </Typography>
+                                                ) : null;
+                                            })()}
+                                        </Stack>
                                         <Stack spacing={0.8}>
                                             {slots.map((slot) => (
                                                 <OfficeHourCard

@@ -24,12 +24,12 @@
 //   POST /api/Student/request-leave
 //   PUT  /api/Student/update-project-info
 //   DELETE /api/Student/delete-join-request/{requestId}
-//   GET  /api/Student/supervisor-office-hours  ← NEW (Get supervisor's available slots)
-//   POST /api/Student/request-appointment      ← UPDATED { officeHourId, isOnline }
-//   GET  /api/Student/my-appointments          ← existing
-//   PUT  /api/Student/update-appointment       ← NEW { appointmentId, officeHourId, isOnline, excuse }
-//   POST /api/Student/switch-version           ← NEW (Phase switching)
-//   GET  /api/Student/current-version          ← NEW (Get current phase)
+//   GET  /api/Student/supervisor-office-hours  ← Get supervisor's available slots
+//   POST /api/Student/request-appointment      ← { officeHourId }  (isOnline determined by backend from slot)
+//   GET  /api/Student/my-appointments          ← returns dateTime ISO + status + link + isOnline …
+//   PUT  /api/Student/update-appointment       ← { appointmentId, officeHourId, excuse }
+//   POST /api/Student/switch-version           ← Phase switching
+//   GET  /api/Student/current-version          ← Get current phase
 
 import axiosInstance from "./../../axiosInstance";
 
@@ -147,6 +147,7 @@ const studentApi = {
      *   dayOfWeek    : string,   // e.g. "Monday"
      *   startTime    : string,   // e.g. "09:00"
      *   endTime      : string,   // e.g. "11:00"
+     *   isOnline     : boolean,
      * }
      */
     getSupervisorOfficeHours: () =>
@@ -155,14 +156,14 @@ const studentApi = {
     /**
      * POST /api/Student/request-appointment
      * Student requests an appointment based on a specific office hour slot.
+     * NOTE: isOnline is NOT sent — backend determines it from the office hour slot.
      *
-     * @param {{ officeHourId: number, isOnline: boolean }} body
+     * @param {{ officeHourId: number }} body
      */
     requestAppointment: (body) =>
         axiosInstance
             .post("/Student/request-appointment", {
                 officeHourId: body.officeHourId,
-                isOnline: body.isOnline ?? false,
             })
             .then((r) => r.data),
 
@@ -170,16 +171,17 @@ const studentApi = {
      * GET /api/Student/my-appointments
      * Returns all appointments for the logged-in student.
      *
-     * Expected response shape per item:
+     * Response shape per item:
      * {
-     *   appointmentId  : number,
-     *   dateTime?      : string (ISO),
-     *   dayOfWeek?     : string,
-     *   startTime?     : string,
-     *   endTime?       : string,
-     *   isOnline       : boolean,
+     *   id             : number,
+     *   dateTime       : string (ISO),   // e.g. "2026-05-14T09:00:00Z"
      *   status         : "Pending" | "Approved" | "Rejected",
-     *   link?          : string,
+     *   link           : string,
+     *   isOnline       : boolean,
+     *   excuse         : string | null,
+     *   teamId         : number,
+     *   projectName    : string,
+     *   supervisorId   : number,
      *   supervisorName : string,
      * }
      */
@@ -188,16 +190,16 @@ const studentApi = {
 
     /**
      * PUT /api/Student/update-appointment
-     * Student updates a pending appointment (reschedule or change mode).
+     * Student updates a pending appointment (reschedule or add excuse).
+     * NOTE: isOnline is NOT sent — backend determines it from the new office hour slot.
      *
-     * @param {{ appointmentId: number, officeHourId: number, isOnline: boolean, excuse: string }} body
+     * @param {{ appointmentId: number, officeHourId: number, excuse: string }} body
      */
     updateAppointment: (body) =>
         axiosInstance
             .put("/Student/update-appointment", {
                 appointmentId: body.appointmentId,
                 officeHourId: body.officeHourId,
-                isOnline: body.isOnline ?? false,
                 excuse: body.excuse ?? "",
             })
             .then((r) => r.data),

@@ -190,7 +190,8 @@ function RequestAppointmentDialog({ open, onClose, onSuccess }) {
         setLoading(true);
         setError("");
         try {
-            await studentApi.requestAppointment({ officeHourId: selectedSlotId, isOnline });
+            // isOnline is NOT sent — backend determines it from the office hour slot
+            await studentApi.requestAppointment({ officeHourId: selectedSlotId });
             onSuccess?.();
             handleClose();
         } catch (err) {
@@ -288,18 +289,15 @@ function UpdateAppointmentDialog({ appointment, open, onClose, onSuccess }) {
             .finally(() => setLoadingSlots(false));
     }, [open, appointment]);
 
-    const selectedSlot = slots.find((s) => (s.officeHourId ?? s.id) === selectedSlotId);
-    const isOnline = Boolean(selectedSlot?.isOnline);
-
     const handleSubmit = async () => {
         if (!selectedSlotId) { setError("Please select a new time slot."); return; }
         setLoading(true);
         setError("");
         try {
+            // isOnline is NOT sent — backend determines it from the new office hour slot
             await studentApi.updateAppointment({
                 appointmentId: appointment.appointmentId ?? appointment.id,
                 officeHourId: selectedSlotId,
-                isOnline,
                 excuse,
             });
             onSuccess?.();
@@ -393,7 +391,7 @@ function AppointmentCard({ appt, onEdit }) {
                 <Stack spacing={1.2} flex={1}>
                     <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
                         <Typography variant="subtitle1" fontWeight={700} sx={{ color: t?.textPrimary }}>
-                            Meeting Request
+                            {appt.projectName ?? "Meeting Request"}
                         </Typography>
                         <Chip
                             label={cfg.label} size="small"
@@ -427,6 +425,12 @@ function AppointmentCard({ appt, onEdit }) {
                             {dateLabel}
                         </Typography>
                     </Stack>
+
+                    {appt.excuse && (
+                        <Typography variant="caption" sx={{ color: "#C49A6C", fontStyle: "italic" }}>
+                            💬 {appt.excuse}
+                        </Typography>
+                    )}
 
                     {appt.link && !isPassed && (
                         <Stack direction="row" alignItems="center" spacing={0.8}>
@@ -544,10 +548,10 @@ export default function StudentMeetings() {
         .filter((a) => (a.status ?? "").toLowerCase() === "approved")
         .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))[0];
 
-    // Reminder banner: approved & within 48 h
+    // ── Reminder banner: approved & within 2 hours ────────────────────────────
     const reminderAppt = upcoming.find((a) => {
         const h = hoursUntil(a.dateTime);
-        return (a.status ?? "").toLowerCase() === "approved" && h > 0 && h <= 48;
+        return (a.status ?? "").toLowerCase() === "approved" && h > 0 && h <= 2;
     });
 
     const tabLists = [upcoming, passed, rejected];
@@ -575,7 +579,7 @@ export default function StudentMeetings() {
 
             {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>}
 
-            {/* 48-hour reminder banner */}
+            {/* 2-hour reminder banner */}
             {reminderAppt && (
                 <Paper elevation={0} sx={{
                     p: 2, mb: 2.5, borderRadius: 3,
@@ -588,7 +592,7 @@ export default function StudentMeetings() {
                         </Box>
                         <Box flex={1} minWidth={0}>
                             <Typography variant="body2" fontWeight={700} sx={{ color: "#9E86C4" }}>
-                                Reminder — meeting in {Math.round(hoursUntil(reminderAppt.dateTime))}h
+                                Reminder — meeting in {Math.round(hoursUntil(reminderAppt.dateTime) * 60)} min
                             </Typography>
                             <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap">
                                 <Typography variant="caption" color="text.secondary">

@@ -48,6 +48,7 @@ export const getUniversityRecords = () =>
 // ══════════════════════════════════════════════════════════════════════════════
 export const getUniversityRecordByEmail = (email) =>
     axiosInstance.get(`/Admin/university-records/${encodeURIComponent(email)}`);
+
 // ══════════════════════════════════════════════════════════════════════════════
 // DELETE /api/Admin/delete-university-record/{email}
 // ══════════════════════════════════════════════════════════════════════════════
@@ -59,3 +60,11 @@ export const deleteUniversityRecord = (email) =>
 // ══════════════════════════════════════════════════════════════════════════════
 export const deleteRequest = (id) =>
     axiosInstance.delete(`/Admin/delete-request/${id}`);
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PUT /api/Admin/set-head-of-department/{supervisorId}
+// Body: { isHeadOfDepartment: boolean }
+// يعين أو يزيل رئيس القسم — Admin only
+// ══════════════════════════════════════════════════════════════════════════════
+export const setHeadOfDepartment = (supervisorId, isHeadOfDepartment) =>
+    axiosInstance.put(`/Admin/set-head-of-department/${supervisorId}`, { isHeadOfDepartment });

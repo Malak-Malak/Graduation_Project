@@ -11,7 +11,6 @@ import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 import PeopleOutlineIcon from "@mui/icons-material/PeopleOutline";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import AssessmentOutlinedIcon from "@mui/icons-material/AssessmentOutlined";
-import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
 import PendingActionsOutlinedIcon from "@mui/icons-material/PendingActionsOutlined";
 import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
@@ -29,6 +28,7 @@ import LightModeOutlinedIcon from "@mui/icons-material/LightModeOutlined";
 import HowToRegOutlinedIcon from "@mui/icons-material/HowToRegOutlined";
 import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined";
 import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
+import SchoolOutlinedIcon from "@mui/icons-material/SchoolOutlined"; // ← HOD icon
 
 import { useAuth } from "../contexts/AuthContext";
 import { useThemeContext } from "../contexts/ThemeContext";
@@ -41,7 +41,6 @@ const NAV_ITEMS = {
         { label: "Pending Requests", icon: <HowToRegOutlinedIcon />, path: "/admin/pending-requests" },
         { label: "User Management", icon: <PeopleOutlineIcon />, path: "/admin/users" },
         { label: "Reports", icon: <AssessmentOutlinedIcon />, path: "/admin/reports" },
-
         { label: "All Requests", icon: <AssessmentOutlinedIcon />, path: "/admin/all-requests" },
         { label: "Configuration", icon: <SettingsOutlinedIcon />, path: "/admin/settings" },
     ],
@@ -55,6 +54,13 @@ const NAV_ITEMS = {
         { label: "AI Reports", icon: <AutoAwesomeOutlinedIcon />, path: "/supervisor/ai-reports" },
         { label: "Analytics", icon: <QueryStatsOutlinedIcon />, path: "/supervisor/analytics" },
         { label: "Project Archive", icon: <SearchOutlinedIcon />, path: "/supervisor/archive" },
+        // ↓ يظهر فقط لرئيس القسم — hodOnly: true
+        {
+            label: "Head of Department",
+            icon: <SchoolOutlinedIcon />,
+            path: "/supervisor/head-of-department",
+            hodOnly: true,
+        },
     ],
     student: [
         { label: "Dashboard", icon: <DashboardOutlinedIcon />, path: "/student" },
@@ -77,7 +83,6 @@ const P1 = { color: "#C49A6C", label: "Phase 1", sub: "Proposal" };
 const P2 = { color: "#6D8A7D", label: "Phase 2", sub: "Project" };
 
 // ── Compact Phase Toggle ──────────────────────────────────────────────────────
-// نفس المساحة الأصلية — avatar + اسم + رول + toggle في صف واحد أنيق
 function PhaseToggle({ onSwitch, currentPhase }) {
     const theme = useTheme();
     const isDark = theme.palette.mode === "dark";
@@ -97,57 +102,30 @@ function PhaseToggle({ onSwitch, currentPhase }) {
         <Box
             onClick={onSwitch}
             sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 0.7,
-                cursor: "pointer",
-                userSelect: "none",
+                display: "flex", alignItems: "center", gap: 0.7,
+                cursor: "pointer", userSelect: "none",
                 "&:hover .phase-label": { opacity: 0.75 },
             }}
         >
-            {/* Phase label — compact */}
-            <Typography
-                className="phase-label"
-                sx={{
-                    fontSize: "0.65rem",
-                    fontWeight: 600,
-                    color: phase.color,
-                    lineHeight: 1,
-                    letterSpacing: "0.01em",
-                    transition: "color 0.35s, opacity 0.2s",
-                    whiteSpace: "nowrap",
-                }}
-            >
+            <Typography className="phase-label" sx={{
+                fontSize: "0.65rem", fontWeight: 600, color: phase.color,
+                lineHeight: 1, letterSpacing: "0.01em",
+                transition: "color 0.35s, opacity 0.2s", whiteSpace: "nowrap",
+            }}>
                 {phase.label}
             </Typography>
-
-            {/* Toggle track */}
-            <Box
-                sx={{
-                    position: "relative",
-                    width: TRACK_W,
-                    height: TRACK_H,
-                    borderRadius: TRACK_H / 2,
-                    bgcolor: trackBg,
-                    flexShrink: 0,
-                    transition: "background-color 0.35s ease",
-                    boxShadow: isDark
-                        ? "inset 0 1px 2px rgba(0,0,0,0.45)"
-                        : "inset 0 1px 2px rgba(0,0,0,0.12)",
-                }}
-            >
+            <Box sx={{
+                position: "relative", width: TRACK_W, height: TRACK_H,
+                borderRadius: TRACK_H / 2, bgcolor: trackBg, flexShrink: 0,
+                transition: "background-color 0.35s ease",
+                boxShadow: isDark ? "inset 0 1px 2px rgba(0,0,0,0.45)" : "inset 0 1px 2px rgba(0,0,0,0.12)",
+            }}>
                 <Box sx={{
-                    position: "absolute",
-                    top: PAD,
+                    position: "absolute", top: PAD,
                     left: isP2 ? TRACK_W - KNOB - PAD : PAD,
-                    width: KNOB,
-                    height: KNOB,
-                    borderRadius: "50%",
-                    bgcolor: "#fff",
+                    width: KNOB, height: KNOB, borderRadius: "50%", bgcolor: "#fff",
                     transition: "left 0.28s cubic-bezier(0.4, 0, 0.2, 1)",
-                    boxShadow: isDark
-                        ? "0 1px 3px rgba(0,0,0,0.55)"
-                        : "0 1px 3px rgba(0,0,0,0.22)",
+                    boxShadow: isDark ? "0 1px 3px rgba(0,0,0,0.55)" : "0 1px 3px rgba(0,0,0,0.22)",
                 }} />
             </Box>
         </Box>
@@ -160,16 +138,11 @@ function PhaseDot({ currentPhase, onSwitch }) {
     const phase = isP2 ? P2 : P1;
     return (
         <Tooltip title={`${phase.label} — click to switch`} placement="right">
-            <Box
-                onClick={onSwitch}
-                sx={{
-                    width: 7, height: 7, borderRadius: "50%",
-                    bgcolor: phase.color,
-                    mt: 0.7, cursor: "pointer",
-                    transition: "background-color 0.4s ease",
-                    "&:hover": { transform: "scale(1.35)" },
-                }}
-            />
+            <Box onClick={onSwitch} sx={{
+                width: 7, height: 7, borderRadius: "50%", bgcolor: phase.color,
+                mt: 0.7, cursor: "pointer", transition: "background-color 0.4s ease",
+                "&:hover": { transform: "scale(1.35)" },
+            }} />
         </Tooltip>
     );
 }
@@ -179,6 +152,7 @@ function PhaseDot({ currentPhase, onSwitch }) {
 export default function Sidebar({
     width, collapsedWidth, collapsed, mobileOpen,
     onMobileClose, onCollapse, isMobile, onPhaseSwitch,
+    isHeadOfDepartment,  // ← prop جديد: يتحكم في ظهور HOD item
 }) {
     const theme = useTheme();
     const location = useLocation();
@@ -212,6 +186,13 @@ export default function Sidebar({
         logout();
         navigate("/login");
     };
+
+    // ── Filter nav items based on flags ──────────────────────────────────────
+    const visibleItems = navItems.filter((item) => {
+        if (item.phase2Only && !isP2) return false;
+        if (item.hodOnly && !isHeadOfDepartment) return false;
+        return true;
+    });
 
     const drawerContent = (
         <Box sx={{
@@ -250,9 +231,7 @@ export default function Sidebar({
                 {!isMobile && (
                     <Tooltip title={collapsed ? "Expand" : "Collapse"} placement="right">
                         <IconButton size="small" onClick={onCollapse} sx={{
-                            width: 28, height: 28,
-                            border: `1px solid ${border}`,
-                            color: tSec,
+                            width: 28, height: 28, border: `1px solid ${border}`, color: tSec,
                             "&:hover": { bgcolor: theme.palette.action.hover },
                         }}>
                             {collapsed
@@ -266,13 +245,10 @@ export default function Sidebar({
             {/* ── User card — expanded ── */}
             {!collapsed && (
                 <Box sx={{ px: 2, pt: 1.6, pb: 1.6, borderBottom: `1px solid ${border}` }}>
-
-                    {/* Row 1: Avatar + Name + Role badge */}
                     <Stack direction="row" spacing={1.2} alignItems="center">
                         <Avatar src={user?.avatar} sx={{
                             width: 36, height: 36,
-                            bgcolor: `${phaseAccent}20`,
-                            color: phaseAccent,
+                            bgcolor: `${phaseAccent}20`, color: phaseAccent,
                             fontSize: "0.85rem", fontWeight: 600, flexShrink: 0,
                             transition: "background-color 0.4s ease, color 0.4s ease",
                         }}>
@@ -281,57 +257,35 @@ export default function Sidebar({
                         </Avatar>
 
                         <Box sx={{ minWidth: 0, flex: 1 }}>
-                            {/* Name */}
-                            <Typography
-                                variant="body2"
-                                fontWeight={600}
-                                noWrap
-                                sx={{ fontSize: "1rem", color: tPri, lineHeight: 1.2 }}
-                            >
+                            <Typography variant="body2" fontWeight={600} noWrap
+                                sx={{ fontSize: "1rem", color: tPri, lineHeight: 1.2 }}>
                                 {user?.name ?? user?.username ?? "User"}
                             </Typography>
 
-                            {/* Row 2: Role pill + Phase toggle (inline, same row) */}
                             <Box sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                mt: 0.5,
-                                gap: 0.5,
+                                display: "flex", alignItems: "center",
+                                justifyContent: "space-between", mt: 0.5, gap: 0.5,
                             }}>
                                 {/* Role pill */}
-                                <Box sx={{
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: 0.4,
-                                }}>
-                                    {/* Accent dot */}
+                                <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.4 }}>
                                     <Box sx={{
                                         width: 5, height: 5, borderRadius: "50%",
-                                        bgcolor: ROLE_COLOR[role] ?? phaseAccent,
-                                        flexShrink: 0,
+                                        bgcolor: ROLE_COLOR[role] ?? phaseAccent, flexShrink: 0,
                                         transition: "background-color 0.4s",
                                     }} />
-                                    <Typography sx={{
-                                        fontSize: "0.65rem",
-                                        color: tSec,
-                                        lineHeight: 1,
-                                    }}>
-                                        {ROLE_LABEL[role] ?? role}
+                                    <Typography sx={{ fontSize: "0.65rem", color: tSec, lineHeight: 1 }}>
+                                        {/* Show "Head of Dept." badge for HOD supervisors */}
+                                        {role === "supervisor" && isHeadOfDepartment
+                                            ? "Head of Department"
+                                            : (ROLE_LABEL[role] ?? role)
+                                        }
                                     </Typography>
                                 </Box>
 
-                                {/* Phase toggle — students only, inline */}
                                 {role === "student" && (
-                                    <Tooltip
-                                        title={`Switch to ${isP2 ? "Phase 1 — Proposal" : "Phase 2 — Project"}`}
-                                        placement="top"
-                                    >
+                                    <Tooltip title={`Switch to ${isP2 ? "Phase 1 — Proposal" : "Phase 2 — Project"}`} placement="top">
                                         <span>
-                                            <PhaseToggle
-                                                currentPhase={currentPhase}
-                                                onSwitch={onPhaseSwitch}
-                                            />
+                                            <PhaseToggle currentPhase={currentPhase} onSwitch={onPhaseSwitch} />
                                         </span>
                                     </Tooltip>
                                 )}
@@ -339,7 +293,6 @@ export default function Sidebar({
                         </Box>
                     </Stack>
 
-                    {/* Row 3: Team or Department — only if data exists */}
                     {role === "student" && user?.teamName && (
                         <Typography sx={{ fontSize: "0.7rem", color: tSec, mt: 1, pl: "48px" }}>
                             <Box component="span" sx={{ color: phaseAccent, fontWeight: 600, transition: "color 0.4s" }}>
@@ -364,8 +317,7 @@ export default function Sidebar({
                     <Tooltip title={user?.name ?? user?.username ?? "User"} placement="right">
                         <Avatar src={user?.avatar} sx={{
                             width: 34, height: 34,
-                            bgcolor: `${phaseAccent}20`,
-                            color: phaseAccent,
+                            bgcolor: `${phaseAccent}20`, color: phaseAccent,
                             fontSize: "0.82rem", fontWeight: 600,
                             transition: "background-color 0.4s ease, color 0.4s ease",
                         }}>
@@ -375,54 +327,71 @@ export default function Sidebar({
                     {role === "student" && (
                         <PhaseDot currentPhase={currentPhase} onSwitch={onPhaseSwitch} />
                     )}
+                    {/* HOD indicator dot — collapsed */}
+                    {role === "supervisor" && isHeadOfDepartment && (
+                        <Tooltip title="Head of Department" placement="right">
+                            <Box sx={{
+                                width: 7, height: 7, borderRadius: "50%",
+                                bgcolor: "#6D8A7D", mt: 0.7,
+                            }} />
+                        </Tooltip>
+                    )}
                 </Box>
             )}
 
             {/* ── Nav items ── */}
             <Box sx={{ flexGrow: 1, overflowY: "auto", overflowX: "hidden", py: 1 }}>
                 <List dense disablePadding>
-                    {navItems
-                        .filter((item) => !item.phase2Only || isP2)
-                        .map((item) => {
-                            const active = isActive(item.path);
-                            return (
-                                <Tooltip key={item.path} title={collapsed ? item.label : ""} placement="right">
-                                    <ListItemButton
-                                        selected={active}
-                                        onClick={() => handleNav(item.path)}
-                                        sx={{
-                                            mx: 1, mb: 0.25, px: 1.5,
-                                            justifyContent: collapsed ? "center" : "flex-start",
-                                            borderRadius: "8px", minHeight: 40,
-                                            "&.Mui-selected": {
-                                                bgcolor: `${phaseAccent}12`,
-                                                "&:hover": { bgcolor: `${phaseAccent}1A` },
-                                            },
-                                        }}
-                                    >
-                                        <ListItemIcon sx={{
-                                            minWidth: collapsed ? "auto" : 36,
-                                            color: active ? phaseAccent : tSec,
-                                            "& svg": { fontSize: 20 },
-                                            transition: "color 0.3s ease",
-                                        }}>
-                                            {item.icon}
-                                        </ListItemIcon>
-                                        {!collapsed && (
-                                            <ListItemText
-                                                primary={item.label}
-                                                primaryTypographyProps={{
-                                                    fontSize: "0.875rem",
-                                                    fontWeight: active ? 600 : 500,
-                                                    color: active ? phaseAccent : tPri,
-                                                    noWrap: true,
-                                                }}
-                                            />
-                                        )}
-                                    </ListItemButton>
-                                </Tooltip>
-                            );
-                        })}
+                    {visibleItems.map((item) => {
+                        const active = isActive(item.path);
+                        const isHod = item.hodOnly;
+                        // HOD item gets a slightly different accent to stand out
+                        const itemAccent = isHod ? "#6D8A7D" : phaseAccent;
+
+                        return (
+                            <Tooltip key={item.path} title={collapsed ? item.label : ""} placement="right">
+                                <ListItemButton
+                                    selected={active}
+                                    onClick={() => handleNav(item.path)}
+                                    sx={{
+                                        mx: 1, mb: 0.25, px: 1.5,
+                                        justifyContent: collapsed ? "center" : "flex-start",
+                                        borderRadius: "8px", minHeight: 40,
+                                        // HOD item: subtle top separator to visually group it
+                                        ...(isHod && {
+                                            mt: 0.5,
+                                            borderTop: `1px solid ${border}`,
+                                            borderRadius: "0 0 8px 8px",
+                                        }),
+                                        "&.Mui-selected": {
+                                            bgcolor: `${itemAccent}12`,
+                                            "&:hover": { bgcolor: `${itemAccent}1A` },
+                                        },
+                                    }}
+                                >
+                                    <ListItemIcon sx={{
+                                        minWidth: collapsed ? "auto" : 36,
+                                        color: active ? itemAccent : tSec,
+                                        "& svg": { fontSize: 20 },
+                                        transition: "color 0.3s ease",
+                                    }}>
+                                        {item.icon}
+                                    </ListItemIcon>
+                                    {!collapsed && (
+                                        <ListItemText
+                                            primary={item.label}
+                                            primaryTypographyProps={{
+                                                fontSize: "0.875rem",
+                                                fontWeight: active ? 600 : 500,
+                                                color: active ? itemAccent : tPri,
+                                                noWrap: true,
+                                            }}
+                                        />
+                                    )}
+                                </ListItemButton>
+                            </Tooltip>
+                        );
+                    })}
                 </List>
             </Box>
 

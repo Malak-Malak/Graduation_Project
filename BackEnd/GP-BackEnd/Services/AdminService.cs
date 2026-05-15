@@ -98,16 +98,24 @@ namespace GP_BackEnd.Services
         // Get all users
         public async Task<List<UserDto>> GetAllUsersAsync()
         {
-            return await _context.Users
-                .Select(u => new UserDto
+            var users = await _context.Users.ToListAsync();
+            var uniRecords = await _context.UniversityRecords.ToListAsync();
+
+            return users.Select(u =>
+            {
+                var uniRecord = uniRecords
+                    .FirstOrDefault(r => r.UniversityEmail == u.Email);
+
+                return new UserDto
                 {
                     Id = u.Id,
                     Username = u.Username,
                     Email = u.Email,
                     Role = u.Role,
+                    Department = uniRecord?.Department,
                     CreatedAt = u.CreatedAt
-                })
-                .ToListAsync();
+                };
+            }).ToList();
         }
         public async Task<List<RegistrationRequestDto>> GetAllRequestsAsync()
         {

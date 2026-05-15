@@ -14,7 +14,6 @@ import {
     Logout as LogoutIcon,
     Menu as MenuIcon,
     DoneAll as DoneAllIcon,
-    FiberManualRecord as DotIcon,
 } from '@mui/icons-material';
 import LightbulbOutlinedIcon from "@mui/icons-material/LightbulbOutlined";
 import RocketLaunchOutlinedIcon from "@mui/icons-material/RocketLaunchOutlined";
@@ -48,7 +47,13 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
     },
 }));
 
-const DEFAULT_COLOR = "#B46F4C";
+// ── Role-based colors (matches Sidebar) ───────────────────────────────────────
+const ROLE_COLOR = {
+    admin: "#C47E7E",
+    supervisor: "#6D8A7D",
+    student: "#B46F4C",
+};
+
 const P1_COLOR = "#C49A6C";
 const P2_COLOR = "#6D8A7D";
 
@@ -70,13 +75,9 @@ const TopBar = ({ onMenuClick, isMobile }) => {
     const [notificationAnchor, setNotificationAnchor] = useState(null);
 
     const handleProfileMenuOpen = (e) => setAnchorEl(e.currentTarget);
-    const handleNotificationMenuOpen = (e) => {
-        setNotificationAnchor(e.currentTarget);
-    };
-    const handleMenuClose = () => {
-        setAnchorEl(null);
-        setNotificationAnchor(null);
-    };
+    const handleNotificationMenuOpen = (e) => setNotificationAnchor(e.currentTarget);
+    const handleMenuClose = () => { setAnchorEl(null); setNotificationAnchor(null); };
+
     const handleLogout = () => {
         sessionStorage.removeItem("team_checked");
         logout();
@@ -84,18 +85,20 @@ const TopBar = ({ onMenuClick, isMobile }) => {
     };
 
     const handleNotificationClick = (notification) => {
-        if (!notification.isRead) {
-            markAsRead(notification.id);
-        }
+        if (!notification.isRead) markAsRead(notification.id);
     };
 
     const displayName = user?.name ?? user?.fullName ?? user?.username ?? "User";
     const avatarLetter = displayName.charAt(0).toUpperCase();
 
-    // ── Phase config ──────────────────────────────────────────────────────────
+    // ── Colors ────────────────────────────────────────────────────────────────
+    // Avatar + welcome text follow the role, matching the Sidebar exactly.
+    const avatarColor = ROLE_COLOR[role] ?? "#B46F4C";
+
+    // Phase chip (students only) keeps its own phase-based color.
     const isStudent = role === "student";
     const isP2 = isStudent && currentPhase === "Phase2";
-    const phaseColor = isStudent ? P1_COLOR : DEFAULT_COLOR;
+    const phaseColor = isP2 ? P2_COLOR : P1_COLOR;
     const PhaseIcon = isP2 ? RocketLaunchOutlinedIcon : LightbulbOutlinedIcon;
     const phaseLabel = isP2 ? "Phase 2 — Project" : "Phase 1 — Proposal";
 
@@ -123,27 +126,25 @@ const TopBar = ({ onMenuClick, isMobile }) => {
                     </IconButton>
                 )}
 
-                {/* Welcome */}
+                {/* Welcome — letter color follows role */}
                 <Typography variant="h6" noWrap sx={{
                     fontWeight: 600,
                     display: { xs: 'none', sm: 'block' },
                     color: theme.palette.text.primary,
                 }}>
                     Welcome back,{' '}
-                    <Box component="span" sx={{ color: phaseColor, transition: "color 0.4s ease" }}>
+                    <Box component="span" sx={{ color: avatarColor, transition: "color 0.4s ease" }}>
                         {displayName.split(' ')[0]}
                     </Box>
                 </Typography>
 
-                {/* Phase chip */}
+                {/* Phase chip — students only */}
                 {isStudent && (
                     <Box sx={{
                         display: { xs: 'none', md: 'flex' },
                         alignItems: 'center',
                         gap: "6px",
-                        ml: 2,
-                        px: 1.4,
-                        py: 0.6,
+                        ml: 2, px: 1.4, py: 0.6,
                         borderRadius: "8px",
                         bgcolor: `${phaseColor}18`,
                         border: `1.5px solid ${phaseColor}50`,
@@ -151,11 +152,8 @@ const TopBar = ({ onMenuClick, isMobile }) => {
                     }}>
                         <PhaseIcon sx={{ fontSize: 15, color: phaseColor, transition: "color 0.4s" }} />
                         <Typography sx={{
-                            fontSize: "0.78rem",
-                            fontWeight: 700,
-                            color: phaseColor,
-                            letterSpacing: "0.02em",
-                            lineHeight: 1,
+                            fontSize: "0.78rem", fontWeight: 700, color: phaseColor,
+                            letterSpacing: "0.02em", lineHeight: 1,
                             transition: "color 0.4s ease",
                         }}>
                             {phaseLabel}
@@ -181,7 +179,7 @@ const TopBar = ({ onMenuClick, isMobile }) => {
                         {mode === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
                     </IconButton>
 
-                    {/* 🔔 Notifications */}
+                    {/* Notifications */}
                     <Tooltip title="Notifications">
                         <IconButton
                             onClick={handleNotificationMenuOpen}
@@ -193,10 +191,11 @@ const TopBar = ({ onMenuClick, isMobile }) => {
                         </IconButton>
                     </Tooltip>
 
+                    {/* Avatar — bg color follows role */}
                     <IconButton edge="end" onClick={handleProfileMenuOpen}>
                         <Avatar src={user?.avatar} sx={{
                             width: 34, height: 34,
-                            bgcolor: phaseColor,
+                            bgcolor: avatarColor,
                             fontSize: "0.9rem", fontWeight: 700,
                             transition: "background-color 0.4s ease",
                         }}>
@@ -218,19 +217,13 @@ const TopBar = ({ onMenuClick, isMobile }) => {
                     </MenuItem>
                 </Menu>
 
-                {/* 🔔 Notifications Menu */}
+                {/* Notifications menu */}
                 <Menu
                     anchorEl={notificationAnchor}
                     open={Boolean(notificationAnchor)}
                     onClose={handleMenuClose}
                     PaperProps={{
-                        sx: {
-                            mt: 1.5,
-                            borderRadius: 2,
-                            minWidth: 340,
-                            maxWidth: 360,
-                            overflow: 'visible',   // ← مهم
-                        }
+                        sx: { mt: 1.5, borderRadius: 2, minWidth: 340, maxWidth: 360, overflow: 'visible' },
                     }}
                     transformOrigin={{ horizontal: 'right', vertical: 'top' }}
                     anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
@@ -238,23 +231,16 @@ const TopBar = ({ onMenuClick, isMobile }) => {
                     {/* Header */}
                     <Box sx={{
                         px: 2, py: 1.5,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         borderBottom: `1px solid ${theme.palette.divider}`,
                     }}>
                         <Typography variant="subtitle1" fontWeight={700}>
                             Notifications
                             {unreadCount > 0 && (
                                 <Box component="span" sx={{
-                                    ml: 1,
-                                    px: 0.9,
-                                    py: 0.2,
-                                    borderRadius: '10px',
-                                    bgcolor: 'error.main',
-                                    color: 'white',
-                                    fontSize: '0.7rem',
-                                    fontWeight: 700,
+                                    ml: 1, px: 0.9, py: 0.2, borderRadius: '10px',
+                                    bgcolor: 'error.main', color: 'white',
+                                    fontSize: '0.7rem', fontWeight: 700,
                                 }}>
                                     {unreadCount}
                                 </Box>
@@ -265,33 +251,26 @@ const TopBar = ({ onMenuClick, isMobile }) => {
                                 size="small"
                                 startIcon={<DoneAllIcon sx={{ fontSize: 14 }} />}
                                 onClick={markAllAsRead}
-                                sx={{
-                                    fontSize: '0.72rem',
-                                    color: phaseColor,
-                                    textTransform: 'none',
-                                    px: 1,
-                                }}
+                                sx={{ fontSize: '0.72rem', color: avatarColor, textTransform: 'none', px: 1 }}
                             >
                                 Mark all read
                             </Button>
                         )}
                     </Box>
 
-                    {/* ✅ هون المشكلة كانت — السكرول على Box مش على Menu */}
+                    {/* Scrollable list */}
                     <Box sx={{
-                        maxHeight: 380,
-                        overflowY: 'auto',
-                        overflowX: 'hidden',
+                        maxHeight: 380, overflowY: 'auto', overflowX: 'hidden',
                         '&::-webkit-scrollbar': { width: '4px' },
                         '&::-webkit-scrollbar-track': { background: 'transparent' },
                         '&::-webkit-scrollbar-thumb': {
-                            background: alpha(phaseColor, 0.3),
+                            background: alpha(avatarColor, 0.3),
                             borderRadius: '4px',
                         },
                     }}>
                         {loading ? (
                             <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-                                <CircularProgress size={24} sx={{ color: phaseColor }} />
+                                <CircularProgress size={24} sx={{ color: avatarColor }} />
                             </Box>
                         ) : notifications.length === 0 ? (
                             <Box sx={{ py: 4, textAlign: 'center' }}>
@@ -306,16 +285,9 @@ const TopBar = ({ onMenuClick, isMobile }) => {
                                     <MenuItem
                                         onClick={() => handleNotificationClick(n)}
                                         sx={{
-                                            px: 2,
-                                            py: 1.2,
-                                            alignItems: 'flex-start',
-                                            // ✅ لون خفيف بدل الغامق
-                                            bgcolor: !n.isRead
-                                                ? alpha(phaseColor, 0.05)
-                                                : 'transparent',
-                                            '&:hover': {
-                                                bgcolor: alpha(phaseColor, 0.08),
-                                            },
+                                            px: 2, py: 1.2, alignItems: 'flex-start',
+                                            bgcolor: !n.isRead ? alpha(avatarColor, 0.05) : 'transparent',
+                                            '&:hover': { bgcolor: alpha(avatarColor, 0.08) },
                                             transition: 'background-color 0.15s',
                                         }}
                                     >
@@ -323,29 +295,21 @@ const TopBar = ({ onMenuClick, isMobile }) => {
                                         <Box sx={{ mt: 0.8, mr: 1, minWidth: 8 }}>
                                             {!n.isRead && (
                                                 <Box sx={{
-                                                    width: 7,
-                                                    height: 7,
-                                                    borderRadius: '50%',
-                                                    bgcolor: phaseColor,
-                                                    opacity: 0.8,
+                                                    width: 7, height: 7, borderRadius: '50%',
+                                                    bgcolor: avatarColor, opacity: 0.8,
                                                 }} />
                                             )}
                                         </Box>
-
                                         <Box sx={{ flex: 1, minWidth: 0 }}>
                                             <Typography
                                                 variant="body2"
                                                 fontWeight={n.isRead ? 400 : 600}
-                                                sx={{
-                                                    lineHeight: 1.4,
-                                                    whiteSpace: 'normal',  // ← يكسر النص للسطر الثاني
-                                                }}
+                                                sx={{ lineHeight: 1.4, whiteSpace: 'normal' }}
                                             >
                                                 {n.message}
                                             </Typography>
                                             <Typography
-                                                variant="caption"
-                                                color="text.secondary"
+                                                variant="caption" color="text.secondary"
                                                 sx={{ mt: 0.3, display: 'block' }}
                                             >
                                                 {n.createdAt
@@ -362,6 +326,7 @@ const TopBar = ({ onMenuClick, isMobile }) => {
                         )}
                     </Box>
                 </Menu>
+
             </Toolbar>
         </AppBar>
     );

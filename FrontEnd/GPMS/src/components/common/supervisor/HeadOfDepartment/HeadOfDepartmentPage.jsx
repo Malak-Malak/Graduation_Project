@@ -15,7 +15,6 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import RefreshOutlinedIcon from "@mui/icons-material/RefreshOutlined";
 import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
 import SchoolOutlinedIcon from "@mui/icons-material/SchoolOutlined";
-import PeopleOutlineIcon from "@mui/icons-material/PeopleOutline";
 import HowToRegOutlinedIcon from "@mui/icons-material/HowToRegOutlined";
 import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
@@ -24,6 +23,7 @@ import NoteOutlinedIcon from "@mui/icons-material/NoteOutlined";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
 import CloseIcon from "@mui/icons-material/Close";
+import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
 
 import {
     createSlot, deleteSlot, getSlots, assignTeamToSlot,
@@ -45,7 +45,7 @@ const statusMeta = (s) => {
     if (v === "active" || v.includes("accept")) return { bg: `${GREEN}18`, fg: GREEN };
     if (v === "pending") return { bg: `${ACCENT}18`, fg: ACCENT };
     if (v.includes("reject")) return { bg: `${RED}18`, fg: RED };
-    return { bg: `${ACCENT}18`, fg: ACCENT };
+    return { bg: `${GREEN}18`, fg: GREEN };
 };
 
 const extractErr = (e, fallback = "Something went wrong.") =>
@@ -60,6 +60,29 @@ const fmtDateTime = (dt) => {
         });
     } catch { return dt; }
 };
+
+// ── Team name resolver — tries every possible field ──────────────────────────
+const resolveTeamName = (t) =>
+    t?.teamName ?? t?.name ?? t?.projectName ?? t?.projectTitle ?? "Team";
+
+// ── Slot display row ──────────────────────────────────────────────────────────
+function SlotRow({ slot, green, tSec, tPri }) {
+    if (!slot) return (
+        <Typography fontSize="0.7rem" sx={{ color: ACCENT, fontStyle: "italic" }}>
+            No slot assigned
+        </Typography>
+    );
+    const dt = slot.dateTime ?? slot.date ?? slot.scheduledAt;
+    const loc = slot.location ?? slot.room ?? slot.place;
+    return (
+        <Stack direction="row" alignItems="center" gap={0.5}>
+            <EventOutlinedIcon sx={{ fontSize: 12, color: green }} />
+            <Typography fontSize="0.7rem" fontWeight={600} sx={{ color: green }}>
+                {dt ? fmtDateTime(dt) : "—"}{loc ? ` — ${loc}` : ""}
+            </Typography>
+        </Stack>
+    );
+}
 
 /* ════════════════════════════════════════════════════════════════
    TAB 0 — DISCUSSION SLOTS
@@ -130,7 +153,6 @@ function DiscussionSlotsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
         finally { setAssignBusy(false); }
     };
 
-    // team has no slot if assignedSlot is null
     const unassignedTeams = teams.filter(t => !t.assignedSlot && !(t.slotId ?? t.discussionSlotId));
 
     return (
@@ -165,7 +187,6 @@ function DiscussionSlotsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
                 <Stack gap={1.5}>
                     {slots.map((slot) => {
                         const slotId = slot.slotId ?? slot.id;
-                        // assignedTeams from slot.assignedTeams array
                         const assignedTeams = slot.assignedTeams ?? teams.filter(t => (t.slotId ?? t.discussionSlotId) === slotId);
                         return (
                             <Paper key={slotId} elevation={0} sx={{ p: 2, borderRadius: "14px", border: `1px solid ${brd}`, bgcolor: paperBg }}>
@@ -192,7 +213,6 @@ function DiscussionSlotsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
                                                 <Typography fontSize="0.74rem" sx={{ color: tSec }}>{slot.notes}</Typography>
                                             </Stack>
                                         )}
-                                        {/* Assigned teams */}
                                         {assignedTeams.length > 0 ? (
                                             <Stack gap={0.6} mt={0.5}>
                                                 <Typography fontSize="0.7rem" fontWeight={700} sx={{ color: tSec, textTransform: "uppercase", letterSpacing: "0.05em" }}>
@@ -203,9 +223,9 @@ function DiscussionSlotsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
                                                         sx={{ p: 1, borderRadius: "8px", bgcolor: `${accent}06`, border: `1px solid ${accent}15` }}>
                                                         <GroupsOutlinedIcon sx={{ fontSize: 13, color: accent }} />
                                                         <Typography fontSize="0.78rem" fontWeight={600} sx={{ color: tPri }}>
-                                                            {t.teamName ?? t.name ?? "—"}
+                                                            {resolveTeamName(t)}
                                                         </Typography>
-                                                        {(t.projectName ?? t.projectTitle) && (
+                                                        {(t.projectName ?? t.projectTitle) && resolveTeamName(t) !== (t.projectName ?? t.projectTitle) && (
                                                             <Typography fontSize="0.72rem" sx={{ color: tSec }}>· {t.projectName ?? t.projectTitle}</Typography>
                                                         )}
                                                     </Stack>
@@ -298,17 +318,18 @@ function DiscussionSlotsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
                         {unassignedTeams.map(t => {
                             const tid = String(t.teamId ?? t.id);
                             const selected = selectedTeam === tid;
-                            const members = t.memberNames ?? [];
                             return (
                                 <Paper key={tid} elevation={0} onClick={() => setSelectedTeam(tid)}
                                     sx={{ p: 1.4, borderRadius: "12px", cursor: "pointer", border: `1.5px solid ${selected ? accent : brd}`, bgcolor: selected ? `${ACCENT}08` : "transparent", transition: "all 0.15s", "&:hover": { borderColor: `${accent}70` } }}>
                                     <Stack direction="row" alignItems="center" gap={1.2}>
                                         <Box sx={{ width: 32, height: 32, borderRadius: "9px", bgcolor: `${ACCENT}12`, border: `1px solid ${ACCENT}28`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.72rem", fontWeight: 800, color: accent }}>
-                                            {initials(t.teamName ?? t.name ?? "T")}
+                                            {initials(resolveTeamName(t))}
                                         </Box>
                                         <Box>
-                                            <Typography fontWeight={700} fontSize="0.84rem" sx={{ color: tPri }}>{t.teamName ?? t.name ?? "Team"}</Typography>
-                                            <Typography fontSize="0.7rem" sx={{ color: tSec }}>{t.projectName ?? t.projectTitle ?? ""}</Typography>
+                                            <Typography fontWeight={700} fontSize="0.84rem" sx={{ color: tPri }}>{resolveTeamName(t)}</Typography>
+                                            {(t.projectName ?? t.projectTitle) && resolveTeamName(t) !== (t.projectName ?? t.projectTitle) && (
+                                                <Typography fontSize="0.7rem" sx={{ color: tSec }}>{t.projectName ?? t.projectTitle}</Typography>
+                                            )}
                                         </Box>
                                     </Stack>
                                 </Paper>
@@ -334,7 +355,6 @@ function DiscussionSlotsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
 
 /* ════════════════════════════════════════════════════════════════
    TAB 1 — DEPARTMENT TEAMS
-   Real shape: { teamId, projectName, status, supervisorName, memberNames: string[], assignedSlot }
 ════════════════════════════════════════════════════════════════ */
 function DepartmentTeamsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
     const [teams, setTeams] = useState([]);
@@ -376,13 +396,18 @@ function DepartmentTeamsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
                     {teams.map((team, i) => {
                         const tid = team.teamId ?? team.id;
                         const m = statusMeta(team.status ?? "active");
-                        const hasSlot = team.assignedSlot != null;
-                        // memberNames is string[]
+                        const teamName = resolveTeamName(team);
+                        const slot = team.assignedSlot ?? team.slot ?? team.discussionSlot ?? null;
+                        const hasSlot = slot != null ||
+                            (team.slotDateTime ?? team.slotDate ?? team.assignedSlotDateTime) != null;
+                        const slotDisplay = slot ?? (hasSlot ? {
+                            dateTime: team.slotDateTime ?? team.slotDate ?? team.assignedSlotDateTime,
+                            location: team.slotLocation ?? team.slotRoom,
+                        } : null);
                         const memberNames = team.memberNames ?? [];
                         return (
                             <Paper key={tid ?? i} elevation={0} sx={{ p: 2, borderRadius: "14px", border: `1px solid ${brd}`, bgcolor: paperBg }}>
                                 <Stack direction="row" alignItems="flex-start" gap={1.5}>
-                                    {/* Team avatar */}
                                     <Box sx={{
                                         width: 44, height: 44, borderRadius: "12px", flexShrink: 0,
                                         bgcolor: `${MBR_COLORS[i % MBR_COLORS.length]}15`,
@@ -390,25 +415,26 @@ function DepartmentTeamsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
                                         display: "flex", alignItems: "center", justifyContent: "center",
                                         fontSize: "0.88rem", fontWeight: 800, color: MBR_COLORS[i % MBR_COLORS.length],
                                     }}>
-                                        {initials(team.teamName ?? team.name ?? "T")}
+                                        {initials(teamName)}
                                     </Box>
                                     <Box flex={1} minWidth={0}>
-                                        {/* Title row */}
                                         <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap" mb={0.3}>
                                             <Typography fontWeight={700} fontSize="0.92rem" sx={{ color: tPri }}>
-                                                {team.teamName ?? team.name ?? "—"}
+                                                {teamName}
                                             </Typography>
                                             <Chip label={team.status ?? "Active"} size="small" sx={{ height: 18, fontSize: "0.62rem", fontWeight: 700, bgcolor: m.bg, color: m.fg, borderRadius: "6px" }} />
                                         </Stack>
 
-                                        {/* Project name */}
-                                        {(team.projectName ?? team.projectTitle) && (
-                                            <Typography fontSize="0.78rem" sx={{ color: tSec, mb: 0.8 }}>
-                                                📁 {team.projectName ?? team.projectTitle}
-                                            </Typography>
-                                        )}
+                                        {(team.projectName ?? team.projectTitle) &&
+                                            (team.projectName ?? team.projectTitle) !== teamName && (
+                                                <Stack direction="row" alignItems="center" gap={0.5} mb={0.8}>
+                                                    <FolderOutlinedIcon sx={{ fontSize: 13, color: tSec }} />
+                                                    <Typography fontSize="0.78rem" sx={{ color: tSec }}>
+                                                        {team.projectName ?? team.projectTitle}
+                                                    </Typography>
+                                                </Stack>
+                                            )}
 
-                                        {/* Members */}
                                         {memberNames.length > 0 && (
                                             <Stack direction="row" flexWrap="wrap" gap={0.6} mb={0.8}>
                                                 {memberNames.map((name, j) => (
@@ -428,7 +454,6 @@ function DepartmentTeamsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
                                             </Stack>
                                         )}
 
-                                        {/* Bottom row: supervisor + slot status */}
                                         <Stack direction="row" alignItems="center" gap={2} flexWrap="wrap">
                                             {team.supervisorName && (
                                                 <Stack direction="row" alignItems="center" gap={0.5}>
@@ -436,16 +461,7 @@ function DepartmentTeamsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
                                                     <Typography fontSize="0.73rem" sx={{ color: tSec }}>{team.supervisorName}</Typography>
                                                 </Stack>
                                             )}
-                                            {hasSlot ? (
-                                                <Stack direction="row" alignItems="center" gap={0.5}>
-                                                    <EventOutlinedIcon sx={{ fontSize: 13, color: GREEN }} />
-                                                    <Typography fontSize="0.73rem" fontWeight={600} sx={{ color: GREEN }}>
-                                                        {fmtDateTime(team.assignedSlot?.dateTime)} — {team.assignedSlot?.location ?? "Slot assigned"}
-                                                    </Typography>
-                                                </Stack>
-                                            ) : (
-                                                <Typography fontSize="0.72rem" sx={{ color: ACCENT, fontStyle: "italic" }}>No slot yet</Typography>
-                                            )}
+                                            <SlotRow slot={slotDisplay} green={GREEN} tSec={tSec} tPri={tPri} />
                                         </Stack>
                                     </Box>
                                 </Stack>
@@ -459,23 +475,51 @@ function DepartmentTeamsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
 }
 
 /* ════════════════════════════════════════════════════════════════
-   TAB 2 — DEPARTMENT SUPERVISORS
-   Real shape: { userId, username, fullName, teams: [{ teamId, projectName, status, supervisorName, memberNames, assignedSlot }] }
+   TAB 2 — DEPARTMENT SUPERVISORS (FIXED)
 ════════════════════════════════════════════════════════════════ */
 function DepartmentSupervisorsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
     const [supervisors, setSupervisors] = useState([]);
+    const [slots, setSlots] = useState([]);  // ← Added for matching
     const [loading, setLoading] = useState(false);
 
     const load = useCallback(async () => {
         setLoading(true);
         try {
-            const d = await getDepartmentSupervisors();
+            const [d, s] = await Promise.all([
+                getDepartmentSupervisors(),
+                getSlots(),  // ← Fetch slots as well
+            ]);
             setSupervisors(Array.isArray(d) ? d : d?.data ?? []);
+            setSlots(Array.isArray(s) ? s : s?.data ?? []);
         } catch { }
         finally { setLoading(false); }
     }, []);
 
     useEffect(() => { load(); }, [load]);
+
+    // Helper function to resolve slot from team object with 3 fallback levels
+    const resolveTeamSlot = (team, allSlots) => {
+        // Level 1: Nested object directly in the team
+        if (team.assignedSlot ?? team.slot ?? team.discussionSlot)
+            return team.assignedSlot ?? team.slot ?? team.discussionSlot;
+
+        // Level 2: Flat fields in the team
+        if (team.slotDateTime ?? team.slotDate ?? team.assignedSlotDateTime)
+            return {
+                dateTime: team.slotDateTime ?? team.slotDate ?? team.assignedSlotDateTime,
+                location: team.slotLocation ?? team.slotRoom,
+            };
+
+        // Level 3: Match from slots list by teamId
+        const teamId = team.teamId ?? team.id;
+        const matched = allSlots.find(sl =>
+            (sl.assignedTeams ?? []).some(at => (at.teamId ?? at.id) === teamId)
+        );
+
+        return matched
+            ? { dateTime: matched.dateTime ?? matched.date, location: matched.location }
+            : null;
+    };
 
     return (
         <Box sx={{ p: 2.5 }}>
@@ -500,12 +544,10 @@ function DepartmentSupervisorsTab({ accent, brd, paperBg, isDark, tPri, tSec }) 
             ) : (
                 <Stack gap={2}>
                     {supervisors.map((sup, i) => {
-                        // real field: sup.teams (same shape as department teams)
                         const supTeams = sup.teams ?? sup.supervisedTeams ?? [];
                         const isHead = sup.isHeadOfDepartment ?? sup.isHead ?? false;
                         return (
                             <Paper key={sup.userId ?? sup.id ?? i} elevation={0} sx={{ borderRadius: "14px", border: `1px solid ${brd}`, bgcolor: paperBg, overflow: "hidden" }}>
-                                {/* Supervisor header */}
                                 <Stack direction="row" alignItems="center" gap={1.5} sx={{ p: 2, borderBottom: supTeams.length > 0 ? `1px solid ${brd}` : "none" }}>
                                     <Avatar sx={{ width: 42, height: 42, borderRadius: "12px", bgcolor: `${MBR_COLORS[i % MBR_COLORS.length]}15`, color: MBR_COLORS[i % MBR_COLORS.length], fontWeight: 800, fontSize: "0.9rem" }}>
                                         {initials(sup.fullName ?? sup.name ?? "S")}
@@ -525,12 +567,13 @@ function DepartmentSupervisorsTab({ accent, brd, paperBg, isDark, tPri, tSec }) 
                                     </Box>
                                 </Stack>
 
-                                {/* Teams under this supervisor */}
                                 {supTeams.length > 0 && (
                                     <Stack gap={0} sx={{ px: 2, py: 1.2 }}>
                                         {supTeams.map((t, j) => {
                                             const members = t.memberNames ?? [];
-                                            const hasSlot = t.assignedSlot != null;
+                                            const teamName = resolveTeamName(t);
+                                            // Use the enhanced slot resolver
+                                            const resolvedSlot = resolveTeamSlot(t, slots);
                                             return (
                                                 <Box key={t.teamId ?? t.id ?? j}
                                                     sx={{ py: 1.2, borderBottom: j < supTeams.length - 1 ? `1px solid ${brd}` : "none" }}>
@@ -542,18 +585,18 @@ function DepartmentSupervisorsTab({ accent, brd, paperBg, isDark, tPri, tSec }) 
                                                         <Box flex={1}>
                                                             <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap">
                                                                 <Typography fontSize="0.82rem" fontWeight={700} sx={{ color: tPri }}>
-                                                                    {t.teamName ?? t.name ?? "—"}
+                                                                    {teamName}
                                                                 </Typography>
                                                                 {t.status && (
                                                                     <Chip label={t.status} size="small" sx={{ height: 16, fontSize: "0.58rem", fontWeight: 700, bgcolor: statusMeta(t.status).bg, color: statusMeta(t.status).fg, borderRadius: "5px" }} />
                                                                 )}
                                                             </Stack>
-                                                            {(t.projectName ?? t.projectTitle) && (
-                                                                <Typography fontSize="0.74rem" sx={{ color: tSec, mt: 0.2 }}>
-                                                                    {t.projectName ?? t.projectTitle}
-                                                                </Typography>
-                                                            )}
-                                                            {/* Member name pills */}
+                                                            {(t.projectName ?? t.projectTitle) &&
+                                                                (t.projectName ?? t.projectTitle) !== teamName && (
+                                                                    <Typography fontSize="0.74rem" sx={{ color: tSec, mt: 0.2 }}>
+                                                                        {t.projectName ?? t.projectTitle}
+                                                                    </Typography>
+                                                                )}
                                                             {members.length > 0 && (
                                                                 <Stack direction="row" flexWrap="wrap" gap={0.5} mt={0.6}>
                                                                     {members.map((name, k) => (
@@ -567,19 +610,9 @@ function DepartmentSupervisorsTab({ accent, brd, paperBg, isDark, tPri, tSec }) 
                                                                     ))}
                                                                 </Stack>
                                                             )}
-                                                            {/* Slot info */}
-                                                            <Stack direction="row" alignItems="center" gap={0.5} mt={0.5}>
-                                                                {hasSlot ? (
-                                                                    <>
-                                                                        <EventOutlinedIcon sx={{ fontSize: 12, color: GREEN }} />
-                                                                        <Typography fontSize="0.7rem" fontWeight={600} sx={{ color: GREEN }}>
-                                                                            {fmtDateTime(t.assignedSlot?.dateTime)} — {t.assignedSlot?.location}
-                                                                        </Typography>
-                                                                    </>
-                                                                ) : (
-                                                                    <Typography fontSize="0.7rem" sx={{ color: ACCENT, fontStyle: "italic" }}>No slot assigned</Typography>
-                                                                )}
-                                                            </Stack>
+                                                            <Box mt={0.5}>
+                                                                <SlotRow slot={resolvedSlot} green={GREEN} tSec={tSec} tPri={tPri} />
+                                                            </Box>
                                                         </Box>
                                                     </Stack>
                                                 </Box>

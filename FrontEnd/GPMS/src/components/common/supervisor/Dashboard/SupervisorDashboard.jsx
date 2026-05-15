@@ -1,8 +1,9 @@
 // src/components/common/supervisor/Dashboard/SupervisorDashboard.jsx
+
 import { useEffect, useState } from "react";
 import {
-    Box, Grid, Typography, Paper, Stack, Avatar, Chip, Button, LinearProgress, AvatarGroup,
-    CircularProgress,
+    Box, Grid, Typography, Paper, Stack, Avatar, Chip, Button,
+    LinearProgress, AvatarGroup, CircularProgress, Skeleton,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { useNavigate } from "react-router-dom";
@@ -12,19 +13,166 @@ import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
 import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import WarningAmberOutlinedIcon from "@mui/icons-material/WarningAmberOutlined";
+import PeopleOutlinedIcon from "@mui/icons-material/PeopleOutlined";
+
 import { useAuth } from "../../../../contexts/AuthContext";
-import { getPendingTeamRequests } from "../../../../api/handler/endpoints/supervisorApi";
+import {
+    getPendingTeamRequests,
+    getSupervisorTeams,
+} from "../../../../api/handler/endpoints/supervisorApi";
 
-// ─── static mock for groups (replace later with real API) ────────────────────
-const GROUPS = [
-    { name: "EcoTrackers", project: "AI-Based Waste Management", members: ["A", "H", "M", "S"], progress: 65, risk: "low", last: "Today" },
-    { name: "CodeCraft", project: "Smart Campus Navigation", members: ["O", "L", "N"], progress: 42, risk: "medium", last: "2 days ago" },
-    { name: "InnovateX", project: "Blockchain Voting System", members: ["Y", "K", "R"], progress: 80, risk: "low", last: "Today" },
-    { name: "SmartCampus", project: "IoT Energy Monitor", members: ["D", "F"], progress: 28, risk: "high", last: "4 days ago" },
-];
+// ── helpers ───────────────────────────────────────────────────────────────────
 
-const RISK_CLR = { low: "#6D8A7D", medium: "#C49A6C", high: "#C47E7E" };
-const MBR_COLORS = ["#B46F4C", "#6D8A7D", "#C49A6C", "#7E9FC4", "#9B7EC8", "#C47E7E"];
+const PALETTE = ["#B46F4C", "#6D8A7D", "#C49A6C", "#7E9FC4", "#9B7EC8", "#C47E7E"];
+const avatarBg = (name = "") => PALETTE[(name?.charCodeAt(0) ?? 0) % PALETTE.length];
+const initials = (name = "") =>
+    (name || "?").split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase()).join("");
+
+/** Derive a stable-ish progress % from team data (placeholder until real endpoint exists) */
+const deriveProgress = (team) => {
+    // If the backend ever adds a progress field, use it directly.
+    if (typeof team.progress === "number") return team.progress;
+    // Fallback: hash the team id into 20–90 range so it's stable, not random.
+    return 20 + ((team.id * 37) % 71);
+};
+
+/** Map backend status → risk label */
+const deriveRisk = (team) => {
+    if (team.risk) return team.risk;
+    const s = (team.status ?? "").toLowerCase();
+    if (s === "active") return "low";
+    if (s === "inactive") return "high";
+    return "medium";
+};
+
+const RISK_COLOR = { low: "#6D8A7D", medium: "#C49A6C", high: "#C47E7E" };
+
+// ── TeamCard ──────────────────────────────────────────────────────────────────
+
+function TeamCard({ team, onClick, t, theme }) {
+    const progress = deriveProgress(team);
+    const risk = deriveRisk(team);
+    const members = Array.isArray(team.members) ? team.members : [];
+
+    return (
+        <Box
+            onClick={onClick}
+            sx={{
+                p: 2, borderRadius: 2.5,
+                border: `1px solid ${t.borderLight}`,
+                cursor: "pointer",
+                transition: "background 0.15s, box-shadow 0.15s",
+                "&:hover": { bgcolor: t.surfaceHover, boxShadow: theme.shadows[1] },
+            }}
+        >
+            {/* Top row */}
+            <Stack direction="row" alignItems="flex-start" justifyContent="space-between" mb={1}>
+                <Box sx={{ minWidth: 0, flex: 1, mr: 1 }}>
+                    <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap">
+                        <Typography sx={{ fontSize: "0.9rem", fontWeight: 700, color: t.textPrimary }}>
+                            {team.projectTitle ?? `Team #${team.id}`}
+                        </Typography>
+                        <Chip
+                            label={risk}
+                            size="small"
+                            sx={{
+                                bgcolor: `${RISK_COLOR[risk]}18`,
+                                color: RISK_COLOR[risk],
+                                fontWeight: 600, fontSize: "0.65rem",
+                                height: 20, textTransform: "capitalize",
+                            }}
+                        />
+                    </Stack>
+                    {team.projectDescription?.trim() && (
+                        <Typography
+                            sx={{
+                                fontSize: "0.76rem", color: t.textSecondary, mt: 0.3,
+                                overflow: "hidden", textOverflow: "ellipsis",
+                                display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical",
+                            }}
+                        >
+                            {team.projectDescription}
+                        </Typography>
+                    )}
+                </Box>
+
+                {/* Member avatars */}
+                {members.length > 0 && (
+                    <AvatarGroup
+                        max={4}
+                        sx={{ "& .MuiAvatar-root": { width: 26, height: 26, fontSize: "0.62rem", fontWeight: 700 } }}
+                    >
+                        {members.map((m, i) => {
+                            const name = m?.name ?? m?.fullName ?? m?.username ?? String(m);
+                            return (
+                                <Avatar key={i} sx={{ bgcolor: avatarBg(name) }}>
+                                    {initials(name)}
+                                </Avatar>
+                            );
+                        })}
+                    </AvatarGroup>
+                )}
+
+                {members.length === 0 && (
+                    <Stack direction="row" alignItems="center" gap={0.5}
+                        sx={{ px: 1, py: 0.4, borderRadius: 1.5, bgcolor: `${t.textTertiary}10` }}>
+                        <PeopleOutlinedIcon sx={{ fontSize: 13, color: t.textTertiary }} />
+                        <Typography sx={{ fontSize: "0.65rem", color: t.textTertiary }}>No members</Typography>
+                    </Stack>
+                )}
+            </Stack>
+
+            {/* Progress bar */}
+            <Stack direction="row" justifyContent="space-between" mb={0.4}>
+                <Typography sx={{ fontSize: "0.7rem", color: t.textTertiary }}>Progress</Typography>
+                <Typography sx={{ fontSize: "0.7rem", fontWeight: 600, color: t.textPrimary }}>{progress}%</Typography>
+            </Stack>
+            <LinearProgress
+                variant="determinate"
+                value={progress}
+                sx={{
+                    borderRadius: 4, height: 5,
+                    bgcolor: t.borderLight,
+                    "& .MuiLinearProgress-bar": { bgcolor: RISK_COLOR[risk], borderRadius: 4 },
+                }}
+            />
+
+            {/* Member names — subtle single line */}
+            {members.length > 0 && (
+                <Typography
+                    sx={{
+                        mt: 1, fontSize: "0.68rem", color: t.textTertiary,
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    }}
+                >
+                    {members
+                        .map((m) => m?.name ?? m?.fullName ?? m?.username ?? "")
+                        .filter(Boolean)
+                        .join(" · ")}
+                </Typography>
+            )}
+        </Box>
+    );
+}
+
+// ── TeamCard skeleton ─────────────────────────────────────────────────────────
+
+function TeamCardSkeleton() {
+    return (
+        <Box sx={{ p: 2, borderRadius: 2.5, border: "1px solid", borderColor: "divider" }}>
+            <Stack direction="row" justifyContent="space-between" mb={1}>
+                <Box sx={{ flex: 1, mr: 1 }}>
+                    <Skeleton width="55%" height={20} />
+                    <Skeleton width="80%" height={16} sx={{ mt: 0.5 }} />
+                </Box>
+                <Skeleton variant="circular" width={26} height={26} />
+            </Stack>
+            <Skeleton width="100%" height={8} sx={{ borderRadius: 4 }} />
+        </Box>
+    );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 export default function SupervisorDashboard() {
     const theme = useTheme();
@@ -32,45 +180,84 @@ export default function SupervisorDashboard() {
     const { user } = useAuth();
     const t = theme.palette.custom;
 
-    // ── pending count from real API ──────────────────────────────────────────
+    // ── pending requests count (real API) ─────────────────────────────────────
     const [pendingCount, setPendingCount] = useState(null);
     const [pendingLoading, setPendingLoading] = useState(true);
 
+    // ── teams (real API) ──────────────────────────────────────────────────────
+    const [teams, setTeams] = useState([]);
+    const [teamsLoading, setTeamsLoading] = useState(true);
+    const [teamsError, setTeamsError] = useState(null);
+
     useEffect(() => {
-        const load = async () => {
-            try {
-                const raw = await getPendingTeamRequests();
+        // Pending requests
+        getPendingTeamRequests()
+            .then((raw) => {
                 const count = Array.isArray(raw)
                     ? raw.length
                     : ((raw.teamRequests?.length ?? 0) + (raw.leaveRequests?.length ?? 0));
                 setPendingCount(count);
-            } catch {
-                setPendingCount("—");
-            } finally {
-                setPendingLoading(false);
-            }
-        };
-        load();
+            })
+            .catch(() => setPendingCount("—"))
+            .finally(() => setPendingLoading(false));
+
+        // Teams
+        getSupervisorTeams()
+            .then((data) => setTeams(Array.isArray(data) ? data : []))
+            .catch((err) => setTeamsError(err?.message ?? "Failed to load teams."))
+            .finally(() => setTeamsLoading(false));
     }, []);
 
-    // ── stats — only Pending Requests value is live; rest still static ────────
+    // ── stat cards ────────────────────────────────────────────────────────────
     const STATS = [
-        { label: "My Groups", value: "4", icon: <GroupsOutlinedIcon />, color: "#B46F4C", path: "/supervisor/groups" },
+        {
+            label: "My Groups",
+            value: teamsLoading ? null : String(teams.length),
+            icon: <GroupsOutlinedIcon />,
+            color: "#B46F4C",
+            path: "/supervisor/groups",
+        },
         {
             label: "Pending Requests",
             value: pendingLoading ? null : String(pendingCount ?? "—"),
-            icon: <PendingActionsOutlinedIcon />, color: "#C49A6C", path: "/supervisor/requests",
+            icon: <PendingActionsOutlinedIcon />,
+            color: "#C49A6C",
+            path: "/supervisor/requests",
         },
-        { label: "Files to Review", value: "7", icon: <FolderOutlinedIcon />, color: "#6D8A7D", path: "/supervisor/files" },
-        { label: "Meetings This Wk", value: "4", icon: <CalendarMonthOutlinedIcon />, color: "#7E9FC4", path: "/supervisor/meetings" },
+        {
+            label: "Files to Review",
+            value: "—",
+            icon: <FolderOutlinedIcon />,
+            color: "#6D8A7D",
+            path: "/supervisor/files",
+        },
+        {
+            label: "Meetings This Wk",
+            value: "—",
+            icon: <CalendarMonthOutlinedIcon />,
+            color: "#7E9FC4",
+            path: "/supervisor/meetings",
+        },
     ];
 
+    // ── render ────────────────────────────────────────────────────────────────
     return (
         <Box sx={{ maxWidth: 1200 }}>
+
             {/* Welcome */}
             <Box sx={{ mb: 3 }}>
-                <Typography variant="h2" sx={{ color: t.textPrimary, mb: 0.5 }}>
-                    Welcome, {user?.name ?? user?.fullName ?? user?.username ?? "Supervisor"}
+                <Typography variant="h2" sx={{ mb: 0.5 }}>
+                    <Box component="span" sx={{ color: t.textPrimary }}>Welcome, </Box>
+                    <Box
+                        component="span"
+                        sx={{
+                            background: "linear-gradient(90deg, #6D8A7D, #9EC4B5)",
+                            WebkitBackgroundClip: "text",
+                            WebkitTextFillColor: "transparent",
+                        }}
+                    >
+                        {user?.name ?? user?.fullName ?? user?.username ?? "Supervisor"}
+                    </Box>
                 </Typography>
                 <Typography sx={{ color: t.textSecondary, fontSize: "0.9rem" }}>
                     {user?.department ?? "Computer Systems Engineering"} · Spring 2025
@@ -81,24 +268,38 @@ export default function SupervisorDashboard() {
             <Grid container spacing={2} sx={{ mb: 3 }}>
                 {STATS.map((s) => (
                     <Grid size={{ xs: 6, lg: 3 }} key={s.label}>
-                        <Paper elevation={1} onClick={() => navigate(s.path)} sx={{
-                            p: 2, borderRadius: 3, cursor: "pointer",
-                            bgcolor: theme.palette.background.paper,
-                            "&:hover": { transform: "translateY(-2px)" }, transition: "all 0.2s",
-                        }}>
+                        <Paper
+                            elevation={1}
+                            onClick={() => navigate(s.path)}
+                            sx={{
+                                p: 2, borderRadius: 3, cursor: "pointer",
+                                bgcolor: theme.palette.background.paper,
+                                transition: "all 0.2s",
+                                "&:hover": { transform: "translateY(-2px)" },
+                            }}
+                        >
                             <Stack direction="row" alignItems="center" gap={1.5}>
-                                <Box sx={{ p: 1, borderRadius: 2, bgcolor: `${s.color}15`, color: s.color, "& svg": { fontSize: 20 } }}>
+                                <Box sx={{
+                                    p: 1, borderRadius: 2,
+                                    bgcolor: `${s.color}15`, color: s.color,
+                                    "& svg": { fontSize: 20 },
+                                }}>
                                     {s.icon}
                                 </Box>
                                 <Box>
                                     {s.value === null ? (
                                         <CircularProgress size={20} sx={{ color: s.color }} />
                                     ) : (
-                                        <Typography sx={{ fontSize: "1.6rem", fontWeight: 700, color: t.textPrimary, lineHeight: 1 }}>
+                                        <Typography sx={{
+                                            fontSize: "1.6rem", fontWeight: 700,
+                                            color: t.textPrimary, lineHeight: 1,
+                                        }}>
                                             {s.value}
                                         </Typography>
                                     )}
-                                    <Typography sx={{ fontSize: "0.7rem", color: t.textTertiary, mt: 0.3 }}>{s.label}</Typography>
+                                    <Typography sx={{ fontSize: "0.7rem", color: t.textTertiary, mt: 0.3 }}>
+                                        {s.label}
+                                    </Typography>
                                 </Box>
                             </Stack>
                         </Paper>
@@ -108,103 +309,142 @@ export default function SupervisorDashboard() {
 
             {/* Groups + sidebar */}
             <Grid container spacing={2}>
+
+                {/* ── Teams list ── */}
                 <Grid size={{ xs: 12, lg: 8 }}>
                     <Paper elevation={1} sx={{ p: 2.5, borderRadius: 3, bgcolor: theme.palette.background.paper }}>
                         <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
                             <Typography variant="h4" sx={{ color: t.textPrimary }}>My Groups</Typography>
-                            <Button endIcon={<ArrowForwardIcon sx={{ fontSize: 15 }} />} size="small"
+                            <Button
+                                endIcon={<ArrowForwardIcon sx={{ fontSize: 15 }} />}
+                                size="small"
                                 onClick={() => navigate("/supervisor/groups")}
-                                sx={{ color: t.accentPrimary, fontSize: "0.8rem", textTransform: "none" }}>
+                                sx={{ color: t.accentPrimary, fontSize: "0.8rem", textTransform: "none" }}
+                            >
                                 View all
                             </Button>
                         </Stack>
-                        <Stack spacing={1.5}>
-                            {GROUPS.map((g) => (
-                                <Box key={g.name} onClick={() => navigate("/supervisor/groups")}
-                                    sx={{
-                                        p: 1.8, borderRadius: 2.5, border: `1px solid ${t.borderLight}`,
-                                        "&:hover": { bgcolor: t.surfaceHover }, transition: "background 0.15s", cursor: "pointer",
-                                    }}>
-                                    <Stack direction="row" alignItems="flex-start" justifyContent="space-between" mb={1}>
-                                        <Box>
-                                            <Stack direction="row" alignItems="center" gap={1}>
-                                                <Typography sx={{ fontSize: "0.9rem", fontWeight: 700, color: t.textPrimary }}>{g.name}</Typography>
-                                                <Chip label={g.risk} size="small" sx={{
-                                                    bgcolor: `${RISK_CLR[g.risk]}18`, color: RISK_CLR[g.risk],
-                                                    fontWeight: 600, fontSize: "0.65rem", height: 20, textTransform: "capitalize",
-                                                }} />
-                                            </Stack>
-                                            <Typography sx={{ fontSize: "0.78rem", color: t.textSecondary, mt: 0.2 }}>{g.project}</Typography>
-                                        </Box>
-                                        <Typography sx={{ fontSize: "0.72rem", color: t.textTertiary }}>{g.last}</Typography>
-                                    </Stack>
-                                    <Stack direction="row" alignItems="center" justifyContent="space-between">
-                                        <Box sx={{ flex: 1, mr: 2 }}>
-                                            <Stack direction="row" justifyContent="space-between" mb={0.4}>
-                                                <Typography sx={{ fontSize: "0.7rem", color: t.textTertiary }}>Progress</Typography>
-                                                <Typography sx={{ fontSize: "0.7rem", fontWeight: 600, color: t.textPrimary }}>{g.progress}%</Typography>
-                                            </Stack>
-                                            <LinearProgress variant="determinate" value={g.progress}
-                                                sx={{ bgcolor: t.borderLight, "& .MuiLinearProgress-bar": { bgcolor: RISK_CLR[g.risk] } }} />
-                                        </Box>
-                                        <AvatarGroup max={4} sx={{ "& .MuiAvatar-root": { width: 26, height: 26, fontSize: "0.65rem", fontWeight: 700 } }}>
-                                            {g.members.map((m, j) => (
-                                                <Avatar key={j} sx={{ bgcolor: MBR_COLORS[j % MBR_COLORS.length] }}>{m}</Avatar>
-                                            ))}
-                                        </AvatarGroup>
-                                    </Stack>
-                                </Box>
-                            ))}
-                        </Stack>
+
+                        {/* Loading skeletons */}
+                        {teamsLoading && (
+                            <Stack spacing={1.5}>
+                                {[1, 2, 3].map((i) => <TeamCardSkeleton key={i} />)}
+                            </Stack>
+                        )}
+
+                        {/* Error */}
+                        {!teamsLoading && teamsError && (
+                            <Box sx={{ py: 4, textAlign: "center" }}>
+                                <Typography sx={{ color: t.textTertiary, fontSize: "0.85rem" }}>
+                                    {teamsError}
+                                </Typography>
+                            </Box>
+                        )}
+
+                        {/* Empty */}
+                        {!teamsLoading && !teamsError && teams.length === 0 && (
+                            <Box sx={{ py: 6, textAlign: "center" }}>
+                                <GroupsOutlinedIcon sx={{ fontSize: 40, color: t.textTertiary, mb: 1 }} />
+                                <Typography sx={{ color: t.textSecondary, fontSize: "0.88rem" }}>
+                                    No teams assigned yet.
+                                </Typography>
+                            </Box>
+                        )}
+
+                        {/* Team cards — show max 4 on dashboard */}
+                        {!teamsLoading && !teamsError && teams.length > 0 && (
+                            <Stack spacing={1.5}>
+                                {teams.slice(0, 4).map((team) => (
+                                    <TeamCard
+                                        key={team.id}
+                                        team={team}
+                                        onClick={() => navigate("/supervisor/groups")}
+                                        t={t}
+                                        theme={theme}
+                                    />
+                                ))}
+                            </Stack>
+                        )}
                     </Paper>
                 </Grid>
 
-                {/* Alerts + Quick Actions */}
+                {/* ── Alerts + Quick Actions ── */}
                 <Grid size={{ xs: 12, lg: 4 }}>
                     <Stack spacing={2}>
+
+                        {/* Alerts */}
                         <Paper elevation={1} sx={{ p: 2.5, borderRadius: 3, bgcolor: theme.palette.background.paper }}>
                             <Typography variant="h4" sx={{ color: t.textPrimary, mb: 1.5 }}>Alerts</Typography>
                             <Stack spacing={1}>
                                 {[
-                                    { text: "CodeCraft: 3 overdue tasks", sev: "error" },
-                                    { text: "SmartCampus: no activity 4d", sev: "warning" },
                                     { text: "7 files awaiting your review", sev: "info" },
+                                    { text: "Some teams have no recent activity", sev: "warning" },
+                                    { text: "Pending appointment requests", sev: "info" },
                                 ].map((a, i) => (
-                                    <Stack key={i} direction="row" gap={1.5} alignItems="center" sx={{
-                                        p: 1.2, borderRadius: 2,
-                                        bgcolor: a.sev === "error" ? `${t.error}10` : a.sev === "warning" ? `${t.warning}10` : `${t.accentSecondary}10`,
-                                        border: `1px solid ${a.sev === "error" ? `${t.error}30` : a.sev === "warning" ? `${t.warning}30` : `${t.accentSecondary}30`}`,
-                                    }}>
+                                    <Stack
+                                        key={i}
+                                        direction="row" gap={1.5} alignItems="center"
+                                        sx={{
+                                            p: 1.2, borderRadius: 2,
+                                            bgcolor: a.sev === "error"
+                                                ? `${t.error}10`
+                                                : a.sev === "warning"
+                                                    ? `${t.warning ?? "#C49A6C"}10`
+                                                    : `${t.accentSecondary ?? t.accentPrimary}10`,
+                                            border: `1px solid ${a.sev === "error"
+                                                ? `${t.error}30`
+                                                : a.sev === "warning"
+                                                    ? `${t.warning ?? "#C49A6C"}30`
+                                                    : `${t.accentSecondary ?? t.accentPrimary}30`}`,
+                                        }}
+                                    >
                                         <WarningAmberOutlinedIcon sx={{
                                             fontSize: 16, flexShrink: 0,
-                                            color: a.sev === "error" ? t.error : a.sev === "warning" ? t.warning : t.accentSecondary,
+                                            color: a.sev === "error"
+                                                ? t.error
+                                                : a.sev === "warning"
+                                                    ? (t.warning ?? "#C49A6C")
+                                                    : (t.accentSecondary ?? t.accentPrimary),
                                         }} />
-                                        <Typography sx={{ fontSize: "0.82rem", color: t.textPrimary }}>{a.text}</Typography>
+                                        <Typography sx={{ fontSize: "0.82rem", color: t.textPrimary }}>
+                                            {a.text}
+                                        </Typography>
                                     </Stack>
                                 ))}
                             </Stack>
                         </Paper>
 
+                        {/* Quick Actions */}
                         <Paper elevation={1} sx={{ p: 2.5, borderRadius: 3, bgcolor: theme.palette.background.paper }}>
                             <Typography variant="h4" sx={{ color: t.textPrimary, mb: 1.5 }}>Quick Actions</Typography>
                             <Stack spacing={1}>
                                 {[
                                     { label: "Pending Requests", path: "/supervisor/requests", color: t.accentPrimary },
-                                    { label: "Review Files", path: "/supervisor/files", color: t.accentSecondary },
+                                    { label: "Review Files", path: "/supervisor/files", color: t.accentSecondary ?? "#6D8A7D" },
                                     { label: "AI Reports", path: "/supervisor/ai-reports", color: "#9B7EC8" },
-                                    { label: "My Availability", path: "/supervisor/meetings", color: t.accentTertiary },
+                                    { label: "My Availability", path: "/supervisor/meetings", color: t.accentTertiary ?? "#7E9FC4" },
                                 ].map((a) => (
-                                    <Button key={a.label} variant="outlined" fullWidth onClick={() => navigate(a.path)}
+                                    <Button
+                                        key={a.label}
+                                        variant="outlined"
+                                        fullWidth
+                                        onClick={() => navigate(a.path)}
                                         sx={{
-                                            borderColor: t.borderLight, color: a.color, fontSize: "0.8rem", fontWeight: 600,
+                                            borderColor: t.borderLight,
+                                            color: a.color,
+                                            fontSize: "0.8rem",
+                                            fontWeight: 600,
                                             justifyContent: "flex-start",
+                                            textTransform: "none",
                                             "&:hover": { borderColor: a.color, bgcolor: `${a.color}08` },
-                                        }}>
+                                        }}
+                                    >
                                         {a.label}
                                     </Button>
                                 ))}
                             </Stack>
                         </Paper>
+
                     </Stack>
                 </Grid>
             </Grid>

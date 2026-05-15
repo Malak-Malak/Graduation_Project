@@ -153,12 +153,16 @@ function PhaseDot({ currentPhase, onSwitch }) {
 export default function Sidebar({
     width, collapsedWidth, collapsed, mobileOpen,
     onMobileClose, onCollapse, isMobile, onPhaseSwitch,
-    isHeadOfDepartment,  // ← prop جديد: يتحكم في ظهور HOD item
+
 }) {
     const theme = useTheme();
     const location = useLocation();
     const navigate = useNavigate();
     const { user, role, logout, currentPhase } = useAuth();
+    console.log("USER:", user);
+
+    const isHeadOfDepartment = Boolean(user?.isHeadOfDepartment);
+    console.log("isHead:", isHeadOfDepartment);
     const { mode, toggleMode } = useThemeContext();
 
     const t = theme.palette.custom ?? {};

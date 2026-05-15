@@ -69,10 +69,11 @@ export default function Login() {
       });
 
       // ✅ الـ response: { role, token, userId, username }
-      const { token, role, userId, username } = res.data;
+      const { token, role, userId, username, isHeadOfDepartment } = res.data;
+
 
       // نبني الـ user object من الـ response
-      const user = { id: userId, username, role: role?.toLowerCase() };
+      const user = { id: userId, username, role: role?.toLowerCase(), isHeadOfDepartment };
 
       login(user, token);
 

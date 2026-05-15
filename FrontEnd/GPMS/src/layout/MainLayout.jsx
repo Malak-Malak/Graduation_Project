@@ -11,7 +11,7 @@ const SIDEBAR_WIDTH = 260;
 const SIDEBAR_COLLAPSED_WIDTH = 68;
 const TOPBAR_HEIGHT = 64;
 
-export default function MainLayout({ children, onPhaseSwitch }) {
+export default function MainLayout({ children, onPhaseSwitch, isHeadOfDepartment = false }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -38,6 +38,7 @@ export default function MainLayout({ children, onPhaseSwitch }) {
         onCollapse={handleCollapse}
         isMobile={isMobile}
         onPhaseSwitch={onPhaseSwitch}
+        isHeadOfDepartment={isHeadOfDepartment}
       />
 
       {/* ── Main area ── */}

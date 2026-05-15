@@ -15,7 +15,7 @@ import SubmittedTeams from "../../components/common/supervisor/Archive/Submitted
 import HeadOfDepartmentPage from "../../components/common/supervisor/HeadOfDepartment/HeadOfDepartmentPage";
 
 import { useAuth } from "../../contexts/AuthContext";
-import axiosInstance from "../../api/axiosInstance";
+
 
 /* ─────────────────────────────────────────────────────────────────────────────
    HOD Guard — renders children only if the logged-in supervisor is a head.
@@ -28,29 +28,7 @@ function HodGuard({ isHead, children }) {
 
 export default function SupervisorPage() {
     const { user, updateUser } = useAuth();
-
-    /* ── Fetch isHeadOfDepartment flag once on mount ──────────────────────── */
-    const [isHead, setIsHead] = useState(
-        () => user?.isHeadOfDepartment ?? false
-    );
-
-    useEffect(() => {
-        // If already stored on the user object, use it directly.
-        if (user?.isHeadOfDepartment === true) {
-            setIsHead(Boolean(user.isHeadOfDepartment));
-            return;
-        }
-
-        // Otherwise fetch the profile to check the flag.
-        axiosInstance.get("/Supervisor/profile")
-            .then(res => {
-                const flag = res.data?.isHeadOfDepartment ?? false;
-                setIsHead(flag);
-                // Persist so we don't need to re-fetch next render.
-                updateUser({ isHeadOfDepartment: flag });
-            })
-            .catch(() => { /* leave isHead as false — page is still usable */ });
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    const isHead = Boolean(user?.isHeadOfDepartment);
 
     return (
         <MainLayout isHeadOfDepartment={isHead}>

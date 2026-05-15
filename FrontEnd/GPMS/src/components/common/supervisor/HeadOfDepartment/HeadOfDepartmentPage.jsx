@@ -352,9 +352,8 @@ function DiscussionSlotsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
         </Box>
     );
 }
-
 /* ════════════════════════════════════════════════════════════════
-   TAB 1 — DEPARTMENT TEAMS
+   TAB 1 — DEPARTMENT TEAMS (مع فلتر pending و rejected)
 ════════════════════════════════════════════════════════════════ */
 function DepartmentTeamsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
     const [teams, setTeams] = useState([]);
@@ -364,7 +363,12 @@ function DepartmentTeamsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
         setLoading(true);
         try {
             const d = await getDepartmentTeams();
-            setTeams(Array.isArray(d) ? d : d?.data ?? []);
+            const rawTeams = Array.isArray(d) ? d : d?.data ?? [];
+            // ← أضف الفلتر pending و rejected
+            setTeams(rawTeams.filter(tm => {
+                const s = (tm.status ?? tm.teamStatus ?? "").toLowerCase();
+                return s !== "pending" && s !== "rejected";
+            }));
         } catch { }
         finally { setLoading(false); }
     }, []);
@@ -473,7 +477,6 @@ function DepartmentTeamsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
         </Box>
     );
 }
-
 /* ════════════════════════════════════════════════════════════════
    TAB 2 — DEPARTMENT SUPERVISORS (FIXED)
 ════════════════════════════════════════════════════════════════ */

@@ -67,11 +67,7 @@ const normaliseRequests = (raw) =>
         projectDescription: r.projectDescription ?? r.description ?? "",
         studentName:
             r.studentName ?? r.memberName ?? r.fullName ?? r.leaderName ??
-            r.requestedBy ??
-            (r.teamMemberId ? `Member #${r.teamMemberId}`
-                : r.memberId ? `Member #${r.memberId}`
-                    : r.studentId ? `Student #${r.studentId}`
-                        : "Unknown Student"),
+            r.requestedBy ?? null,  // ← null بدل "Unknown Student"
         studentId: r.studentId ?? r.userId ?? null,
         members: r.members ?? r.students ?? [],
         requestedAt: r.requestedAt ?? r.createdAt ?? null,
@@ -84,7 +80,7 @@ const normaliseTeams = (raw) =>
     (Array.isArray(raw) ? raw : [])
         .filter((t) => {
             const s = (t.status ?? t.teamStatus ?? "").toLowerCase();
-            return s !== "rejected";
+            return s !== "rejected" && s !== "pending"; // ← أضف && s !== "pending"
         })
         .map((t) => ({
             id: t.teamId ?? t.id,

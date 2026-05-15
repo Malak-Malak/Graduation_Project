@@ -258,9 +258,12 @@ export default function SupervisorDashboard() {
             .catch(() => setPendingCount("—"))
             .finally(() => setPendingLoading(false));
 
-        // Teams
+        // Teams — ✅ مع فلتر pending
         getSupervisorTeams()
-            .then((data) => setTeams(Array.isArray(data) ? data : []))
+            .then((data) => {
+                const all = Array.isArray(data) ? data : [];
+                setTeams(all.filter(t => (t.status ?? t.teamStatus ?? "").toLowerCase() !== "pending"));
+            })
             .catch((err) => setTeamsError(err?.message ?? "Failed to load teams."))
             .finally(() => setTeamsLoading(false));
 

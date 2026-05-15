@@ -22,6 +22,7 @@ import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import PersonOffOutlinedIcon from "@mui/icons-material/PersonOffOutlined";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import requirementApi from "../../../../api/handler/endpoints/requirementApi";
+import axiosInstance from "../../../../api/axiosInstance";
 import {
     DndContext, pointerWithin, PointerSensor,
     useSensor, useSensors, DragOverlay, useDroppable,
@@ -264,12 +265,24 @@ function OverlayCard({ task, colId }) {
 }
 
 /* =================================================================
-   COLUMN — receives hasRepo as prop
+   COLUMN
+   currentVersion: null = loading, 0 = free, 1+ = need repo
 ================================================================= */
-function Column({ colId, tasks, onAdd, onCardClick, hasRepo }) {
+function Column({ colId, tasks, onAdd, onCardClick, currentVersion, githubRepo }) {
     const { surfaceCol, border, textPri, textSec, textMut, dark } = useTokens();
     const c = COL_META[colId];
     const { setNodeRef, isOver } = useDroppable({ id: colId });
+
+    // null = still loading → disable to avoid premature clicks
+    const canAdd = currentVersion !== null && (currentVersion === 0 || Boolean(githubRepo));
+
+    const getTooltipTitle = () => {
+        if (currentVersion === null) return "Loading...";
+        if (currentVersion === 0) return "Add task";
+        if (!githubRepo) return "Link a GitHub repository first to add tasks";
+        return "Add task";
+    };
+
     return (
         <Box sx={{ flex: 1, minWidth: 262, maxWidth: 330, display: "flex", flexDirection: "column", borderRadius: "10px", border: `1px solid ${isOver ? c.color + "60" : border}`, bgcolor: isOver ? c.color + "08" : surfaceCol, transition: "border-color 0.14s, background-color 0.14s", overflow: "hidden" }}>
             <Box sx={{ px: 1.5, py: 1.2, bgcolor: dark ? c.color + "10" : c.color + "0d", borderBottom: `1px solid ${border}` }}>
@@ -281,16 +294,16 @@ function Column({ colId, tasks, onAdd, onCardClick, hasRepo }) {
                             <Typography sx={{ fontSize: "0.62rem", fontWeight: 700, color: textSec }}>{tasks.length}</Typography>
                         </Box>
                     </Stack>
-                    <Tooltip title={!hasRepo ? "Link a GitHub repository first to add tasks" : "Add task"}>
+                    <Tooltip title={getTooltipTitle()}>
                         <span>
                             <IconButton
                                 size="small"
                                 onClick={onAdd}
-                                disabled={!hasRepo}
+                                disabled={!canAdd}
                                 sx={{
                                     width: 22, height: 22,
-                                    color: hasRepo ? textMut : (dark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)"),
-                                    "&:hover": hasRepo ? { color: c.color, bgcolor: c.color + "18" } : {},
+                                    color: canAdd ? textMut : (dark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)"),
+                                    "&:hover": canAdd ? { color: c.color, bgcolor: c.color + "18" } : {},
                                     "&.Mui-disabled": { opacity: 0.4 },
                                 }}
                             >
@@ -378,9 +391,9 @@ function TaskFormFields({ form, setForm, members, inputSx, accent }) {
 export default function KanbanBoard() {
     const { dark, border, textPri, textSec, textMut, dialogBg, surfaceInput } = useTokens();
 
-    // ✅ FIXED: All hooks are now correctly inside the component body
     const [githubRepo, setGithubRepo] = useState(null);
     const [repoChecked, setRepoChecked] = useState(false);
+    const [currentVersion, setCurrentVersion] = useState(null); // null=loading, 0=free, 1+=need repo
 
     const [columns, setColumns] = useState({ todo: [], inProgress: [], done: [] });
     const [members, setMembers] = useState([]);
@@ -430,7 +443,7 @@ export default function KanbanBoard() {
     const findColOf = (taskId, cols) => COL_ORDER.find(c => cols[c].some(t => t.id === taskId));
     const findTaskIn = (taskId, cols) => Object.values(cols).flat().find(t => t.id === taskId);
 
-    // ✅ FIXED: GitHub repo fetch is now correctly inside the component body
+    /* ── FETCH REPO + VERSION ── */
     useEffect(() => {
         requirementApi.getGithubRepo()
             .then((data) => {
@@ -439,9 +452,13 @@ export default function KanbanBoard() {
             })
             .catch(() => setGithubRepo(null))
             .finally(() => setRepoChecked(true));
+
+        axiosInstance.get("/Student/current-version")
+            .then((r) => setCurrentVersion(r.data?.currentVersion ?? null))
+            .catch(() => setCurrentVersion(null));
     }, []);
 
-    /* ── FETCH ── */
+    /* ── FETCH BOARD ── */
     const fetchBoard = useCallback(async () => {
         try {
             setLoading(true);
@@ -520,7 +537,6 @@ export default function KanbanBoard() {
                 const task = findTaskIn(active.id, prev);
                 if (task) {
                     const status = COL_TO_STATUS[finalCol];
-                    console.log("update-status payload:", { taskId: task.backendId, status });
                     updateTaskStatus({ taskId: task.backendId, status })
                         .then(() => {
                             showSnack(`Moved to ${COL_META[finalCol].label}`);
@@ -538,7 +554,14 @@ export default function KanbanBoard() {
     };
 
     /* ── ADD TASK ── */
-    const openAdd = (col) => { setAddCol(col); setAddForm(EMPTY_FORM); setAddOpen(true); };
+    const openAdd = (col) => {
+        // Guard: double-check before opening dialog
+        const canAdd = currentVersion !== null && (currentVersion === 0 || Boolean(githubRepo));
+        if (!canAdd) return;
+        setAddCol(col);
+        setAddForm(EMPTY_FORM);
+        setAddOpen(true);
+    };
 
     const handleAdd = async () => {
         if (!addForm.title.trim()) return;
@@ -552,7 +575,6 @@ export default function KanbanBoard() {
             };
             if (addForm.deadline) payload.deadline = new Date(addForm.deadline).toISOString();
 
-            console.log("create-task payload:", payload);
             const res = await createTask(payload);
 
             const newId = res?.data?.id ?? res?.data?.taskId ?? res?.data;
@@ -617,7 +639,6 @@ export default function KanbanBoard() {
         setDetailOpen(false);
         try {
             const status = COL_TO_STATUS[toCol];
-            console.log("dialog move payload:", { taskId: selected.backendId, status });
             await updateTaskStatus({ taskId: selected.backendId, status });
             showSnack(`Moved to ${COL_META[toCol].label}`);
             fetchBoard();
@@ -697,7 +718,8 @@ export default function KanbanBoard() {
                             tasks={columns[colId]}
                             onAdd={() => openAdd(colId)}
                             onCardClick={openDetail}
-                            hasRepo={Boolean(githubRepo)}
+                            currentVersion={currentVersion}
+                            githubRepo={githubRepo}
                         />
                     ))}
                 </Box>

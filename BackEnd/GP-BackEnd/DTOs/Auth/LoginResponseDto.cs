@@ -6,5 +6,6 @@
         public string Username { get; set; }
         public string Role { get; set; }
         public int UserId { get; set; }
+        public bool IsHeadOfDepartment { get; set; }
     }
 }

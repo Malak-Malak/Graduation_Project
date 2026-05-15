@@ -41,7 +41,8 @@ namespace GP_BackEnd.Services
                 Token = token,
                 Username = user.Username,
                 Role = user.Role,
-                UserId = user.Id
+                UserId = user.Id,
+                IsHeadOfDepartment = user.IsHeadOfDepartment
             };
         }
 

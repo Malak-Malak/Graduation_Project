@@ -63,6 +63,11 @@ const fileSystemApi = {
      */
     deleteFile: (id) =>
         axiosInstance.delete(`/FileSystem/delete/${id}`).then((r) => r.data),
+
+    /** GET /api/FileSystem/supervisor-files
+ *  Called from the STUDENT side to see what the supervisor shared */
+    getSupervisorSharedFiles: () =>
+        axiosInstance.get("/FileSystem/supervisor-files").then((r) => r.data),
 };
 
 export default fileSystemApi;

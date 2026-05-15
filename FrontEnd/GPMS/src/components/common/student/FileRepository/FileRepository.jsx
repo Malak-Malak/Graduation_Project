@@ -297,13 +297,12 @@ export default function FileRepository() {
     const fetchSupFiles = useCallback(async () => {
         setSupLoading(true); setSupError(null);
         try {
-            const data = await fileSystemApi.getSupervisorFiles();
+            const data = await fileSystemApi.getSupervisorSharedFiles();
             setSupFiles(Array.isArray(data) ? data : []);
         } catch (err) {
             setSupError(err?.response?.data?.message ?? err?.message ?? "Failed to load supervisor files.");
         } finally { setSupLoading(false); }
     }, []);
-
     useEffect(() => { fetchMyFiles(); fetchSupFiles(); }, [fetchMyFiles, fetchSupFiles]);
 
     const refreshFileFeedback = useCallback(async (fileId) => {

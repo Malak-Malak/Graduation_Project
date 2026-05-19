@@ -8,7 +8,7 @@ using System.Security.Claims;
 namespace GP_BackEnd.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/head")]
     [Authorize]
     public class HeadOfDepartmentController : ControllerBase
     {
@@ -19,18 +19,18 @@ namespace GP_BackEnd.Controllers
             _service = service;
         }
 
+        // ── Discussion Slots ─────────────────────────────────────────────────
+
         // POST api/head/create-slot
         [HttpPost("create-slot")]
         [Authorize(Roles = "Supervisor")]
         public async Task<IActionResult> CreateSlot([FromBody] CreateDiscussionSlotDto dto)
         {
-            var headId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-            var result = await _service.CreateSlotAsync(headId, dto);
+            var headId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var (success, message) = await _service.CreateSlotAsync(headId, dto);
 
-            if (!result)
-                return BadRequest("Could not create slot. You may not be a head of department.");
-
-            return Ok("Discussion slot created successfully.");
+            if (!success) return BadRequest(message);
+            return Ok(message);
         }
 
         // DELETE api/head/delete-slot/{slotId}
@@ -38,13 +38,11 @@ namespace GP_BackEnd.Controllers
         [Authorize(Roles = "Supervisor")]
         public async Task<IActionResult> DeleteSlot(int slotId)
         {
-            var headId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-            var result = await _service.DeleteSlotAsync(headId, slotId);
+            var headId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var (success, message) = await _service.DeleteSlotAsync(headId, slotId);
 
-            if (!result)
-                return BadRequest("Slot not found or you are not the owner.");
-
-            return Ok("Discussion slot deleted successfully.");
+            if (!success) return BadRequest(message);
+            return Ok(message);
         }
 
         // GET api/head/slots
@@ -52,32 +50,62 @@ namespace GP_BackEnd.Controllers
         [Authorize(Roles = "Supervisor")]
         public async Task<IActionResult> GetMySlots()
         {
-            var headId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var headId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var slots = await _service.GetMySlotsAsync(headId);
+
+            if (slots == null) return StatusCode(403, "You are not a head of department.");
             return Ok(slots);
         }
+
+        // ── Team-Slot Assignment ─────────────────────────────────────────────
 
         // POST api/head/assign-team-to-slot
         [HttpPost("assign-team-to-slot")]
         [Authorize(Roles = "Supervisor")]
         public async Task<IActionResult> AssignTeamToSlot([FromBody] AssignTeamToSlotDto dto)
         {
-            var headId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-            var result = await _service.AssignTeamToSlotAsync(headId, dto);
+            var headId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var (success, message) = await _service.AssignTeamToSlotAsync(headId, dto);
 
-            if (!result)
-                return BadRequest("Could not assign team. Team may already have a slot or is not in your department.");
-
-            return Ok("Team assigned to slot successfully.");
+            if (!success) return BadRequest(message);
+            return Ok(message);
         }
+
+        // PUT api/head/update-team-slot
+        [HttpPut("update-team-slot")]
+        [Authorize(Roles = "Supervisor")]
+        public async Task<IActionResult> UpdateTeamSlot([FromBody] UpdateTeamSlotDto dto)
+        {
+            var headId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var (success, message) = await _service.UpdateTeamSlotAsync(headId, dto);
+
+            if (!success) return BadRequest(message);
+            return Ok(message);
+        }
+
+        // DELETE api/head/unassign-team/{teamId}
+        [HttpDelete("unassign-team/{teamId}")]
+        [Authorize(Roles = "Supervisor")]
+        public async Task<IActionResult> UnassignTeamFromSlot(int teamId)
+        {
+            var headId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var (success, message) = await _service.UnassignTeamFromSlotAsync(headId, teamId);
+
+            if (!success) return BadRequest(message);
+            return Ok(message);
+        }
+
+        // ── Department Views ─────────────────────────────────────────────────
 
         // GET api/head/department-teams
         [HttpGet("department-teams")]
         [Authorize(Roles = "Supervisor")]
         public async Task<IActionResult> GetDepartmentTeams()
         {
-            var headId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var headId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var teams = await _service.GetDepartmentTeamsAsync(headId);
+
+            if (teams == null) return StatusCode(403, "You are not a head of department.");
             return Ok(teams);
         }
 
@@ -86,18 +114,36 @@ namespace GP_BackEnd.Controllers
         [Authorize(Roles = "Supervisor")]
         public async Task<IActionResult> GetDepartmentSupervisors()
         {
-            var headId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var headId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var supervisors = await _service.GetDepartmentSupervisorsAsync(headId);
+
+            if (supervisors == null) return StatusCode(403, "You are not a head of department.");
             return Ok(supervisors);
         }
+
+        // GET api/head/department-students
+        [HttpGet("department-students")]
+        [Authorize(Roles = "Supervisor")]
+        public async Task<IActionResult> GetDepartmentStudents()
+        {
+            var headId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var students = await _service.GetDepartmentStudentsAsync(headId);
+
+            if (students == null) return StatusCode(403, "You are not a head of department.");
+            return Ok(students);
+        }
+
+        // ── Student Registration ─────────────────────────────────────────────
 
         // GET api/head/student-requests
         [HttpGet("student-requests")]
         [Authorize(Roles = "Supervisor")]
         public async Task<IActionResult> GetStudentRequests()
         {
-            var headId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var headId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var requests = await _service.GetDepartmentStudentRequestsAsync(headId);
+
+            if (requests == null) return StatusCode(403, "You are not a head of department.");
             return Ok(requests);
         }
 
@@ -106,45 +152,33 @@ namespace GP_BackEnd.Controllers
         [Authorize(Roles = "Supervisor")]
         public async Task<IActionResult> ReviewStudentRequest([FromBody] ApproveRequestDto dto)
         {
-            var headId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-            var result = await _service.ReviewStudentRequestAsync(headId, dto);
+            var headId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var (success, message) = await _service.ReviewStudentRequestAsync(headId, dto);
 
-            if (!result)
-                return BadRequest("Request not found or student is not in your department.");
-
-            return Ok(dto.IsApproved ? "Student approved successfully." : "Request rejected.");
+            if (!success) return BadRequest(message);
+            return Ok(message);
         }
 
-        // GET api/head/department-students
-        [HttpGet("department-students")]
-        [Authorize(Roles = "Supervisor")]
-        public async Task<IActionResult> GetDepartmentStudents()
-        {
-            var headId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-            var students = await _service.GetDepartmentStudentsAsync(headId);
-            return Ok(students);
-        }
+        // ── Student & Supervisor Views ────────────────────────────────────────
 
-        // GET api/head/my-discussion-slot
+        // GET api/head/my-discussion-slot  (student)
         [HttpGet("my-discussion-slot")]
         [Authorize(Roles = "Student")]
         public async Task<IActionResult> GetMyDiscussionSlot()
         {
-            var studentId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var studentId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var slot = await _service.GetMyDiscussionSlotAsync(studentId);
 
-            if (slot == null)
-                return NotFound("No discussion slot assigned yet.");
-
+            if (slot == null) return NotFound("No discussion slot assigned to your team yet.");
             return Ok(slot);
         }
 
-        // GET api/head/my-teams-slots
+        // GET api/head/my-teams-slots  (supervisor)
         [HttpGet("my-teams-slots")]
         [Authorize(Roles = "Supervisor")]
         public async Task<IActionResult> GetSupervisorTeamsSlots()
         {
-            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var slots = await _service.GetSupervisorTeamsSlotsAsync(supervisorId);
             return Ok(slots);
         }

@@ -299,12 +299,87 @@ namespace GP_BackEnd.Services
             await _context.SaveChangesAsync();
             return approved;
         }
-        public async Task<bool> SetHeadOfDepartmentAsync(int supervisorId, bool isHead)
+        public async Task<(bool success, SetHeadOfDepartmentResponseDto response)> CheckAndSetHeadOfDepartmentAsync(int supervisorId)
         {
-            var user = await _context.Users.FindAsync(supervisorId);
-            if (user == null || user.Role != "Supervisor") return false;
+            // Must be a supervisor
+            var supervisor = await _context.Users
+                .Include(u => u.UserProfile)
+                .FirstOrDefaultAsync(u => u.Id == supervisorId && u.Role == "Supervisor");
 
-            user.IsHeadOfDepartment = isHead;
+            if (supervisor == null)
+                return (false, new SetHeadOfDepartmentResponseDto { Message = "Supervisor not found." });
+
+            var department = supervisor.UserProfile?.Department;
+            if (department == null)
+                return (false, new SetHeadOfDepartmentResponseDto { Message = "Supervisor has no department set in their profile." });
+
+            // Check if department already has an HOD
+            var existingHod = await _context.Users
+                .Include(u => u.UserProfile)
+                .FirstOrDefaultAsync(u =>
+                    u.Role == "Supervisor" &&
+                    u.IsHeadOfDepartment &&
+                    u.UserProfile != null &&
+                    u.UserProfile.Department == department &&
+                    u.Id != supervisorId);
+
+            if (existingHod != null)
+            {
+                return (true, new SetHeadOfDepartmentResponseDto
+                {
+                    HasConflict = true,
+                    ExistingHodName = existingHod.UserProfile?.FullName ?? existingHod.Username,
+                    Message = $"Department '{department}' already has a head of department."
+                });
+            }
+
+            // No conflict — set directly
+            supervisor.IsHeadOfDepartment = true;
+            await _context.SaveChangesAsync();
+
+            return (true, new SetHeadOfDepartmentResponseDto
+            {
+                HasConflict = false,
+                Message = "Supervisor set as head of department successfully."
+            });
+        }
+        public async Task<bool> ReplaceHeadOfDepartmentAsync(int supervisorId)
+        {
+            var supervisor = await _context.Users
+                .Include(u => u.UserProfile)
+                .FirstOrDefaultAsync(u => u.Id == supervisorId && u.Role == "Supervisor");
+
+            if (supervisor == null) return false;
+
+            var department = supervisor.UserProfile?.Department;
+            if (department == null) return false;
+
+            // Demote existing HOD
+            var existingHod = await _context.Users
+                .Include(u => u.UserProfile)
+                .FirstOrDefaultAsync(u =>
+                    u.Role == "Supervisor" &&
+                    u.IsHeadOfDepartment &&
+                    u.UserProfile != null &&
+                    u.UserProfile.Department == department &&
+                    u.Id != supervisorId);
+
+            if (existingHod != null)
+            {
+                existingHod.IsHeadOfDepartment = false;
+
+                // Notify old HOD
+                _context.Notifications.Add(new Notification
+                {
+                    Title = "Head of Department Status Removed",
+                    Message = $"You have been removed as Head of Department for the '{department}' department by the admin.",
+                    CreatedAt = DateTime.UtcNow,
+                    UserId = existingHod.Id
+                });
+            }
+
+            // Promote new HOD
+            supervisor.IsHeadOfDepartment = true;
             await _context.SaveChangesAsync();
             return true;
         }

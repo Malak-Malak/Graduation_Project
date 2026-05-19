@@ -14,7 +14,14 @@ namespace GP_BackEnd.Services
             _context = context;
         }
 
-        // Helper: get department of head
+        // ── Helpers ─────────────────────────────────────────────────────────
+
+        private async Task<bool> IsHeadOfDepartmentAsync(int userId)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            return user != null && user.IsHeadOfDepartment;
+        }
+
         private async Task<string?> GetDepartmentAsync(int userId)
         {
             var profile = await _context.UserProfiles
@@ -22,20 +29,30 @@ namespace GP_BackEnd.Services
             return profile?.Department;
         }
 
-        // Helper: check if user is head of department
-        private async Task<bool> IsHeadOfDepartmentAsync(int userId)
-        {
-            var user = await _context.Users.FindAsync(userId);
-            return user != null && user.IsHeadOfDepartment;
-        }
+        // ── Discussion Slots ─────────────────────────────────────────────────
 
         // Create a discussion slot
-        public async Task<bool> CreateSlotAsync(int headId, CreateDiscussionSlotDto dto)
+        public async Task<(bool success, string message)> CreateSlotAsync(int headId, CreateDiscussionSlotDto dto)
         {
-            if (!await IsHeadOfDepartmentAsync(headId)) return false;
+            if (!await IsHeadOfDepartmentAsync(headId))
+                return (false, "You are not a head of department.");
 
             var department = await GetDepartmentAsync(headId);
-            if (department == null) return false;
+            if (department == null)
+                return (false, "No department set in your profile.");
+
+            // No duplicate slot at same date and time in this department
+            var duplicate = await _context.DiscussionSlots
+                .AnyAsync(ds => ds.Department == department && ds.DateTime == dto.DateTime);
+            if (duplicate)
+                return (false, "A slot already exists at this exact date and time.");
+
+            // Max 6 slots per day in this department
+            var slotsOnSameDay = await _context.DiscussionSlots
+                .CountAsync(ds => ds.Department == department
+                    && ds.DateTime.Date == dto.DateTime.Date);
+            if (slotsOnSameDay >= 6)
+                return (false, "Maximum of 6 discussion slots are allowed per day.");
 
             _context.DiscussionSlots.Add(new DiscussionSlot
             {
@@ -47,25 +64,31 @@ namespace GP_BackEnd.Services
             });
 
             await _context.SaveChangesAsync();
-            return true;
+            return (true, "Discussion slot created successfully.");
         }
 
         // Delete a discussion slot
-        public async Task<bool> DeleteSlotAsync(int headId, int slotId)
+        public async Task<(bool success, string message)> DeleteSlotAsync(int headId, int slotId)
         {
+            if (!await IsHeadOfDepartmentAsync(headId))
+                return (false, "You are not a head of department.");
+
             var slot = await _context.DiscussionSlots
                 .FirstOrDefaultAsync(ds => ds.Id == slotId && ds.HeadOfDepartmentId == headId);
 
-            if (slot == null) return false;
+            if (slot == null)
+                return (false, "Slot not found or does not belong to you.");
 
             _context.DiscussionSlots.Remove(slot);
             await _context.SaveChangesAsync();
-            return true;
+            return (true, "Discussion slot deleted successfully.");
         }
 
-        // Get all slots created by head
-        public async Task<List<DiscussionSlotDto>> GetMySlotsAsync(int headId)
+        // Get all slots created by this HOD
+        public async Task<List<DiscussionSlotDto>?> GetMySlotsAsync(int headId)
         {
+            if (!await IsHeadOfDepartmentAsync(headId)) return null;
+
             var slots = await _context.DiscussionSlots
                 .Include(ds => ds.TeamSlots)
                     .ThenInclude(ts => ts.Team)
@@ -96,40 +119,48 @@ namespace GP_BackEnd.Services
             }).ToList();
         }
 
-        // Assign team to slot
-        public async Task<bool> AssignTeamToSlotAsync(int headId, AssignTeamToSlotDto dto)
+        // ── Team-Slot Assignment ─────────────────────────────────────────────
+
+        // Assign a team to a slot
+        public async Task<(bool success, string message)> AssignTeamToSlotAsync(int headId, AssignTeamToSlotDto dto)
         {
-            if (!await IsHeadOfDepartmentAsync(headId)) return false;
+            if (!await IsHeadOfDepartmentAsync(headId))
+                return (false, "You are not a head of department.");
 
             var department = await GetDepartmentAsync(headId);
-            if (department == null) return false;
+            if (department == null)
+                return (false, "No department set in your profile.");
 
-            // Check slot belongs to this head
+            // Slot must belong to this HOD
             var slot = await _context.DiscussionSlots
                 .FirstOrDefaultAsync(ds => ds.Id == dto.SlotId && ds.HeadOfDepartmentId == headId);
+            if (slot == null)
+                return (false, "Slot not found or does not belong to you.");
 
-            if (slot == null) return false;
+            // Slot must not already be taken by another team
+            var slotTaken = await _context.TeamDiscussionSlots
+                .AnyAsync(tds => tds.DiscussionSlotId == dto.SlotId);
+            if (slotTaken)
+                return (false, "This slot is already assigned to another team.");
 
-            // Check team is in the same department
+            // Team must exist, be Active, and belong to HOD's department (via supervisor)
             var team = await _context.Teams
+                .Include(t => t.Supervisor).ThenInclude(s => s.UserProfile)
                 .Include(t => t.TeamMembers)
-                    .ThenInclude(tm => tm.User)
-                        .ThenInclude(u => u.UserProfile)
                 .FirstOrDefaultAsync(t => t.Id == dto.TeamId);
 
-            if (team == null) return false;
+            if (team == null)
+                return (false, "Team not found.");
+            if (team.Status != "Active")
+                return (false, "Only active teams can be assigned a discussion slot.");
+            if (team.Supervisor.UserProfile?.Department != department)
+                return (false, "Team does not belong to your department.");
 
-            var teamDepartment = team.TeamMembers
-                .Select(tm => tm.User.UserProfile?.Department)
-                .FirstOrDefault();
-
-            if (teamDepartment != department) return false;
-
-            // Check team not already assigned to a slot
+            // If team already has a slot, remove old assignment first
             var existingAssignment = await _context.TeamDiscussionSlots
-                .AnyAsync(tds => tds.TeamId == dto.TeamId);
-
-            if (existingAssignment) return false;
+                .FirstOrDefaultAsync(tds => tds.TeamId == dto.TeamId);
+            if (existingAssignment != null)
+                _context.TeamDiscussionSlots.Remove(existingAssignment);
 
             _context.TeamDiscussionSlots.Add(new TeamDiscussionSlot
             {
@@ -153,22 +184,152 @@ namespace GP_BackEnd.Services
             _context.Notifications.Add(new Notification
             {
                 Title = "Discussion Slot Assigned",
-                Message = $"Team '{team.ProjectTitle}' has been assigned a final discussion slot on {slot.DateTime:ddd dd MMM}.",
+                Message = $"Team '{team.ProjectTitle}' has been assigned a final discussion slot on {slot.DateTime:ddd dd MMM} at {slot.DateTime:hh\\:mm tt}.",
                 CreatedAt = DateTime.UtcNow,
                 UserId = team.SupervisorId
             });
 
             await _context.SaveChangesAsync();
-            return true;
+            return (true, "Team assigned to slot successfully.");
         }
 
-        // Get all teams in department
-        public async Task<List<DepartmentTeamDto>> GetDepartmentTeamsAsync(int headId)
+        // Reassign a team to a different slot
+        public async Task<(bool success, string message)> UpdateTeamSlotAsync(int headId, UpdateTeamSlotDto dto)
         {
-            if (!await IsHeadOfDepartmentAsync(headId)) return new List<DepartmentTeamDto>();
+            if (!await IsHeadOfDepartmentAsync(headId))
+                return (false, "You are not a head of department.");
 
             var department = await GetDepartmentAsync(headId);
-            if (department == null) return new List<DepartmentTeamDto>();
+            if (department == null)
+                return (false, "No department set in your profile.");
+
+            // New slot must exist and belong to this HOD
+            var newSlot = await _context.DiscussionSlots
+                .FirstOrDefaultAsync(ds => ds.Id == dto.NewSlotId && ds.HeadOfDepartmentId == headId);
+            if (newSlot == null)
+                return (false, "New slot not found or does not belong to you.");
+
+            // New slot must not be taken by a different team
+            var newSlotTaken = await _context.TeamDiscussionSlots
+                .AnyAsync(tds => tds.DiscussionSlotId == dto.NewSlotId && tds.TeamId != dto.TeamId);
+            if (newSlotTaken)
+                return (false, "The new slot is already assigned to another team.");
+
+            // Team must exist, be Active, and belong to HOD's department
+            var team = await _context.Teams
+                .Include(t => t.Supervisor).ThenInclude(s => s.UserProfile)
+                .Include(t => t.TeamMembers)
+                .FirstOrDefaultAsync(t => t.Id == dto.TeamId);
+
+            if (team == null)
+                return (false, "Team not found.");
+            if (team.Status != "Active")
+                return (false, "Only active teams can have a discussion slot.");
+            if (team.Supervisor.UserProfile?.Department != department)
+                return (false, "Team does not belong to your department.");
+
+            // Remove old assignment
+            var existing = await _context.TeamDiscussionSlots
+                .FirstOrDefaultAsync(tds => tds.TeamId == dto.TeamId);
+            if (existing != null)
+                _context.TeamDiscussionSlots.Remove(existing);
+
+            // Add new assignment
+            _context.TeamDiscussionSlots.Add(new TeamDiscussionSlot
+            {
+                TeamId = dto.TeamId,
+                DiscussionSlotId = dto.NewSlotId
+            });
+
+            // Notify team members
+            foreach (var member in team.TeamMembers)
+            {
+                _context.Notifications.Add(new Notification
+                {
+                    Title = "Discussion Slot Updated",
+                    Message = $"Your team's discussion slot has been changed to {newSlot.DateTime:ddd dd MMM} at {newSlot.DateTime:hh\\:mm tt} at {newSlot.Location}.",
+                    CreatedAt = DateTime.UtcNow,
+                    UserId = member.UserId
+                });
+            }
+
+            // Notify supervisor
+            _context.Notifications.Add(new Notification
+            {
+                Title = "Discussion Slot Updated",
+                Message = $"Team '{team.ProjectTitle}' discussion slot has been updated to {newSlot.DateTime:ddd dd MMM} at {newSlot.DateTime:hh\\:mm tt}.",
+                CreatedAt = DateTime.UtcNow,
+                UserId = team.SupervisorId
+            });
+
+            await _context.SaveChangesAsync();
+            return (true, "Team slot updated successfully.");
+        }
+
+        // Unassign a team from its slot
+        public async Task<(bool success, string message)> UnassignTeamFromSlotAsync(int headId, int teamId)
+        {
+            if (!await IsHeadOfDepartmentAsync(headId))
+                return (false, "You are not a head of department.");
+
+            var department = await GetDepartmentAsync(headId);
+            if (department == null)
+                return (false, "No department set in your profile.");
+
+            // Team must belong to HOD's department
+            var team = await _context.Teams
+                .Include(t => t.Supervisor).ThenInclude(s => s.UserProfile)
+                .Include(t => t.TeamMembers)
+                .FirstOrDefaultAsync(t => t.Id == teamId);
+
+            if (team == null)
+                return (false, "Team not found.");
+            if (team.Supervisor.UserProfile?.Department != department)
+                return (false, "Team does not belong to your department.");
+
+            var assignment = await _context.TeamDiscussionSlots
+                .Include(tds => tds.DiscussionSlot)
+                .FirstOrDefaultAsync(tds => tds.TeamId == teamId);
+
+            if (assignment == null)
+                return (false, "This team has no assigned slot.");
+
+            _context.TeamDiscussionSlots.Remove(assignment);
+
+            // Notify team members
+            foreach (var member in team.TeamMembers)
+            {
+                _context.Notifications.Add(new Notification
+                {
+                    Title = "Discussion Slot Removed",
+                    Message = "Your team's discussion slot has been removed.",
+                    CreatedAt = DateTime.UtcNow,
+                    UserId = member.UserId
+                });
+            }
+
+            // Notify supervisor
+            _context.Notifications.Add(new Notification
+            {
+                Title = "Discussion Slot Removed",
+                Message = $"Team '{team.ProjectTitle}' has had their discussion slot removed.",
+                CreatedAt = DateTime.UtcNow,
+                UserId = team.SupervisorId
+            });
+
+            await _context.SaveChangesAsync();
+            return (true, "Team unassigned from slot successfully.");
+        }
+
+        // ── Department Views ─────────────────────────────────────────────────
+
+        // Get all teams in HOD's department (filtered by supervisor's department)
+        public async Task<List<DepartmentTeamDto>?> GetDepartmentTeamsAsync(int headId)
+        {
+            if (!await IsHeadOfDepartmentAsync(headId)) return null;
+
+            var department = await GetDepartmentAsync(headId);
+            if (department == null) return null;
 
             var teams = await _context.Teams
                 .Include(t => t.TeamMembers)
@@ -176,20 +337,18 @@ namespace GP_BackEnd.Services
                         .ThenInclude(u => u.UserProfile)
                 .Include(t => t.Supervisor)
                     .ThenInclude(s => s.UserProfile)
+                .Where(t => t.Supervisor.UserProfile != null
+                    && t.Supervisor.UserProfile.Department == department)
                 .ToListAsync();
 
-            var departmentTeams = teams.Where(t => t.TeamMembers
-                .Any(tm => tm.User.UserProfile?.Department == department))
-                .ToList();
-
-            var teamIds = departmentTeams.Select(t => t.Id).ToList();
+            var teamIds = teams.Select(t => t.Id).ToList();
 
             var assignments = await _context.TeamDiscussionSlots
                 .Include(tds => tds.DiscussionSlot)
                 .Where(tds => teamIds.Contains(tds.TeamId))
                 .ToListAsync();
 
-            return departmentTeams.Select(t =>
+            return teams.Select(t =>
             {
                 var assignment = assignments.FirstOrDefault(a => a.TeamId == t.Id);
                 return new DepartmentTeamDto
@@ -217,13 +376,13 @@ namespace GP_BackEnd.Services
             }).ToList();
         }
 
-        // Get all supervisors in department with their teams
-        public async Task<List<DepartmentSupervisorDto>> GetDepartmentSupervisorsAsync(int headId)
+        // Get all supervisors in HOD's department (excluding the HOD himself)
+        public async Task<List<DepartmentSupervisorDto>?> GetDepartmentSupervisorsAsync(int headId)
         {
-            if (!await IsHeadOfDepartmentAsync(headId)) return new List<DepartmentSupervisorDto>();
+            if (!await IsHeadOfDepartmentAsync(headId)) return null;
 
             var department = await GetDepartmentAsync(headId);
-            if (department == null) return new List<DepartmentSupervisorDto>();
+            if (department == null) return null;
 
             var supervisors = await _context.Users
                 .Include(u => u.UserProfile)
@@ -232,6 +391,7 @@ namespace GP_BackEnd.Services
                         .ThenInclude(tm => tm.User)
                             .ThenInclude(u => u.UserProfile)
                 .Where(u => u.Role == "Supervisor"
+                    && u.Id != headId
                     && u.UserProfile != null
                     && u.UserProfile.Department == department)
                 .ToListAsync();
@@ -256,13 +416,15 @@ namespace GP_BackEnd.Services
             }).ToList();
         }
 
-        // Get student registration requests in department
-        public async Task<List<DTOs.Admin.RegistrationRequestDto>> GetDepartmentStudentRequestsAsync(int headId)
+        // ── Student Registration ─────────────────────────────────────────────
+
+        // Get pending student registration requests in HOD's department
+        public async Task<List<DTOs.Admin.RegistrationRequestDto>?> GetDepartmentStudentRequestsAsync(int headId)
         {
-            if (!await IsHeadOfDepartmentAsync(headId)) return new List<DTOs.Admin.RegistrationRequestDto>();
+            if (!await IsHeadOfDepartmentAsync(headId)) return null;
 
             var department = await GetDepartmentAsync(headId);
-            if (department == null) return new List<DTOs.Admin.RegistrationRequestDto>();
+            if (department == null) return null;
 
             return await _context.RegistrationRequests
                 .Where(r => r.Status == "Pending")
@@ -281,39 +443,39 @@ namespace GP_BackEnd.Services
                 .ToListAsync();
         }
 
-        // Review student request
-        public async Task<bool> ReviewStudentRequestAsync(int headId, DTOs.Admin.ApproveRequestDto dto)
+        // Approve or reject a student registration request
+        public async Task<(bool success, string message)> ReviewStudentRequestAsync(int headId, DTOs.Admin.ApproveRequestDto dto)
         {
-            if (!await IsHeadOfDepartmentAsync(headId)) return false;
+            if (!await IsHeadOfDepartmentAsync(headId))
+                return (false, "You are not a head of department.");
 
             var department = await GetDepartmentAsync(headId);
-            if (department == null) return false;
+            if (department == null)
+                return (false, "No department set in your profile.");
 
             var request = await _context.RegistrationRequests
                 .FirstOrDefaultAsync(r => r.Id == dto.RequestId);
+            if (request == null)
+                return (false, "Request not found.");
 
-            if (request == null) return false;
-
-            // Verify student is in head's department
+            // Verify the student belongs to this HOD's department
             var universityRecord = await _context.UniversityRecords
                 .FirstOrDefaultAsync(u => u.UniversityEmail == request.UniversityEmail
                     && u.Role == "Student"
                     && u.Department == department);
-
-            if (universityRecord == null) return false;
+            if (universityRecord == null)
+                return (false, "Student does not belong to your department.");
 
             if (dto.IsApproved)
             {
-                var user = new User
+                _context.Users.Add(new User
                 {
                     Username = universityRecord.Username,
                     Email = universityRecord.UniversityEmail,
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword(universityRecord.Password),
                     Role = "Student",
                     CreatedAt = DateTime.UtcNow
-                };
-
-                _context.Users.Add(user);
+                });
                 request.Status = "Approved";
             }
             else
@@ -322,16 +484,16 @@ namespace GP_BackEnd.Services
             }
 
             await _context.SaveChangesAsync();
-            return true;
+            return (true, dto.IsApproved ? "Student approved successfully." : "Request rejected.");
         }
 
-        // Get all students in department
-        public async Task<List<DepartmentStudentDto>> GetDepartmentStudentsAsync(int headId)
+        // Get all students in HOD's department
+        public async Task<List<DepartmentStudentDto>?> GetDepartmentStudentsAsync(int headId)
         {
-            if (!await IsHeadOfDepartmentAsync(headId)) return new List<DepartmentStudentDto>();
+            if (!await IsHeadOfDepartmentAsync(headId)) return null;
 
             var department = await GetDepartmentAsync(headId);
-            if (department == null) return new List<DepartmentStudentDto>();
+            if (department == null) return null;
 
             var students = await _context.Users
                 .Include(u => u.UserProfile)
@@ -352,7 +514,9 @@ namespace GP_BackEnd.Services
             }).ToList();
         }
 
-        // Student gets their discussion slot
+        // ── Student & Supervisor Views ────────────────────────────────────────
+
+        // Student gets their own team's discussion slot
         public async Task<MyDiscussionSlotDto?> GetMyDiscussionSlotAsync(int studentId)
         {
             var teamMember = await _context.TeamMembers
@@ -377,7 +541,7 @@ namespace GP_BackEnd.Services
             };
         }
 
-        // Supervisor gets all their teams slots
+        // Supervisor gets all their teams with their assigned slots
         public async Task<List<DepartmentTeamDto>> GetSupervisorTeamsSlotsAsync(int supervisorId)
         {
             var teams = await _context.Teams

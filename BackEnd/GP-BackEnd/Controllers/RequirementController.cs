@@ -22,7 +22,7 @@ namespace GP_BackEnd.Controllers
         [HttpGet]
         public async Task<IActionResult> GetRequirements()
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var requirements = await _requirementService.GetRequirementsAsync(userId);
             return Ok(requirements);
         }
@@ -31,7 +31,7 @@ namespace GP_BackEnd.Controllers
         [HttpPost("add")]
         public async Task<IActionResult> AddRequirement([FromBody] AddRequirementDto dto)
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var result = await _requirementService.AddRequirementAsync(userId, dto);
 
             if (!result)
@@ -44,7 +44,7 @@ namespace GP_BackEnd.Controllers
         [HttpPut("update/{requirementId}")]
         public async Task<IActionResult> UpdateRequirement(int requirementId, [FromBody] UpdateRequirementDto dto)
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var result = await _requirementService.UpdateRequirementAsync(userId, requirementId, dto);
 
             if (!result)
@@ -57,7 +57,7 @@ namespace GP_BackEnd.Controllers
         [HttpDelete("delete/{requirementId}")]
         public async Task<IActionResult> DeleteRequirement(int requirementId)
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var result = await _requirementService.DeleteRequirementAsync(userId, requirementId);
 
             if (!result)
@@ -69,7 +69,7 @@ namespace GP_BackEnd.Controllers
         [HttpGet("github-repo")]
         public async Task<IActionResult> GetGithubRepo()
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var repo = await _requirementService.GetGithubRepoAsync(userId);
             return Ok(new { githubRepo = repo });
         }
@@ -78,7 +78,7 @@ namespace GP_BackEnd.Controllers
         [HttpPost("github-repo")]
         public async Task<IActionResult> SetGithubRepo([FromBody] SetGithubRepoDto dto)
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var result = await _requirementService.SetGithubRepoAsync(userId, dto.GithubRepo);
 
             if (!result)

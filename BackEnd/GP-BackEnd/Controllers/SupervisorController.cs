@@ -25,7 +25,7 @@ namespace GP_BackEnd.Controllers
         [HttpGet("pending-team-requests")]
         public async Task<IActionResult> GetPendingTeamRequests()
         {
-            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var requests = await _supervisorService.GetPendingTeamRequestsAsync(supervisorId);
             return Ok(requests);
         }
@@ -34,7 +34,7 @@ namespace GP_BackEnd.Controllers
         [HttpPost("respond-to-team-request")]
         public async Task<IActionResult> RespondToTeamRequest([FromBody] RespondToTeamRequestDto dto)
         {
-            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var result = await _supervisorService.RespondToTeamRequestAsync(supervisorId, dto);
 
             if (!result)
@@ -47,7 +47,7 @@ namespace GP_BackEnd.Controllers
         [HttpPost("respond-to-leave-request")]
         public async Task<IActionResult> RespondToLeaveRequest([FromBody] RespondToLeaveRequestDto dto)
         {
-            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var result = await _supervisorService.RespondToLeaveRequestAsync(supervisorId, dto);
 
             if (!result)
@@ -60,7 +60,7 @@ namespace GP_BackEnd.Controllers
         [HttpPut("set-max-teams")]
         public async Task<IActionResult> SetMaxTeams([FromBody] SetMaxTeamsDto dto)
         {
-            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var result = await _supervisorService.SetMaxTeamsAsync(supervisorId, dto);
 
             if (!result)
@@ -72,7 +72,7 @@ namespace GP_BackEnd.Controllers
         [HttpGet("my-teams")]
         public async Task<IActionResult> GetMyTeams()
         {
-            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var teams = await _supervisorService.GetMyTeamsAsync(supervisorId);
             return Ok(teams);
         }
@@ -81,7 +81,7 @@ namespace GP_BackEnd.Controllers
         [HttpGet("team/{teamId}")]
         public async Task<IActionResult> GetTeamById(int teamId)
         {
-            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var team = await _supervisorService.GetTeamByIdAsync(supervisorId, teamId);
 
             if (team == null)
@@ -94,7 +94,7 @@ namespace GP_BackEnd.Controllers
         [HttpGet("total-teams")]
         public async Task<IActionResult> GetTotalTeamsCount()
         {
-            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var count = await _supervisorService.GetTotalTeamsCountAsync(supervisorId);
             return Ok(new { totalTeams = count });
         }
@@ -102,7 +102,7 @@ namespace GP_BackEnd.Controllers
         [HttpGet("leave-requests")]
         public async Task<IActionResult> GetLeaveRequests()
         {
-            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var requests = await _supervisorService.GetLeaveRequestsAsync(supervisorId);
             return Ok(requests);
         }
@@ -111,7 +111,7 @@ namespace GP_BackEnd.Controllers
         [HttpPost("office-hours")]
         public async Task<IActionResult> SetOfficeHour([FromBody] SetOfficeHourDto dto)
         {
-            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var result = await _appointmentService.SetOfficeHourAsync(supervisorId, dto);
             if (!result)
                 return BadRequest("Could not set office hour.");
@@ -123,7 +123,7 @@ namespace GP_BackEnd.Controllers
         [HttpGet("office-hours")]
         public async Task<IActionResult> GetMyOfficeHours()
         {
-            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var hours = await _appointmentService.GetMyOfficeHoursAsync(supervisorId);
             return Ok(hours);
         }
@@ -133,7 +133,7 @@ namespace GP_BackEnd.Controllers
         [HttpDelete("office-hours/{officeHourId}")]
         public async Task<IActionResult> DeleteOfficeHour(int officeHourId)
         {
-            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var result = await _appointmentService.DeleteOfficeHourAsync(supervisorId, officeHourId);
             if (!result)
                 return BadRequest("Office hour not found or you are not the owner.");
@@ -145,7 +145,7 @@ namespace GP_BackEnd.Controllers
         [HttpGet("all-appointments")]
         public async Task<IActionResult> GetAllAppointments()
         {
-            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var appointments = await _appointmentService.GetAllAppointmentsAsync(supervisorId);
             return Ok(appointments);
         }
@@ -155,7 +155,7 @@ namespace GP_BackEnd.Controllers
         [HttpGet("pending-appointments")]
         public async Task<IActionResult> GetPendingAppointments()
         {
-            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var appointments = await _appointmentService.GetPendingAppointmentsAsync(supervisorId);
             return Ok(appointments);
         }
@@ -165,7 +165,7 @@ namespace GP_BackEnd.Controllers
         [HttpPost("respond-to-appointment")]
         public async Task<IActionResult> RespondToAppointment([FromBody] RespondToAppointmentDto dto)
         {
-            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var result = await _appointmentService.RespondToAppointmentAsync(supervisorId, dto);
             if (!result)
                 return BadRequest("Appointment not found or already responded to.");

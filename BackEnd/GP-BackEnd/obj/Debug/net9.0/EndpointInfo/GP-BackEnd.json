@@ -250,25 +250,29 @@
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "boolean"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "type": "boolean"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "type": "boolean"
-              }
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Admin/replace-head-of-department/{supervisorId}": {
+      "put": {
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "supervisorId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
             }
           }
-        },
+        ],
         "responses": {
           "200": {
             "description": "OK"
@@ -816,7 +820,7 @@
         }
       }
     },
-    "/api/HeadOfDepartment/create-slot": {
+    "/api/head/create-slot": {
       "post": {
         "tags": [
           "HeadOfDepartment"
@@ -847,7 +851,7 @@
         }
       }
     },
-    "/api/HeadOfDepartment/delete-slot/{slotId}": {
+    "/api/head/delete-slot/{slotId}": {
       "delete": {
         "tags": [
           "HeadOfDepartment"
@@ -870,7 +874,7 @@
         }
       }
     },
-    "/api/HeadOfDepartment/slots": {
+    "/api/head/slots": {
       "get": {
         "tags": [
           "HeadOfDepartment"
@@ -882,7 +886,7 @@
         }
       }
     },
-    "/api/HeadOfDepartment/assign-team-to-slot": {
+    "/api/head/assign-team-to-slot": {
       "post": {
         "tags": [
           "HeadOfDepartment"
@@ -913,7 +917,61 @@
         }
       }
     },
-    "/api/HeadOfDepartment/department-teams": {
+    "/api/head/update-team-slot": {
+      "put": {
+        "tags": [
+          "HeadOfDepartment"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTeamSlotDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTeamSlotDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTeamSlotDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/head/unassign-team/{teamId}": {
+      "delete": {
+        "tags": [
+          "HeadOfDepartment"
+        ],
+        "parameters": [
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/head/department-teams": {
       "get": {
         "tags": [
           "HeadOfDepartment"
@@ -925,7 +983,7 @@
         }
       }
     },
-    "/api/HeadOfDepartment/department-supervisors": {
+    "/api/head/department-supervisors": {
       "get": {
         "tags": [
           "HeadOfDepartment"
@@ -937,7 +995,7 @@
         }
       }
     },
-    "/api/HeadOfDepartment/student-requests": {
+    "/api/head/department-students": {
       "get": {
         "tags": [
           "HeadOfDepartment"
@@ -949,7 +1007,19 @@
         }
       }
     },
-    "/api/HeadOfDepartment/review-student-request": {
+    "/api/head/student-requests": {
+      "get": {
+        "tags": [
+          "HeadOfDepartment"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/head/review-student-request": {
       "post": {
         "tags": [
           "HeadOfDepartment"
@@ -980,7 +1050,7 @@
         }
       }
     },
-    "/api/HeadOfDepartment/department-students": {
+    "/api/head/my-discussion-slot": {
       "get": {
         "tags": [
           "HeadOfDepartment"
@@ -992,19 +1062,7 @@
         }
       }
     },
-    "/api/HeadOfDepartment/my-discussion-slot": {
-      "get": {
-        "tags": [
-          "HeadOfDepartment"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/HeadOfDepartment/my-teams-slots": {
+    "/api/head/my-teams-slots": {
       "get": {
         "tags": [
           "HeadOfDepartment"
@@ -2810,6 +2868,20 @@
           "status": {
             "type": "string",
             "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateTeamSlotDto": {
+        "type": "object",
+        "properties": {
+          "teamId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "newSlotId": {
+            "type": "integer",
+            "format": "int32"
           }
         },
         "additionalProperties": false

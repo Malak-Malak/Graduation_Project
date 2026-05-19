@@ -127,16 +127,29 @@ namespace GP_BackEnd.Controllers
             var approved = await _adminService.ApproveAllRequestsAsync();
             return Ok(new { approved, message = $"{approved} users approved and accounts created." });
         }
+
         // PUT api/admin/set-head-of-department/{supervisorId}
         [HttpPut("set-head-of-department/{supervisorId}")]
-        public async Task<IActionResult> SetHeadOfDepartment(int supervisorId, [FromBody] bool isHead)
+        public async Task<IActionResult> SetHeadOfDepartment(int supervisorId)
         {
-            var result = await _adminService.SetHeadOfDepartmentAsync(supervisorId, isHead);
+            var (success, response) = await _adminService.CheckAndSetHeadOfDepartmentAsync(supervisorId);
+
+            if (!success)
+                return BadRequest(response.Message);
+
+            return Ok(response);
+        }
+
+        // PUT api/admin/replace-head-of-department/{supervisorId}
+        [HttpPut("replace-head-of-department/{supervisorId}")]
+        public async Task<IActionResult> ReplaceHeadOfDepartment(int supervisorId)
+        {
+            var result = await _adminService.ReplaceHeadOfDepartmentAsync(supervisorId);
 
             if (!result)
-                return BadRequest("Supervisor not found or user is not a supervisor.");
+                return BadRequest("Supervisor not found or has no department set.");
 
-            return Ok(isHead ? "Supervisor set as head of department." : "Head of department status removed.");
+            return Ok("Head of department replaced successfully.");
         }
     }
 }

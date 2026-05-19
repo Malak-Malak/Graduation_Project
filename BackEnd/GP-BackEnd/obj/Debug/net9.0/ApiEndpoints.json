@@ -95,6 +95,22 @@
   },
   {
     "ContainingType": "GP_BackEnd.Controllers.AdminController",
+    "Method": "ReplaceHeadOfDepartment",
+    "RelativePath": "api/Admin/replace-head-of-department/{supervisorId}",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "supervisorId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.AdminController",
     "Method": "ReviewRequest",
     "RelativePath": "api/Admin/review-request",
     "HttpMethod": "POST",
@@ -120,11 +136,6 @@
       {
         "Name": "supervisorId",
         "Type": "System.Int32",
-        "IsRequired": true
-      },
-      {
-        "Name": "isHead",
-        "Type": "System.Boolean",
         "IsRequired": true
       }
     ],
@@ -480,7 +491,7 @@
   {
     "ContainingType": "GP_BackEnd.Controllers.HeadOfDepartmentController",
     "Method": "AssignTeamToSlot",
-    "RelativePath": "api/HeadOfDepartment/assign-team-to-slot",
+    "RelativePath": "api/head/assign-team-to-slot",
     "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,
@@ -496,7 +507,7 @@
   {
     "ContainingType": "GP_BackEnd.Controllers.HeadOfDepartmentController",
     "Method": "CreateSlot",
-    "RelativePath": "api/HeadOfDepartment/create-slot",
+    "RelativePath": "api/head/create-slot",
     "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,
@@ -512,7 +523,7 @@
   {
     "ContainingType": "GP_BackEnd.Controllers.HeadOfDepartmentController",
     "Method": "DeleteSlot",
-    "RelativePath": "api/HeadOfDepartment/delete-slot/{slotId}",
+    "RelativePath": "api/head/delete-slot/{slotId}",
     "HttpMethod": "DELETE",
     "IsController": true,
     "Order": 0,
@@ -528,7 +539,7 @@
   {
     "ContainingType": "GP_BackEnd.Controllers.HeadOfDepartmentController",
     "Method": "GetDepartmentStudents",
-    "RelativePath": "api/HeadOfDepartment/department-students",
+    "RelativePath": "api/head/department-students",
     "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
@@ -538,7 +549,7 @@
   {
     "ContainingType": "GP_BackEnd.Controllers.HeadOfDepartmentController",
     "Method": "GetDepartmentSupervisors",
-    "RelativePath": "api/HeadOfDepartment/department-supervisors",
+    "RelativePath": "api/head/department-supervisors",
     "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
@@ -548,7 +559,7 @@
   {
     "ContainingType": "GP_BackEnd.Controllers.HeadOfDepartmentController",
     "Method": "GetDepartmentTeams",
-    "RelativePath": "api/HeadOfDepartment/department-teams",
+    "RelativePath": "api/head/department-teams",
     "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
@@ -558,7 +569,7 @@
   {
     "ContainingType": "GP_BackEnd.Controllers.HeadOfDepartmentController",
     "Method": "GetMyDiscussionSlot",
-    "RelativePath": "api/HeadOfDepartment/my-discussion-slot",
+    "RelativePath": "api/head/my-discussion-slot",
     "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
@@ -568,7 +579,7 @@
   {
     "ContainingType": "GP_BackEnd.Controllers.HeadOfDepartmentController",
     "Method": "GetSupervisorTeamsSlots",
-    "RelativePath": "api/HeadOfDepartment/my-teams-slots",
+    "RelativePath": "api/head/my-teams-slots",
     "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
@@ -578,7 +589,7 @@
   {
     "ContainingType": "GP_BackEnd.Controllers.HeadOfDepartmentController",
     "Method": "ReviewStudentRequest",
-    "RelativePath": "api/HeadOfDepartment/review-student-request",
+    "RelativePath": "api/head/review-student-request",
     "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,
@@ -594,7 +605,7 @@
   {
     "ContainingType": "GP_BackEnd.Controllers.HeadOfDepartmentController",
     "Method": "GetMySlots",
-    "RelativePath": "api/HeadOfDepartment/slots",
+    "RelativePath": "api/head/slots",
     "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
@@ -604,11 +615,43 @@
   {
     "ContainingType": "GP_BackEnd.Controllers.HeadOfDepartmentController",
     "Method": "GetStudentRequests",
-    "RelativePath": "api/HeadOfDepartment/student-requests",
+    "RelativePath": "api/head/student-requests",
     "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
     "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.HeadOfDepartmentController",
+    "Method": "UnassignTeamFromSlot",
+    "RelativePath": "api/head/unassign-team/{teamId}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "teamId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.HeadOfDepartmentController",
+    "Method": "UpdateTeamSlot",
+    "RelativePath": "api/head/update-team-slot",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "GP_BackEnd.DTOs.HeadOfDepartment.UpdateTeamSlotDto",
+        "IsRequired": true
+      }
+    ],
     "ReturnTypes": []
   },
   {

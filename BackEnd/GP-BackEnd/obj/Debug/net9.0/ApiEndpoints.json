@@ -95,6 +95,22 @@
   },
   {
     "ContainingType": "GP_BackEnd.Controllers.AdminController",
+    "Method": "RemoveHeadOfDepartment",
+    "RelativePath": "api/Admin/remove-head-of-department/{supervisorId}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "supervisorId",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "GP_BackEnd.Controllers.AdminController",
     "Method": "ReplaceHeadOfDepartment",
     "RelativePath": "api/Admin/replace-head-of-department/{supervisorId}",
     "HttpMethod": "PUT",

@@ -30,7 +30,7 @@ namespace GP_BackEnd.Services
                 .ToListAsync();
         }
 
-        // Approve or reject a request
+        // Approve or reject a registration request
         public async Task<bool> ReviewRequestAsync(ApproveRequestDto dto)
         {
             var request = await _context.RegistrationRequests
@@ -40,13 +40,11 @@ namespace GP_BackEnd.Services
 
             if (dto.IsApproved)
             {
-                // Find university record
                 var universityRecord = await _context.UniversityRecords
                     .FirstOrDefaultAsync(u => u.UniversityEmail == request.UniversityEmail);
 
                 if (universityRecord == null) return false;
 
-                // Create user account
                 var user = new User
                 {
                     Username = universityRecord.Username,
@@ -68,7 +66,7 @@ namespace GP_BackEnd.Services
             return true;
         }
 
-        // Add university record (for testing)
+        // Add a single university record
         public async Task<bool> AddUniversityRecordAsync(AddUniversityRecordDto dto)
         {
             if (!dto.UniversityEmail.EndsWith("@students.ptuk.edu.ps"))
@@ -79,7 +77,7 @@ namespace GP_BackEnd.Services
 
             if (existing != null) return false;
 
-            var record = new UniversityRecord
+            _context.UniversityRecords.Add(new UniversityRecord
             {
                 UniversityEmail = dto.UniversityEmail,
                 Username = dto.Username,
@@ -88,9 +86,8 @@ namespace GP_BackEnd.Services
                 Role = dto.Role,
                 Department = dto.Department,
                 IsGraduate = dto.IsGraduate
-            };
+            });
 
-            _context.UniversityRecords.Add(record);
             await _context.SaveChangesAsync();
             return true;
         }
@@ -117,6 +114,8 @@ namespace GP_BackEnd.Services
                 };
             }).ToList();
         }
+
+        // Get all registration requests
         public async Task<List<RegistrationRequestDto>> GetAllRequestsAsync()
         {
             return await _context.RegistrationRequests
@@ -129,6 +128,7 @@ namespace GP_BackEnd.Services
                 })
                 .ToListAsync();
         }
+
         // Get all university records
         public async Task<List<UniversityRecordDto>> GetAllUniversityRecordsAsync()
         {
@@ -165,6 +165,8 @@ namespace GP_BackEnd.Services
                 IsGraduate = record.IsGraduate
             };
         }
+
+        // Delete university record and its associated user
         public async Task<bool> DeleteUniversityRecordAsync(string universityEmail)
         {
             var record = await _context.UniversityRecords
@@ -172,19 +174,18 @@ namespace GP_BackEnd.Services
 
             if (record == null) return false;
 
-            // Delete the user account if exists
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.Email == universityEmail);
 
             if (user != null)
-            {
                 _context.Users.Remove(user);
-            }
 
             _context.UniversityRecords.Remove(record);
             await _context.SaveChangesAsync();
             return true;
         }
+
+        // Clear all data except admin account
         public async Task ClearAllDataAsync()
         {
             _context.TeamJoinRequests.RemoveRange(_context.TeamJoinRequests);
@@ -201,7 +202,6 @@ namespace GP_BackEnd.Services
             _context.RegistrationRequests.RemoveRange(_context.RegistrationRequests);
             _context.UniversityRecords.RemoveRange(_context.UniversityRecords);
 
-            // Delete all users except admin
             var nonAdminUsers = await _context.Users
                 .Where(u => u.Role != "Admin")
                 .ToListAsync();
@@ -209,6 +209,8 @@ namespace GP_BackEnd.Services
 
             await _context.SaveChangesAsync();
         }
+
+        // Delete a specific registration request
         public async Task<bool> DeleteRegistrationRequestAsync(int requestId)
         {
             var request = await _context.RegistrationRequests
@@ -220,6 +222,7 @@ namespace GP_BackEnd.Services
             await _context.SaveChangesAsync();
             return true;
         }
+
         // Add multiple university records at once
         public async Task<(int added, int skipped)> AddUniversityRecordsAsync(List<AddUniversityRecordDto> records)
         {
@@ -255,8 +258,6 @@ namespace GP_BackEnd.Services
             return (added, skipped);
         }
 
-      
-
         // Approve all pending requests at once
         public async Task<int> ApproveAllRequestsAsync()
         {
@@ -282,16 +283,15 @@ namespace GP_BackEnd.Services
                     continue;
                 }
 
-                var user = new User
+                _context.Users.Add(new User
                 {
                     Username = universityRecord.Username,
                     Email = universityRecord.UniversityEmail,
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword(universityRecord.Password),
                     Role = char.ToUpper(universityRecord.Role[0]) + universityRecord.Role.Substring(1).ToLower(),
                     CreatedAt = DateTime.UtcNow
-                };
+                });
 
-                _context.Users.Add(user);
                 request.Status = "Approved";
                 approved++;
             }
@@ -299,21 +299,44 @@ namespace GP_BackEnd.Services
             await _context.SaveChangesAsync();
             return approved;
         }
-        public async Task<(bool success, SetHeadOfDepartmentResponseDto response)> CheckAndSetHeadOfDepartmentAsync(int supervisorId)
+
+        // ── Head of Department ───────────────────────────────────────────────
+
+        // Check if department already has an HOD — returns conflict info for the frontend
+        public async Task<SetHeadOfDepartmentResponseDto> CheckAndSetHeadOfDepartmentAsync(int supervisorId)
         {
-            // Must be a supervisor
+            // Must be a supervisor with a profile
             var supervisor = await _context.Users
                 .Include(u => u.UserProfile)
                 .FirstOrDefaultAsync(u => u.Id == supervisorId && u.Role == "Supervisor");
 
             if (supervisor == null)
-                return (false, new SetHeadOfDepartmentResponseDto { Message = "Supervisor not found." });
+                return new SetHeadOfDepartmentResponseDto
+                {
+                    HasConflict = false,
+                    Success = false,
+                    Message = "Supervisor not found."
+                };
 
             var department = supervisor.UserProfile?.Department;
             if (department == null)
-                return (false, new SetHeadOfDepartmentResponseDto { Message = "Supervisor has no department set in their profile." });
+                return new SetHeadOfDepartmentResponseDto
+                {
+                    HasConflict = false,
+                    Success = false,
+                    Message = "This supervisor has no department set in their profile."
+                };
 
-            // Check if department already has an HOD
+            // Check if this supervisor is already the HOD
+            if (supervisor.IsHeadOfDepartment)
+                return new SetHeadOfDepartmentResponseDto
+                {
+                    HasConflict = false,
+                    Success = false,
+                    Message = "This supervisor is already the head of department."
+                };
+
+            // Check if another supervisor in the same department is already HOD
             var existingHod = await _context.Users
                 .Include(u => u.UserProfile)
                 .FirstOrDefaultAsync(u =>
@@ -325,34 +348,41 @@ namespace GP_BackEnd.Services
 
             if (existingHod != null)
             {
-                return (true, new SetHeadOfDepartmentResponseDto
+                // Conflict — frontend should show a warning popup
+                return new SetHeadOfDepartmentResponseDto
                 {
                     HasConflict = true,
+                    Success = false,
                     ExistingHodName = existingHod.UserProfile?.FullName ?? existingHod.Username,
                     Message = $"Department '{department}' already has a head of department."
-                });
+                };
             }
 
             // No conflict — set directly
             supervisor.IsHeadOfDepartment = true;
             await _context.SaveChangesAsync();
 
-            return (true, new SetHeadOfDepartmentResponseDto
+            return new SetHeadOfDepartmentResponseDto
             {
                 HasConflict = false,
+                Success = true,
                 Message = "Supervisor set as head of department successfully."
-            });
+            };
         }
-        public async Task<bool> ReplaceHeadOfDepartmentAsync(int supervisorId)
+
+        // Admin confirmed replacement — demote old HOD, promote new one
+        public async Task<(bool success, string message)> ReplaceHeadOfDepartmentAsync(int supervisorId)
         {
             var supervisor = await _context.Users
                 .Include(u => u.UserProfile)
                 .FirstOrDefaultAsync(u => u.Id == supervisorId && u.Role == "Supervisor");
 
-            if (supervisor == null) return false;
+            if (supervisor == null)
+                return (false, "Supervisor not found.");
 
             var department = supervisor.UserProfile?.Department;
-            if (department == null) return false;
+            if (department == null)
+                return (false, "This supervisor has no department set in their profile.");
 
             // Demote existing HOD
             var existingHod = await _context.Users
@@ -381,7 +411,37 @@ namespace GP_BackEnd.Services
             // Promote new HOD
             supervisor.IsHeadOfDepartment = true;
             await _context.SaveChangesAsync();
-            return true;
+
+            return (true, "Head of department replaced successfully.");
+        }
+
+        // Remove HOD status from a supervisor
+        public async Task<(bool success, string message)> RemoveHeadOfDepartmentAsync(int supervisorId)
+        {
+            var supervisor = await _context.Users
+                .Include(u => u.UserProfile)
+                .FirstOrDefaultAsync(u => u.Id == supervisorId && u.Role == "Supervisor");
+
+            if (supervisor == null)
+                return (false, "Supervisor not found.");
+
+            if (!supervisor.IsHeadOfDepartment)
+                return (false, "This supervisor is not a head of department.");
+
+            supervisor.IsHeadOfDepartment = false;
+
+            var department = supervisor.UserProfile?.Department ?? "your department";
+
+            _context.Notifications.Add(new Notification
+            {
+                Title = "Head of Department Status Removed",
+                Message = $"You have been removed as Head of Department for the '{department}' department by the admin.",
+                CreatedAt = DateTime.UtcNow,
+                UserId = supervisor.Id
+            });
+
+            await _context.SaveChangesAsync();
+            return (true, "Head of department status removed successfully.");
         }
     }
 }

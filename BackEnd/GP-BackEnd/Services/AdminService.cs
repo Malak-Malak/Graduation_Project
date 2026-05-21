@@ -110,7 +110,8 @@ namespace GP_BackEnd.Services
                     Email = u.Email,
                     Role = u.Role,
                     Department = uniRecord?.Department,
-                    CreatedAt = u.CreatedAt
+                    CreatedAt = u.CreatedAt,
+                    IsHeadOfDepartment = u.IsHeadOfDepartment,
                 };
             }).ToList();
         }

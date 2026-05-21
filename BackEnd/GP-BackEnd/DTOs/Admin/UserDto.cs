@@ -8,5 +8,6 @@
         public string Role { get; set; }
         public string? Department { get; set; }
         public DateTime CreatedAt { get; set; }
+        public bool IsHeadOfDepartment { get; set; }
     }
 }

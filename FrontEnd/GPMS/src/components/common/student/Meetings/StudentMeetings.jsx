@@ -18,6 +18,7 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import EventBusyOutlinedIcon from "@mui/icons-material/EventBusyOutlined";
 import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
 import NotificationsActiveOutlinedIcon from "@mui/icons-material/NotificationsActiveOutlined";
+import TodayOutlinedIcon from "@mui/icons-material/TodayOutlined";
 import studentApi from "../../../../api/handler/endpoints/studentApi";
 
 const PRIMARY = "#d0895b";
@@ -37,9 +38,47 @@ function hoursUntil(isoString) {
 function formatFromISO(isoString) {
     if (!isoString) return { short: "—", time: "—", full: "—" };
     const d = new Date(isoString);
-    const short = d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
-    const time = d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+    const short = d.toLocaleDateString("en-GB", {
+        weekday: "short", day: "numeric", month: "short",
+        timeZone: "UTC",
+    });
+    const time = d.toLocaleTimeString("en-US", {
+        hour: "2-digit", minute: "2-digit",
+        timeZone: "UTC",
+    });
     return { short, time, full: `${short} · ${time}` };
+}
+
+// ── Day-of-week helpers (same as SupervisorMeetings) ──────────────────────────
+const DAY_INDEX = {
+    Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3,
+    Thursday: 4, Friday: 5, Saturday: 6,
+};
+
+function getNextDateForDay(dayName) {
+    const today = new Date();
+    const todayIdx = today.getDay();
+    const targetIdx = DAY_INDEX[dayName];
+    if (targetIdx === undefined) return null;
+    let diff = targetIdx - todayIdx;
+    if (diff < 0) diff += 7;
+    const result = new Date(today);
+    result.setDate(today.getDate() + diff);
+    return result;
+}
+
+function formatNextDate(date) {
+    if (!date) return "";
+    return date.toLocaleDateString("en-GB", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+    });
+}
+
+function isToday(dayName) {
+    const today = new Date();
+    return today.getDay() === DAY_INDEX[dayName];
 }
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -100,58 +139,87 @@ function SlotSelector({ slots, selectedId, onSelect }) {
 
     return (
         <Stack spacing={1.5}>
-            {Object.entries(byDay).map(([day, daySlots]) => (
-                <Box key={day}>
-                    <Stack direction="row" alignItems="center" gap={0.8} mb={0.8}>
-                        <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: DAY_COLOR[day] ?? PRIMARY, flexShrink: 0 }} />
-                        <Typography variant="caption" sx={{ fontWeight: 700, color: DAY_COLOR[day] ?? PRIMARY, textTransform: "uppercase", letterSpacing: "0.07em", fontSize: "0.65rem" }}>
-                            {day}
-                        </Typography>
-                    </Stack>
-                    <Stack spacing={0.7}>
-                        {daySlots.map((slot) => {
-                            const slotId = slot.officeHourId ?? slot.id;
-                            const isSelected = selectedId === slotId;
-                            const isOnline = Boolean(slot.isOnline);
-                            const typeColor = isOnline ? "#7E9FC4" : "#6D8A7D";
-                            const dayColor = DAY_COLOR[day] ?? PRIMARY;
-                            const timeLabel = slot.endTime
-                                ? `${fmtTime(slot.startTime)} – ${fmtTime(slot.endTime)}`
-                                : fmtTime(slot.startTime);
+            {Object.entries(byDay).map(([day, daySlots]) => {
+                const nextDate = getNextDateForDay(day);
+                const todayFlag = isToday(day);
+                const dayColor = DAY_COLOR[day] ?? PRIMARY;
 
-                            return (
-                                <Box key={slotId} onClick={() => onSelect(slotId)} sx={{
-                                    px: 2, py: 1.5, borderRadius: 2, cursor: "pointer",
-                                    border: `1.5px solid ${isSelected ? dayColor : alpha(dayColor, 0.2)}`,
-                                    bgcolor: isSelected ? alpha(dayColor, 0.08) : "transparent",
-                                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                                    transition: "all 0.15s",
-                                    "&:hover": { borderColor: dayColor, bgcolor: alpha(dayColor, 0.05) },
+                return (
+                    <Box key={day}>
+                        {/* Day heading with date pill */}
+                        <Stack direction="row" alignItems="center" gap={0.8} mb={0.8}>
+                            <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: dayColor, flexShrink: 0 }} />
+                            <Typography variant="caption" sx={{
+                                fontWeight: 700, color: dayColor,
+                                textTransform: "uppercase", letterSpacing: "0.07em", fontSize: "0.65rem",
+                            }}>
+                                {day}
+                            </Typography>
+
+                            {/* Date pill — same pattern as SupervisorMeetings */}
+                            {nextDate && (
+                                <Box sx={{
+                                    display: "flex", alignItems: "center", gap: 0.4,
+                                    px: 0.9, py: 0.1, borderRadius: 1,
+                                    bgcolor: todayFlag ? alpha(PRIMARY, 0.12) : alpha(dayColor, 0.08),
+                                    border: `1px solid ${todayFlag ? alpha(PRIMARY, 0.3) : alpha(dayColor, 0.2)}`,
                                 }}>
-                                    <Stack direction="row" alignItems="center" gap={1.5}>
-                                        <AccessTimeOutlinedIcon sx={{ fontSize: 15, color: isSelected ? dayColor : t?.textTertiary }} />
-                                        <Box>
-                                            <Typography variant="body2" fontWeight={isSelected ? 700 : 500}
-                                                sx={{ color: isSelected ? dayColor : t?.textPrimary, lineHeight: 1.3 }}>
-                                                {timeLabel}
-                                            </Typography>
-                                            <Box mt={0.3}><OnlineBadge isOnline={isOnline} size="small" /></Box>
-                                        </Box>
-                                    </Stack>
-                                    <Stack direction="row" alignItems="center" gap={1}>
-                                        <Chip size="small" label={isOnline ? "Online" : "In-person"} sx={{
-                                            height: 18, fontSize: "0.6rem", fontWeight: 600,
-                                            bgcolor: alpha(typeColor, isSelected ? 0.18 : 0.1), color: typeColor,
-                                            "& .MuiChip-label": { px: 0.7 },
-                                        }} />
-                                        {isSelected && <CheckCircleOutlineIcon sx={{ fontSize: 16, color: dayColor }} />}
-                                    </Stack>
+                                    <TodayOutlinedIcon sx={{ fontSize: 10, color: todayFlag ? PRIMARY : dayColor }} />
+                                    <Typography sx={{
+                                        fontSize: "0.62rem",
+                                        fontWeight: todayFlag ? 700 : 500,
+                                        color: todayFlag ? PRIMARY : dayColor,
+                                    }}>
+                                        {todayFlag ? "Today" : formatNextDate(nextDate)}
+                                    </Typography>
                                 </Box>
-                            );
-                        })}
-                    </Stack>
-                </Box>
-            ))}
+                            )}
+                        </Stack>
+
+                        <Stack spacing={0.7}>
+                            {daySlots.map((slot) => {
+                                const slotId = slot.officeHourId ?? slot.id;
+                                const isSelected = selectedId === slotId;
+                                const isOnline = Boolean(slot.isOnline);
+                                const typeColor = isOnline ? "#7E9FC4" : "#6D8A7D";
+                                const timeLabel = slot.endTime
+                                    ? `${fmtTime(slot.startTime)} – ${fmtTime(slot.endTime)}`
+                                    : fmtTime(slot.startTime);
+
+                                return (
+                                    <Box key={slotId} onClick={() => onSelect(slotId)} sx={{
+                                        px: 2, py: 1.5, borderRadius: 2, cursor: "pointer",
+                                        border: `1.5px solid ${isSelected ? dayColor : alpha(dayColor, 0.2)}`,
+                                        bgcolor: isSelected ? alpha(dayColor, 0.08) : "transparent",
+                                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                                        transition: "all 0.15s",
+                                        "&:hover": { borderColor: dayColor, bgcolor: alpha(dayColor, 0.05) },
+                                    }}>
+                                        <Stack direction="row" alignItems="center" gap={1.5}>
+                                            <AccessTimeOutlinedIcon sx={{ fontSize: 15, color: isSelected ? dayColor : t?.textTertiary }} />
+                                            <Box>
+                                                <Typography variant="body2" fontWeight={isSelected ? 700 : 500}
+                                                    sx={{ color: isSelected ? dayColor : t?.textPrimary, lineHeight: 1.3 }}>
+                                                    {timeLabel}
+                                                </Typography>
+                                                <Box mt={0.3}><OnlineBadge isOnline={isOnline} size="small" /></Box>
+                                            </Box>
+                                        </Stack>
+                                        <Stack direction="row" alignItems="center" gap={1}>
+                                            <Chip size="small" label={isOnline ? "Online" : "In-person"} sx={{
+                                                height: 18, fontSize: "0.6rem", fontWeight: 600,
+                                                bgcolor: alpha(typeColor, isSelected ? 0.18 : 0.1), color: typeColor,
+                                                "& .MuiChip-label": { px: 0.7 },
+                                            }} />
+                                            {isSelected && <CheckCircleOutlineIcon sx={{ fontSize: 16, color: dayColor }} />}
+                                        </Stack>
+                                    </Box>
+                                );
+                            })}
+                        </Stack>
+                    </Box>
+                );
+            })}
         </Stack>
     );
 }
@@ -190,7 +258,6 @@ function RequestAppointmentDialog({ open, onClose, onSuccess }) {
         setLoading(true);
         setError("");
         try {
-            // isOnline is NOT sent — backend determines it from the office hour slot
             await studentApi.requestAppointment({ officeHourId: selectedSlotId });
             onSuccess?.();
             handleClose();
@@ -247,6 +314,24 @@ function RequestAppointmentDialog({ open, onClose, onSuccess }) {
                                         {selectedSlot.dayOfWeek} · {fmtTime(selectedSlot.startTime)}
                                         {selectedSlot.endTime ? ` – ${fmtTime(selectedSlot.endTime)}` : ""}
                                     </Typography>
+                                    {/* Date pill in summary */}
+                                    {(() => {
+                                        const nd = getNextDateForDay(selectedSlot.dayOfWeek);
+                                        const td = isToday(selectedSlot.dayOfWeek);
+                                        return nd ? (
+                                            <Box sx={{
+                                                display: "flex", alignItems: "center", gap: 0.4,
+                                                px: 0.9, py: 0.1, borderRadius: 1,
+                                                bgcolor: td ? alpha(PRIMARY, 0.12) : alpha(DAY_COLOR[selectedSlot.dayOfWeek] ?? PRIMARY, 0.08),
+                                                border: `1px solid ${td ? alpha(PRIMARY, 0.3) : alpha(DAY_COLOR[selectedSlot.dayOfWeek] ?? PRIMARY, 0.2)}`,
+                                            }}>
+                                                <TodayOutlinedIcon sx={{ fontSize: 10, color: td ? PRIMARY : DAY_COLOR[selectedSlot.dayOfWeek] ?? PRIMARY }} />
+                                                <Typography sx={{ fontSize: "0.62rem", fontWeight: td ? 700 : 500, color: td ? PRIMARY : DAY_COLOR[selectedSlot.dayOfWeek] ?? PRIMARY }}>
+                                                    {td ? "Today" : formatNextDate(nd)}
+                                                </Typography>
+                                            </Box>
+                                        ) : null;
+                                    })()}
                                 </Stack>
                                 <Stack direction="row" alignItems="center" gap={1} mt={0.4}>
                                     <OnlineBadge isOnline={isOnline} />
@@ -294,7 +379,6 @@ function UpdateAppointmentDialog({ appointment, open, onClose, onSuccess }) {
         setLoading(true);
         setError("");
         try {
-            // isOnline is NOT sent — backend determines it from the new office hour slot
             await studentApi.updateAppointment({
                 appointmentId: appointment.appointmentId ?? appointment.id,
                 officeHourId: selectedSlotId,
@@ -526,7 +610,6 @@ export default function StudentMeetings() {
 
     useEffect(() => { fetchAppointments(); }, [fetchAppointments]);
 
-    // ── Categorise using dateTime ISO ─────────────────────────────────────────
     const upcoming = appointments.filter((a) => {
         const s = (a.status ?? "").toLowerCase();
         if (s === "pending") return true;
@@ -543,12 +626,10 @@ export default function StudentMeetings() {
         (a.status ?? "").toLowerCase() === "rejected"
     );
 
-    // Next = soonest future approved
     const nextAppt = [...upcoming]
         .filter((a) => (a.status ?? "").toLowerCase() === "approved")
         .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))[0];
 
-    // ── Reminder banner: approved & within 2 hours ────────────────────────────
     const reminderAppt = upcoming.find((a) => {
         const h = hoursUntil(a.dateTime);
         return (a.status ?? "").toLowerCase() === "approved" && h > 0 && h <= 2;

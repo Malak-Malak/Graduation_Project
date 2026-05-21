@@ -10,16 +10,19 @@ import { useTheme } from "@mui/material/styles";
 
 import SearchIcon from "@mui/icons-material/Search";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import SchoolOutlinedIcon from "@mui/icons-material/SchoolOutlined";
 import StarIcon from "@mui/icons-material/Star";
 import StarOutlineIcon from "@mui/icons-material/StarOutline";
 import BusinessOutlinedIcon from "@mui/icons-material/BusinessOutlined";
 import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
 import PersonOutlinedIcon from "@mui/icons-material/PersonOutlined";
 import WarningAmberOutlinedIcon from "@mui/icons-material/WarningAmberOutlined";
-import FilterListIcon from "@mui/icons-material/FilterList";
 
-import { getAllUsers, setHeadOfDepartment } from "../../../../api/handler/endpoints/adminApi";
+import {
+    getAllUsers,
+    setHeadOfDepartment,
+    replaceHeadOfDepartment,
+    removeHeadOfDepartment,
+} from "../../../../api/handler/endpoints/adminApi";
 
 const PRIMARY = "#d0895b";
 const HOD_COLOR = "#6D8A7D";
@@ -97,18 +100,9 @@ function ConfirmHodDialog({ open, supervisor, makingHod, existingHead, onCancel,
                     {/* Message */}
                     {makingHod ? (
                         <Typography fontSize="0.82rem" color="text.secondary" lineHeight={1.7}>
-                            {willReplace
-                                ? <>
-                                    <Box component="span" fontWeight={700} sx={{ color: "text.primary" }}>{name}</Box>
-                                    {" "}will be assigned as Head of Department for{" "}
-                                    <Box component="span" fontWeight={700} sx={{ color: "text.primary" }}>{dept}</Box>.
-                                </>
-                                : <>
-                                    <Box component="span" fontWeight={700} sx={{ color: "text.primary" }}>{name}</Box>
-                                    {" "}will be assigned as Head of Department for{" "}
-                                    <Box component="span" fontWeight={700} sx={{ color: "text.primary" }}>{dept}</Box>.
-                                </>
-                            }
+                            <Box component="span" fontWeight={700} sx={{ color: "text.primary" }}>{name}</Box>
+                            {" "}will be assigned as Head of Department for{" "}
+                            <Box component="span" fontWeight={700} sx={{ color: "text.primary" }}>{dept}</Box>.
                         </Typography>
                     ) : (
                         <Typography fontSize="0.82rem" color="text.secondary" lineHeight={1.7}>
@@ -128,7 +122,9 @@ function ConfirmHodDialog({ open, supervisor, makingHod, existingHead, onCancel,
                             <Stack direction="row" alignItems="flex-start" gap={1}>
                                 <WarningAmberOutlinedIcon sx={{ fontSize: 16, color: "#d32f2f", flexShrink: 0, mt: 0.1 }} />
                                 <Typography fontSize="0.76rem" sx={{ color: "#d32f2f", lineHeight: 1.6 }}>
-                                    <Box component="span" fontWeight={700}>{existingHead.fullName ?? existingHead.name ?? existingHead.username ?? "Current Head"}</Box>
+                                    <Box component="span" fontWeight={700}>
+                                        {existingHead?.fullName ?? existingHead?.name ?? existingHead?.username ?? "Current Head"}
+                                    </Box>
                                     {" "}is currently the Head of Department for{" "}
                                     <Box component="span" fontWeight={700}>{dept}</Box>.<br />
                                     They will be reverted to a regular supervisor.
@@ -189,11 +185,10 @@ export default function ManageSupervisors() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [search, setSearch] = useState("");
-    const [filterHod, setFilterHod] = useState("all"); // "all" | "hod" | "supervisor"
+    const [filterHod, setFilterHod] = useState("all");
     const [page, setPage] = useState(1);
     const [actionLoading, setActionLoading] = useState(null);
 
-    // Confirm dialog state
     const [dialog, setDialog] = useState({
         open: false,
         supervisor: null,
@@ -208,10 +203,11 @@ export default function ManageSupervisors() {
         try {
             const res = await getAllUsers();
             const all = Array.isArray(res.data) ? res.data : res.data?.data ?? [];
-            // Only supervisors (approved)
+            console.log("ALL USERS:", all);
             const supervisors = all.filter(u => {
                 const role = (u.role ?? u.userRole ?? "").toLowerCase();
-                return role === "supervisor";
+                // نضم كل من role = supervisor أو isHeadOfDepartment = true
+                return role === "supervisor" || u.isHeadOfDepartment === true;
             });
             setUsers(supervisors);
         } catch {
@@ -251,21 +247,15 @@ export default function ManageSupervisors() {
         supervisor: users.filter(u => !u.isHeadOfDepartment).length,
     };
 
-    // ── Toggle HoD click ───────────────────────────────────────────────────────
+    // ── Toggle HoD click — بدون فحص محلي، خلي الباكند يقرر ───────────────────
     const handleToggleClick = (supervisor) => {
         const makingHod = !supervisor.isHeadOfDepartment;
-        const dept = (supervisor.department ?? supervisor.dept ?? "").toLowerCase();
-
-        // Check if another supervisor in same dept is already HoD
-        const existingHead = makingHod
-            ? users.find(u =>
-                u.isHeadOfDepartment === true &&
-                (u.department ?? u.dept ?? "").toLowerCase() === dept &&
-                (u.id ?? u.userId) !== (supervisor.id ?? supervisor.userId)
-            )
-            : null;
-
-        setDialog({ open: true, supervisor, makingHod, existingHead: existingHead ?? null });
+        setDialog({
+            open: true,
+            supervisor,
+            makingHod,
+            existingHead: null, // مش نفحص محلياً، الباكند هو اللي يرجع الـ conflict
+        });
     };
 
     // ── Confirm action ─────────────────────────────────────────────────────────
@@ -276,26 +266,47 @@ export default function ManageSupervisors() {
         setActionLoading(supId);
 
         try {
-            // If replacing existing HoD, remove them first
-            if (makingHod && existingHead) {
-                const existId = existingHead.id ?? existingHead.userId;
-                await setHeadOfDepartment(existId, false);
-                setUsers(prev => prev.map(u =>
-                    (u.id ?? u.userId) === existId
-                        ? { ...u, isHeadOfDepartment: false }
-                        : u
-                ));
+            if (!makingHod) {
+                // ── إزالة رئيس القسم
+                await removeHeadOfDepartment(supId);
+
+            } else if (existingHead) {
+                // ── المستخدم أكد الـ warning → استبدال
+                await replaceHeadOfDepartment(supId);
+
+            } else {
+                // ── تعيين جديد — نجرب set أولاً
+                try {
+                    await setHeadOfDepartment(supId);
+                } catch (err) {
+                    const data = err?.response?.data;
+
+                    // الباكند رجع conflict → افتح الـ dialog مرة ثانية مع الـ warning
+                    if (data?.hasConflict === true) {
+                        setActionLoading(null);
+                        setDialog({
+                            open: true,
+                            supervisor,
+                            makingHod: true,
+                            existingHead: { fullName: data.existingHodName ?? "Current Head" },
+                        });
+                        return;
+                    }
+
+                    // أي error ثاني → ارمه للـ catch الخارجي
+                    throw err;
+                }
             }
 
-            // Set / unset the selected supervisor
-            await setHeadOfDepartment(supId, makingHod);
-            setUsers(prev => prev.map(u =>
-                (u.id ?? u.userId) === supId
-                    ? { ...u, isHeadOfDepartment: makingHod }
-                    : u
-            ));
+            // نجح → نجيب البيانات من السيرفر
+            await fetchUsers();
+
         } catch (err) {
-            setError(err.response?.data?.message ?? err.response?.data ?? "Failed to update role.");
+            setError(
+                err?.response?.data?.message ??
+                err?.response?.data ??
+                "Failed to update role."
+            );
         } finally {
             setActionLoading(null);
         }
@@ -483,22 +494,48 @@ export default function ManageSupervisors() {
                                                 {isProcessing ? (
                                                     <CircularProgress size={22} sx={{ color: PRIMARY }} />
                                                 ) : (
-                                                    <Tooltip title={isHod ? "Remove Head of Department role" : "Set as Head of Department"}>
-                                                        <Switch
-                                                            checked={isHod}
-                                                            onChange={() => handleToggleClick(sup)}
-                                                            size="small"
-                                                            sx={{
-                                                                "& .MuiSwitch-switchBase.Mui-checked": {
-                                                                    color: HOD_COLOR,
-                                                                    "&:hover": { bgcolor: alpha(HOD_COLOR, 0.08) },
-                                                                },
-                                                                "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                                                                    bgcolor: HOD_COLOR,
-                                                                },
-                                                            }}
-                                                        />
-                                                    </Tooltip>
+                                                    <Stack direction="row" alignItems="center" spacing={0.5}>
+                                                        <Tooltip title={isHod ? "Remove Head of Department" : "Set as Head of Department"}>
+                                                            <Switch
+                                                                checked={isHod}
+                                                                onChange={() => handleToggleClick(sup)}
+                                                                size="small"
+                                                                sx={{
+                                                                    "& .MuiSwitch-switchBase.Mui-checked": {
+                                                                        color: HOD_COLOR,
+                                                                        "&:hover": { bgcolor: alpha(HOD_COLOR, 0.08) },
+                                                                    },
+                                                                    "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                                                                        bgcolor: HOD_COLOR,
+                                                                    },
+                                                                }}
+                                                            />
+                                                        </Tooltip>
+
+                                                        {/* زر إزالة صريح — يظهر بس للـ HoD */}
+                                                        {isHod && (
+                                                            <Tooltip title="Remove Head of Department role">
+                                                                <IconButton
+                                                                    size="small"
+                                                                    onClick={() => setDialog({
+                                                                        open: true,
+                                                                        supervisor: sup,
+                                                                        makingHod: false,
+                                                                        existingHead: null,
+                                                                    })}
+                                                                    sx={{
+                                                                        color: "#d32f2f",
+                                                                        opacity: 0.65,
+                                                                        "&:hover": { opacity: 1, bgcolor: "rgba(211,47,47,0.08)" },
+                                                                        borderRadius: "8px",
+                                                                        width: 28, height: 28,
+                                                                    }}
+                                                                >
+                                                                    <StarOutlineIcon sx={{ fontSize: 16 }} />
+                                                                </IconButton>
+                                                            </Tooltip>
+                                                        )}
+                                                    </Stack>
                                                 )}
                                             </TableCell>
                                         </TableRow>

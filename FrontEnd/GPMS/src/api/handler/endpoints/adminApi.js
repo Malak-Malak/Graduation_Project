@@ -62,11 +62,23 @@ export const deleteRequest = (id) =>
     axiosInstance.delete(`/Admin/delete-request/${id}`);
 
 // ══════════════════════════════════════════════════════════════════════════════
-// PUT /api/Admin/set-head-of-department/{supervisorId}
-// Body: { isHeadOfDepartment: boolean }
-// يعين أو يزيل رئيس القسم — Admin only
+// HEAD OF DEPARTMENT — Admin Only
 // ══════════════════════════════════════════════════════════════════════════════
-export const setHeadOfDepartment = (supervisorId, isHeadOfDepartment) =>
-    axiosInstance.put(`/Admin/set-head-of-department/${supervisorId}`, isHeadOfDepartment, {
-        headers: { "Content-Type": "application/json" },
-    });
+
+// PUT /api/Admin/set-head-of-department/{supervisorId}
+// يعين مشرف كرئيس قسم — بدون body
+// إذا القسم ما فيه رئيس → 200 مباشرة
+// إذا القسم فيه رئيس ثاني → 409/400 مع رسالة خطأ → استخدم replaceHeadOfDepartment
+export const setHeadOfDepartment = (supervisorId) =>
+    axiosInstance.put(`/Admin/set-head-of-department/${supervisorId}`);
+
+// PUT /api/Admin/replace-head-of-department/{supervisorId}
+// يستبدل رئيس القسم الحالي بالمشرف الجديد — بدون body
+// استدعيها بعد ما الأدمن يأكد الـ warning popup
+export const replaceHeadOfDepartment = (supervisorId) =>
+    axiosInstance.put(`/Admin/replace-head-of-department/${supervisorId}`);
+
+// DELETE /api/Admin/remove-head-of-department/{supervisorId}
+// يشيل صلاحية رئيس القسم من المشرف بدون تعيين بديل
+export const removeHeadOfDepartment = (supervisorId) =>
+    axiosInstance.delete(`/Admin/remove-head-of-department/${supervisorId}`);

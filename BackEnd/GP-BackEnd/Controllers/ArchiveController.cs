@@ -42,13 +42,11 @@ namespace GP_BackEnd.Controllers
         [Authorize(Roles = "Student")]
         public async Task<IActionResult> SubmitProject([FromBody] int version)
         {
-            var studentId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-            var result = await _archiveService.SubmitProjectAsync(studentId, version);
+            var studentId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var (success, message) = await _archiveService.SubmitProjectAsync(studentId, version);
 
-            if (!result)
-                return BadRequest("Could not submit project. Your team may not be active or already submitted.");
-
-            return Ok("Project submitted for supervisor review.");
+            if (!success) return BadRequest(message);
+            return Ok(message);
         }
 
         // GET api/archive/submitted-teams
@@ -56,9 +54,23 @@ namespace GP_BackEnd.Controllers
         [Authorize(Roles = "Supervisor")]
         public async Task<IActionResult> GetSubmittedTeams()
         {
-            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var teams = await _archiveService.GetSubmittedTeamsAsync(supervisorId);
             return Ok(teams);
+        }
+
+        // GET api/archive/team-files/{teamId}?version=0
+        // Supervisor calls this to see files before choosing which to archive
+        [HttpGet("team-files/{teamId}")]
+        [Authorize(Roles = "Supervisor")]
+        public async Task<IActionResult> GetTeamFiles(int teamId, [FromQuery] int version)
+        {
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var (success, message, files) = await _archiveService
+                .GetTeamFilesForVersionAsync(supervisorId, teamId, version);
+
+            if (!success) return BadRequest(message);
+            return Ok(files);
         }
 
         // POST api/archive/send-to-archive
@@ -66,13 +78,11 @@ namespace GP_BackEnd.Controllers
         [Authorize(Roles = "Supervisor")]
         public async Task<IActionResult> SendToArchive([FromBody] SendToArchiveDto dto)
         {
-            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-            var result = await _archiveService.SendToArchiveAsync(supervisorId, dto);
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var (success, message) = await _archiveService.SendToArchiveAsync(supervisorId, dto);
 
-            if (!result)
-                return BadRequest("Could not archive project. Team may not be submitted or already archived.");
-
-            return Ok("Project successfully archived.");
+            if (!success) return BadRequest(message);
+            return Ok(message);
         }
     }
 }

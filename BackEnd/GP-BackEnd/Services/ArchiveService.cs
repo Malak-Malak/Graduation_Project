@@ -1,5 +1,7 @@
 ﻿using GP_BackEnd.Data;
 using GP_BackEnd.DTOs.Archive;
+using GP_BackEnd.DTOs.Requirement;
+using GP_BackEnd.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace GP_BackEnd.Services
@@ -13,123 +15,236 @@ namespace GP_BackEnd.Services
             _context = context;
         }
 
-        // Student submits project
-        public async Task<bool> SubmitProjectAsync(int studentId, int version)
+        // ── Student submits project ───────────────────────────────────────────
+        public async Task<(bool success, string message)> SubmitProjectAsync(int studentId, int version)
         {
             var teamMember = await _context.TeamMembers
                 .Include(tm => tm.Team)
-                .FirstOrDefaultAsync(tm => tm.UserId == studentId && tm.Team.Status == "Active");
+                .FirstOrDefaultAsync(tm => tm.UserId == studentId
+                    && tm.Team.Status == "Active");
 
-            if (teamMember == null) return false;
-            if (teamMember.Team.IsSubmitted) return false;
+            if (teamMember == null)
+                return (false, "You are not in an active team.");
 
-            teamMember.Team.IsSubmitted = true;
+            var team = teamMember.Team;
 
-            // Notify supervisor
-            _context.Notifications.Add(new Models.Notification
+            if (version == 0 && team.IsSubmittedV0)
+                return (false, "Your team has already submitted Phase 1.");
+            if (version == 1 && team.IsSubmittedV1)
+                return (false, "Your team has already submitted Phase 2.");
+            if (version == 0 && team.IsArchivedV0)
+                return (false, "Phase 1 has already been archived.");
+            if (version == 1 && team.IsArchivedV1)
+                return (false, "Phase 2 has already been archived.");
+
+            if (version == 0) team.IsSubmittedV0 = true;
+            else team.IsSubmittedV1 = true;
+
+            _context.Notifications.Add(new Notification
             {
                 Title = "Project Submitted",
-                Message = $"Team '{teamMember.Team.ProjectTitle}' has submitted their project for review.",
+                Message = $"Team '{team.ProjectTitle}' has submitted Phase {version + 1} for review.",
                 CreatedAt = DateTime.UtcNow,
-                UserId = teamMember.Team.SupervisorId
+                UserId = team.SupervisorId
             });
 
             await _context.SaveChangesAsync();
-            return true;
+            return (true, $"Phase {version + 1} submitted for supervisor review.");
         }
 
-        // Supervisor gets submitted teams
+        // ── Supervisor gets submitted teams ───────────────────────────────────
         public async Task<List<SubmittedTeamDto>> GetSubmittedTeamsAsync(int supervisorId)
         {
             var teams = await _context.Teams
                 .Include(t => t.TeamMembers)
                     .ThenInclude(tm => tm.User)
                         .ThenInclude(u => u.UserProfile)
+                .Include(t => t.Supervisor)
+                    .ThenInclude(s => s.UserProfile)
                 .Include(t => t.Project)
-                .Where(t => t.SupervisorId == supervisorId && t.IsSubmitted && !t.IsArchived)
+                .Where(t => t.SupervisorId == supervisorId
+                    && ((t.IsSubmittedV0 && !t.IsArchivedV0)
+                     || (t.IsSubmittedV1 && !t.IsArchivedV1)))
                 .ToListAsync();
 
-            return teams.Select(t => new SubmittedTeamDto
+            var result = new List<SubmittedTeamDto>();
+
+            foreach (var t in teams)
             {
-                TeamId = t.Id,
-                ProjectName = t.ProjectTitle,
-                ProjectDescription = t.Project != null ? t.Project.Description : "",
-                GithubRepo = t.GithubRepo,
-                MemberNames = t.TeamMembers
+                var supervisorName = t.Supervisor.UserProfile != null
+                    ? t.Supervisor.UserProfile.FullName
+                    : t.Supervisor.Username;
+
+                var memberNames = t.TeamMembers
                     .Select(tm => tm.User.UserProfile != null
                         ? tm.User.UserProfile.FullName
                         : tm.User.Username)
-                    .ToList(),
-                Version = t.TeamMembers
-                    .Select(tm => tm.User.CurrentVersion)
-                    .FirstOrDefault()
-            }).ToList();
+                    .ToList();
+
+                if (t.IsSubmittedV0 && !t.IsArchivedV0)
+                    result.Add(new SubmittedTeamDto
+                    {
+                        TeamId = t.Id,
+                        ProjectName = t.ProjectTitle,
+                        ProjectDescription = t.Project != null ? t.Project.Description : "",
+                        SupervisorName = supervisorName,
+                        GithubRepo = t.GithubRepo,
+                        MemberNames = memberNames,
+                        Version = 0
+                    });
+
+                if (t.IsSubmittedV1 && !t.IsArchivedV1)
+                    result.Add(new SubmittedTeamDto
+                    {
+                        TeamId = t.Id,
+                        ProjectName = t.ProjectTitle,
+                        ProjectDescription = t.Project != null ? t.Project.Description : "",
+                        SupervisorName = supervisorName,
+                        GithubRepo = t.GithubRepo,
+                        MemberNames = memberNames,
+                        Version = 1
+                    });
+            }
+
+            return result;
         }
 
-        // Supervisor sends to archive
-        public async Task<bool> SendToArchiveAsync(int supervisorId, SendToArchiveDto dto)
+        // ── Supervisor gets team files for a specific version ─────────────────
+        public async Task<(bool success, string message, List<TeamFileDto>? files)>
+            GetTeamFilesForVersionAsync(int supervisorId, int teamId, int version)
         {
             var team = await _context.Teams
+                .FirstOrDefaultAsync(t => t.Id == teamId && t.SupervisorId == supervisorId);
+
+            if (team == null)
+                return (false, "Team not found or does not belong to you.", null);
+
+            var files = await _context.ProjectFiles
+                .Include(f => f.User)
+                    .ThenInclude(u => u.UserProfile)
+                .Where(f => f.TeamId == teamId
+                    && f.Version == version
+                    && f.UserId != supervisorId)
+                .OrderByDescending(f => f.UploadedAt)
+                .Select(f => new TeamFileDto
+                {
+                    Id = f.Id,
+                    FileName = f.FileName,
+                    FilePath = f.FilePath,
+                    Description = f.Description,
+                    UploadedByName = f.User.UserProfile != null
+                        ? f.User.UserProfile.FullName
+                        : f.User.Username,
+                    UploadedAt = f.UploadedAt
+                })
+                .ToListAsync();
+
+            return (true, "OK", files);
+        }
+
+        // ── Supervisor sends to archive ───────────────────────────────────────
+        public async Task<(bool success, string message)> SendToArchiveAsync(
+            int supervisorId, SendToArchiveDto dto)
+        {
+            if (dto.FileIds == null || !dto.FileIds.Any())
+                return (false, "You must select at least one file to archive.");
+
+            var team = await _context.Teams
                 .Include(t => t.TeamMembers)
+                .Include(t => t.Requirements)
                 .FirstOrDefaultAsync(t => t.Id == dto.TeamId
-                    && t.SupervisorId == supervisorId
-                    && t.IsSubmitted
-                    && !t.IsArchived);
+                    && t.SupervisorId == supervisorId);
 
-            if (team == null) return false;
+            if (team == null)
+                return (false, "Team not found or does not belong to you.");
 
-            // Delete tasks and assignments
+            if (dto.Version == 0 && !team.IsSubmittedV0)
+                return (false, "Phase 1 has not been submitted.");
+            if (dto.Version == 1 && !team.IsSubmittedV1)
+                return (false, "Phase 2 has not been submitted.");
+            if (dto.Version == 0 && team.IsArchivedV0)
+                return (false, "Phase 1 has already been archived.");
+            if (dto.Version == 1 && team.IsArchivedV1)
+                return (false, "Phase 2 has already been archived.");
+
+            // Validate selected files belong to this team and version
+            var selectedFiles = await _context.ProjectFiles
+                .Where(f => dto.FileIds.Contains(f.Id)
+                    && f.TeamId == dto.TeamId
+                    && f.Version == dto.Version
+                    && f.UserId != supervisorId)
+                .ToListAsync();
+
+            if (!selectedFiles.Any())
+                return (false, "None of the selected files are valid for this team and version.");
+
+            // Save archived files
+            foreach (var file in selectedFiles)
+            {
+                _context.ArchivedFiles.Add(new ArchivedFile
+                {
+                    TeamId = dto.TeamId,
+                    Version = dto.Version,
+                    FileName = file.FileName,
+                    FilePath = file.FilePath,
+                    Description = file.Description
+                });
+            }
+
+            // Clean up versioned data
             var tasks = await _context.TaskItems
                 .Where(ti => ti.TeamId == dto.TeamId && ti.Version == dto.Version)
                 .ToListAsync();
             _context.TaskItems.RemoveRange(tasks);
 
-            // Delete feedbacks
             var feedbacks = await _context.Feedbacks
                 .Where(f => f.TeamId == dto.TeamId && f.Version == dto.Version)
                 .ToListAsync();
             _context.Feedbacks.RemoveRange(feedbacks);
 
-            // Delete appointments
-            var appointments = await _context.Appointments
-                .Where(a => a.TeamId == dto.TeamId)
-                .ToListAsync();
-            _context.Appointments.RemoveRange(appointments);
-
-            // Delete progress reports
             var reports = await _context.TeamProgressReports
                 .Where(r => r.TeamId == dto.TeamId && r.Version == dto.Version)
                 .ToListAsync();
             _context.TeamProgressReports.RemoveRange(reports);
 
-            // Delete notifications for team members
+            // Clean up notifications for team members
             var memberIds = team.TeamMembers.Select(tm => tm.UserId).ToList();
             var notifications = await _context.Notifications
                 .Where(n => memberIds.Contains(n.UserId))
                 .ToListAsync();
             _context.Notifications.RemoveRange(notifications);
 
-            // Mark as archived
-            team.IsArchived = true;
-            team.ArchivedAt = DateTime.UtcNow;
+            // Mark this version as archived
+            if (dto.Version == 0)
+            {
+                team.IsArchivedV0 = true;
+                team.ArchivedAtV0 = DateTime.UtcNow;
+                team.IsSubmittedV0 = false;
+            }
+            else
+            {
+                team.IsArchivedV1 = true;
+                team.ArchivedAtV1 = DateTime.UtcNow;
+                team.IsSubmittedV1 = false;
+            }
 
             // Notify team members
             foreach (var member in team.TeamMembers)
             {
-                _context.Notifications.Add(new Models.Notification
+                _context.Notifications.Add(new Notification
                 {
                     Title = "Project Archived",
-                    Message = $"Your project '{team.ProjectTitle}' has been archived by your supervisor.",
+                    Message = $"Phase {dto.Version + 1} of your project '{team.ProjectTitle}' has been archived.",
                     CreatedAt = DateTime.UtcNow,
                     UserId = member.UserId
                 });
             }
 
             await _context.SaveChangesAsync();
-            return true;
+            return (true, $"Phase {dto.Version + 1} archived successfully.");
         }
 
-        // Get all archived projects
+        // ── Get all archived projects ─────────────────────────────────────────
         public async Task<List<ArchiveCardDto>> GetArchivedProjectsAsync()
         {
             var teams = await _context.Teams
@@ -139,36 +254,17 @@ namespace GP_BackEnd.Services
                 .Include(t => t.Supervisor)
                     .ThenInclude(s => s.UserProfile)
                 .Include(t => t.Project)
-                .Where(t => t.IsArchived)
+                .Include(t => t.ArchivedFiles)
+                .Include(t => t.Requirements)
+                    .ThenInclude(r => r.CreatedBy)
+                        .ThenInclude(u => u.UserProfile)
+                .Where(t => t.IsArchivedV0 || t.IsArchivedV1)
                 .ToListAsync();
 
-            return teams.Select(t => new ArchiveCardDto
-            {
-                TeamId = t.Id,
-                ProjectName = t.ProjectTitle,
-                ProjectDescription = t.Project != null ? t.Project.Description : "",
-                SupervisorName = t.Supervisor.UserProfile != null
-                    ? t.Supervisor.UserProfile.FullName
-                    : t.Supervisor.Username,
-                Department = t.TeamMembers
-                    .Select(tm => tm.User.UserProfile != null
-                        ? tm.User.UserProfile.Department
-                        : "")
-                    .FirstOrDefault() ?? "",
-                GithubRepo = t.GithubRepo,
-                MemberNames = t.TeamMembers
-                    .Select(tm => tm.User.UserProfile != null
-                        ? tm.User.UserProfile.FullName
-                        : tm.User.Username)
-                    .ToList(),
-                ArchivedAt = t.ArchivedAt ?? DateTime.UtcNow,
-                Version = t.TeamMembers
-                    .Select(tm => tm.User.CurrentVersion)
-                    .FirstOrDefault()
-            }).ToList();
+            return teams.Select(t => BuildArchiveCard(t)).ToList();
         }
 
-        // Get specific archived project
+        // ── Get specific archived project ─────────────────────────────────────
         public async Task<ArchiveCardDto?> GetArchivedProjectByIdAsync(int teamId)
         {
             var team = await _context.Teams
@@ -178,33 +274,60 @@ namespace GP_BackEnd.Services
                 .Include(t => t.Supervisor)
                     .ThenInclude(s => s.UserProfile)
                 .Include(t => t.Project)
-                .FirstOrDefaultAsync(t => t.Id == teamId && t.IsArchived);
+                .Include(t => t.ArchivedFiles)
+                .Include(t => t.Requirements)
+                    .ThenInclude(r => r.CreatedBy)
+                        .ThenInclude(u => u.UserProfile)
+                .FirstOrDefaultAsync(t => t.Id == teamId
+                    && (t.IsArchivedV0 || t.IsArchivedV1));
 
             if (team == null) return null;
 
+            return BuildArchiveCard(team);
+        }
+
+        // ── Helper ────────────────────────────────────────────────────────────
+        private ArchiveCardDto BuildArchiveCard(Team t)
+        {
             return new ArchiveCardDto
             {
-                TeamId = team.Id,
-                ProjectName = team.ProjectTitle,
-                ProjectDescription = team.Project != null ? team.Project.Description : "",
-                SupervisorName = team.Supervisor.UserProfile != null
-                    ? team.Supervisor.UserProfile.FullName
-                    : team.Supervisor.Username,
-                Department = team.TeamMembers
-                    .Select(tm => tm.User.UserProfile != null
-                        ? tm.User.UserProfile.Department
-                        : "")
-                    .FirstOrDefault() ?? "",
-                GithubRepo = team.GithubRepo,
-                MemberNames = team.TeamMembers
+                TeamId = t.Id,
+                ProjectName = t.ProjectTitle,
+                ProjectDescription = t.Project != null ? t.Project.Description : "",
+                SupervisorName = t.Supervisor.UserProfile != null
+                    ? t.Supervisor.UserProfile.FullName
+                    : t.Supervisor.Username,
+                Department = t.Supervisor.UserProfile?.Department ?? "",
+                GithubRepo = t.GithubRepo,
+                MemberNames = t.TeamMembers
                     .Select(tm => tm.User.UserProfile != null
                         ? tm.User.UserProfile.FullName
                         : tm.User.Username)
                     .ToList(),
-                ArchivedAt = team.ArchivedAt ?? DateTime.UtcNow,
-                Version = team.TeamMembers
-                    .Select(tm => tm.User.CurrentVersion)
-                    .FirstOrDefault()
+                HasPhase1 = t.IsArchivedV0,
+                HasPhase2 = t.IsArchivedV1,
+                ArchivedAtV0 = t.ArchivedAtV0,
+                ArchivedAtV1 = t.ArchivedAtV1,
+                Files = t.ArchivedFiles.Select(f => new ArchivedFileDto
+                {
+                    Id = f.Id,
+                    FileName = f.FileName,
+                    FilePath = f.FilePath,
+                    Description = f.Description,
+                    Version = f.Version
+                }).ToList(),
+                Requirements = t.Requirements.Select(r => new RequirementDto
+                {
+                    Id = r.Id,
+                    Title = r.Title,
+                    Description = r.Description,
+                    Priority = r.Priority,
+                    Type = r.Type,
+                    CreatedAt = r.CreatedAt,
+                    CreatedByName = r.CreatedBy.UserProfile != null
+                        ? r.CreatedBy.UserProfile.FullName
+                        : r.CreatedBy.Username
+                }).ToList()
             };
         }
     }

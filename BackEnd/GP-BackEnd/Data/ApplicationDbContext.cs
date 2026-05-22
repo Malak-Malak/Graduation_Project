@@ -29,6 +29,7 @@ namespace GP_BackEnd.Data
         public DbSet<OfficeHour> OfficeHours { get; set; }
         public DbSet<DiscussionSlot> DiscussionSlots { get; set; }
         public DbSet<TeamDiscussionSlot> TeamDiscussionSlots { get; set; }
+        public DbSet<ArchivedFile> ArchivedFiles { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -95,9 +96,9 @@ namespace GP_BackEnd.Data
                 .HasOne(ta => ta.Team)
                 .WithMany(t => t.Attachments)
                 .HasForeignKey(ta => ta.TeamId)
-                .OnDelete(DeleteBehavior.Cascade)
-                .IsRequired(false);
-             
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Cascade);
+
 
             // TaskAttachment -> User
             modelBuilder.Entity<ProjectFile>()
@@ -262,6 +263,13 @@ namespace GP_BackEnd.Data
                 .HasForeignKey(tds => tds.DiscussionSlotId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // ArchivedFile -> Team
+            modelBuilder.Entity<ArchivedFile>()
+                .HasOne(af => af.Team)
+                .WithMany(t => t.ArchivedFiles)
+                .HasForeignKey(af => af.TeamId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
+
     }
 }

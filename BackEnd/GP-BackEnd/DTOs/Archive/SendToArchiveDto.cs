@@ -4,5 +4,6 @@
     {
         public int TeamId { get; set; }
         public int Version { get; set; }
+        public List<int> FileIds { get; set; }
     }
 }

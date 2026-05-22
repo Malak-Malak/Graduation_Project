@@ -95,7 +95,9 @@ namespace GP_BackEnd.Data
                 .HasOne(ta => ta.Team)
                 .WithMany(t => t.Attachments)
                 .HasForeignKey(ta => ta.TeamId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Cascade)
+                .IsRequired(false);
+             
 
             // TaskAttachment -> User
             modelBuilder.Entity<ProjectFile>()

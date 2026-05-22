@@ -2299,11 +2299,6 @@
           "description": {
             "type": "string",
             "nullable": true
-          },
-          "teamId": {
-            "type": "integer",
-            "format": "int32",
-            "nullable": true
           }
         },
         "additionalProperties": false

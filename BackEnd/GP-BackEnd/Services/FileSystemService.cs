@@ -14,34 +14,13 @@ namespace GP_BackEnd.Services
             _context = context;
         }
 
-        // FIX Bug 3: GetTeamIdAsync now requires the teamId to be passed explicitly
-        // for supervisors, because a supervisor can oversee multiple teams.
-        // The old version grabbed the FIRST team found, which was random and wrong.
-        //
-        // For students: teamId is always unique (one team per student), so we look it up.
-        // For supervisors: they must pass a teamId explicitly in the DTO.
-        private async Task<int?> GetStudentTeamIdAsync(int userId)
-        {
-            var teamMember = await _context.TeamMembers
-                .FirstOrDefaultAsync(tm => tm.UserId == userId);
-
-            return teamMember?.TeamId;
-        }
-
-        // Get files uploaded by supervisor (for a specific team)
+        // Get files uploaded by the supervisor — shared across all his teams (TeamId = null)
         public async Task<List<AttachmentDto>> GetSupervisorFilesAsync(int userId)
         {
-            // Supervisor sees files across all their teams grouped — or per team if teamId provided.
-            // Here we return all files the supervisor uploaded across all their teams.
-            var supervisorTeamIds = await _context.Teams
-                .Where(t => t.SupervisorId == userId)
-                .Select(t => t.Id)
-                .ToListAsync();
-
             return await _context.ProjectFiles
                 .Include(f => f.User)
                     .ThenInclude(u => u.UserProfile)
-                .Where(f => supervisorTeamIds.Contains(f.TeamId) && f.UserId == userId)
+                .Where(f => f.UserId == userId && f.TeamId == null)
                 .OrderByDescending(f => f.UploadedAt)
                 .Select(f => new AttachmentDto
                 {
@@ -58,30 +37,24 @@ namespace GP_BackEnd.Services
                 .ToListAsync();
         }
 
-        // Get files uploaded by students (for the supervisor's teams or the student's own team)
+        // Get files uploaded by students — only for the caller's team
+        // If caller is a supervisor, return student files across all their teams
         public async Task<List<AttachmentDto>> GetStudentFilesAsync(int userId)
         {
-            // If the caller is a student, get their team
+            // Check if caller is a student
             var teamMember = await _context.TeamMembers
                 .FirstOrDefaultAsync(tm => tm.UserId == userId);
 
-            int? teamId = teamMember?.TeamId;
-
-            // If the caller is a supervisor, get all their teams
-            if (teamId == null)
+            if (teamMember != null)
             {
-                var supervisorTeamIds = await _context.Teams
-                    .Where(t => t.SupervisorId == userId)
-                    .Select(t => t.Id)
-                    .ToListAsync();
-
-                if (!supervisorTeamIds.Any()) return new List<AttachmentDto>();
+                // Student: return files from their team uploaded by students (TeamId set, not the supervisor)
+                var team = await _context.Teams.FindAsync(teamMember.TeamId);
+                if (team == null) return new List<AttachmentDto>();
 
                 return await _context.ProjectFiles
                     .Include(f => f.User)
                         .ThenInclude(u => u.UserProfile)
-                    .Include(f => f.Team)
-                    .Where(f => supervisorTeamIds.Contains(f.TeamId) && f.UserId != userId)
+                    .Where(f => f.TeamId == teamMember.TeamId && f.UserId != team.SupervisorId)
                     .OrderByDescending(f => f.UploadedAt)
                     .Select(f => new AttachmentDto
                     {
@@ -98,13 +71,21 @@ namespace GP_BackEnd.Services
                     .ToListAsync();
             }
 
-            var team = await _context.Teams.FindAsync(teamId);
-            if (team == null) return new List<AttachmentDto>();
+            // Caller is a supervisor: return student files across all their teams
+            var supervisorTeamIds = await _context.Teams
+                .Where(t => t.SupervisorId == userId)
+                .Select(t => t.Id)
+                .ToListAsync();
+
+            if (!supervisorTeamIds.Any()) return new List<AttachmentDto>();
 
             return await _context.ProjectFiles
                 .Include(f => f.User)
                     .ThenInclude(u => u.UserProfile)
-                .Where(f => f.TeamId == teamId && f.UserId != team.SupervisorId)
+                .Include(f => f.Team)
+                .Where(f => f.TeamId != null
+                    && supervisorTeamIds.Contains(f.TeamId!.Value)
+                    && f.UserId != userId)
                 .OrderByDescending(f => f.UploadedAt)
                 .Select(f => new AttachmentDto
                 {
@@ -121,34 +102,30 @@ namespace GP_BackEnd.Services
                 .ToListAsync();
         }
 
-        // Add attachment
-        // FIX Bug 3: For students, team is looked up automatically (one team only).
-        // For supervisors, the DTO must include a TeamId to avoid attaching to the wrong team.
+        // Add file
+        // Student: TeamId is set to their team automatically
+        // Supervisor: TeamId is left null — file is shared across all his teams
         public async Task<bool> AddAttachmentAsync(int userId, AddAttachmentDto dto)
         {
-            int? teamId;
-
-            // Check if user is a student
             var teamMember = await _context.TeamMembers
                 .FirstOrDefaultAsync(tm => tm.UserId == userId);
 
+            int? teamId = null;
+
             if (teamMember != null)
             {
-                // Student: use their team
+                // Student — attach to their team
                 teamId = teamMember.TeamId;
             }
             else
             {
-                // Supervisor: must provide a TeamId in the DTO
-                if (dto.TeamId == null) return false;
+                // Supervisor — verify they are actually a supervisor (have at least one team)
+                var isSupervisor = await _context.Teams
+                    .AnyAsync(t => t.SupervisorId == userId);
 
-                // Verify this supervisor actually supervises that team
-                var owns = await _context.Teams
-                    .AnyAsync(t => t.Id == dto.TeamId && t.SupervisorId == userId);
+                if (!isSupervisor) return false;
 
-                if (!owns) return false;
-
-                teamId = dto.TeamId;
+                // TeamId stays null — shared file
             }
 
             _context.ProjectFiles.Add(new ProjectFile
@@ -157,7 +134,7 @@ namespace GP_BackEnd.Services
                 FileName = dto.FileName,
                 Description = dto.Description,
                 UploadedAt = DateTime.UtcNow,
-                TeamId = teamId.Value,
+                TeamId = teamId,
                 UserId = userId
             });
 
@@ -165,11 +142,11 @@ namespace GP_BackEnd.Services
             return true;
         }
 
-        // Edit attachment (only the one who uploaded it)
+        // Edit file (only the uploader)
         public async Task<bool> EditAttachmentAsync(int userId, int attachmentId, EditAttachmentDto dto)
         {
             var attachment = await _context.ProjectFiles
-                .FirstOrDefaultAsync(ta => ta.Id == attachmentId && ta.UserId == userId);
+                .FirstOrDefaultAsync(f => f.Id == attachmentId && f.UserId == userId);
 
             if (attachment == null) return false;
 
@@ -181,11 +158,11 @@ namespace GP_BackEnd.Services
             return true;
         }
 
-        // Delete attachment (only the one who uploaded it)
+        // Delete file (only the uploader)
         public async Task<bool> DeleteAttachmentAsync(int userId, int attachmentId)
         {
             var attachment = await _context.ProjectFiles
-                .FirstOrDefaultAsync(ta => ta.Id == attachmentId && ta.UserId == userId);
+                .FirstOrDefaultAsync(f => f.Id == attachmentId && f.UserId == userId);
 
             if (attachment == null) return false;
 

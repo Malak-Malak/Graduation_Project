@@ -1,7 +1,5 @@
 using System.Net;
 using System.Net.Mail;
-using System.Text;
-using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -11,86 +9,66 @@ namespace GP_BackEnd.Services
     {
         private readonly IConfiguration _config;
         private readonly ILogger<EmailService> _logger;
-        private readonly HttpClient _http;
 
-        public EmailService(IConfiguration config, ILogger<EmailService> logger, IHttpClientFactory httpFactory)
+        public EmailService(IConfiguration config, ILogger<EmailService> logger)
         {
             _config = config;
             _logger = logger;
-            _http = httpFactory.CreateClient();
         }
 
-        // ── Generate email content via Gemini ────────────────────────────────
-        public async Task<(string Subject, string Body)> GenerateReminderEmailAsync(
+        // ── Reminder email for team members ──────────────────────────────────
+        public (string Subject, string Body) GenerateReminderEmail(
             string supervisorName,
             string projectName,
             DateTime appointmentDateTime,
             bool isOnline,
             string? meetingLink)
         {
-            var geminiKey = _config["Gemini:ApiKey"];
             var dateStr = appointmentDateTime.ToString("dddd, MMMM d yyyy 'at' h:mm tt");
 
-            var prompt = $@"You are a professional academic assistant. Write a short, friendly meeting reminder email for a student group project meeting.
+            var subject = $"Appointment Reminder – {dateStr} (UTC)";
 
-Details:
-- Meeting date & time: {dateStr} (UTC)
-- Type: {(isOnline ? "Online meeting" : "In-person office hour")}
-- Supervisor: {supervisorName}
-- Project: {projectName}
-{(isOnline && !string.IsNullOrEmpty(meetingLink) ? $"- Meeting link: {meetingLink}" : "")}
+            var body = $"Hi team,\n\n" +
+                       $"This is a reminder that you have an upcoming appointment with {supervisorName} " +
+                       $"regarding your project \"{projectName}\".\n\n" +
+                       $"Date & Time : {dateStr} (UTC)\n" +
+                       $"Type        : {(isOnline ? "Online Meeting" : "In-Person Office Hour")}\n";
 
-Write a concise, professional email (3-4 short paragraphs). Include:
-1. First line must be exactly: Subject: <your subject here>
-2. A greeting to the team
-3. Brief reminder of the meeting details
-4. {(isOnline ? "Remind them to join via the link on time" : "Remind them to be at the office on time")}
-5. Polite closing
+            if (isOnline && !string.IsNullOrEmpty(meetingLink))
+                body += $"Meeting Link: {meetingLink}\n";
 
-Respond with ONLY the email text. Start with 'Subject: ' on the first line.";
+            body += isOnline
+                ? "\nPlease make sure to join the meeting on time and come prepared with your latest updates."
+                : "\nPlease make sure to be at the office on time and come prepared with your latest updates.";
 
-            try
-            {
-                var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key={geminiKey}";
-                var payload = new
-                {
-                    contents = new[]
-                    {
-                        new { parts = new[] { new { text = prompt } } }
-                    }
-                };
+            body += "\n\nBest regards,\nGPMS System";
 
-                var json = JsonSerializer.Serialize(payload);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-                var response = await _http.PostAsync(url, content);
-                var responseStr = await response.Content.ReadAsStringAsync();
+            return (subject, body);
+        }
 
-                using var doc = JsonDocument.Parse(responseStr);
-                var text = doc.RootElement
-                    .GetProperty("candidates")[0]
-                    .GetProperty("content")
-                    .GetProperty("parts")[0]
-                    .GetProperty("text")
-                    .GetString() ?? "";
+        // ── Reminder email for supervisor ─────────────────────────────────────
+        public (string Subject, string Body) GenerateSupervisorReminderEmail(
+            string supervisorName,
+            string teamName,
+            DateTime appointmentDateTime,
+            bool isOnline,
+            string? meetingLink)
+        {
+            var dateStr = appointmentDateTime.ToString("dddd, MMMM d yyyy 'at' h:mm tt");
 
-                var lines = text.Split('\n');
-                var subjectLine = lines.FirstOrDefault(l => l.TrimStart().StartsWith("Subject:", StringComparison.OrdinalIgnoreCase)) ?? "";
-                var subject = subjectLine.Replace("Subject:", "", StringComparison.OrdinalIgnoreCase).Trim();
-                var body = string.Join("\n", lines.Where(l => !l.TrimStart().StartsWith("Subject:", StringComparison.OrdinalIgnoreCase))).Trim();
+            var subject = $"Appointment Reminder – {teamName} – {dateStr} (UTC)";
 
-                return (subject, body);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning("Gemini failed, using fallback email. Error: {Error}", ex.Message);
-                // Fallback if Gemini fails
-                return (
-                    $"Meeting Reminder – {dateStr}",
-                    $"Hi team,\n\nThis is a reminder that you have a meeting with {supervisorName} scheduled on {dateStr}.\n" +
-                    (isOnline && !string.IsNullOrEmpty(meetingLink) ? $"\nJoin here: {meetingLink}\n" : "") +
-                    "\nPlease come prepared with your latest updates.\n\nBest regards,\nGPMS System"
-                );
-            }
+            var body = $"Dear {supervisorName},\n\n" +
+                       $"This is a reminder that you have an upcoming appointment with the team working on \"{teamName}\".\n\n" +
+                       $"Date & Time : {dateStr} (UTC)\n" +
+                       $"Type        : {(isOnline ? "Online Meeting" : "In-Person Office Hour")}\n";
+
+            if (isOnline && !string.IsNullOrEmpty(meetingLink))
+                body += $"Meeting Link: {meetingLink}\n";
+
+            body += "\n\nBest regards,\nGPMS System";
+
+            return (subject, body);
         }
 
         // ── Send email via SMTP ───────────────────────────────────────────────

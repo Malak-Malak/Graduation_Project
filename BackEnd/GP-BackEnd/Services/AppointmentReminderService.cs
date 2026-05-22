@@ -8,17 +8,20 @@ using Microsoft.Extensions.Logging;
 namespace GP_BackEnd.Services
 {
     /// <summary>
-    /// Runs daily at 08:00 UTC.
-    /// Finds every Approved appointment whose DateTime is between 47h and 49h from now
-    /// (i.e. roughly 2 days away) and sends an email reminder to all team members.
-    /// Uses a ReminderSentAt flag on the appointment to avoid duplicate sends.
+    /// Runs every 2 minutes (testing mode).
+    /// Finds every Approved appointment within the next 24 hours
+    /// and sends a reminder email to all team members and the supervisor.
+    /// Uses ReminderSentAt to avoid sending the same reminder twice.
+    ///
+    /// TO SWITCH TO PRODUCTION: replace Task.Delay(TimeSpan.FromMinutes(2))
+    /// with Task.Delay(TimeUntilNextRun()) to run once daily at 08:00 UTC.
     /// </summary>
     public class AppointmentReminderService : BackgroundService
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<AppointmentReminderService> _logger;
 
-        // Run once per day; first run waits until next 08:00 UTC
+        // Returns how long to wait until next 08:00 UTC — use this in production
         private static TimeSpan TimeUntilNextRun()
         {
             var now = DateTime.UtcNow;
@@ -41,13 +44,15 @@ namespace GP_BackEnd.Services
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                var delay = TimeUntilNextRun();
-                _logger.LogInformation("Next reminder check in {Hours}h {Minutes}m", (int)delay.TotalHours, delay.Minutes);
-                await Task.Delay(delay, stoppingToken);
-
-                if (stoppingToken.IsCancellationRequested) break;
-
                 await RunReminderCheckAsync(stoppingToken);
+
+                // TESTING: runs every 2 minutes
+                await Task.Delay(TimeSpan.FromMinutes(2), stoppingToken);
+
+                // PRODUCTION: uncomment the lines below and remove the 2 lines above
+                // var delay = TimeUntilNextRun();
+                // _logger.LogInformation("Next reminder check in {Hours}h {Minutes}m", (int)delay.TotalHours, delay.Minutes);
+                // await Task.Delay(delay, stoppingToken);
             }
         }
 
@@ -60,10 +65,9 @@ namespace GP_BackEnd.Services
             var emailService = scope.ServiceProvider.GetRequiredService<EmailService>();
 
             var now = DateTime.UtcNow;
-            var windowStart = now.AddHours(47);   // ~2 days - 1h buffer
-            var windowEnd   = now.AddHours(49);   // ~2 days + 1h buffer
+            var windowStart = now;
+            var windowEnd = now.AddHours(24);
 
-            // Get Approved appointments in the 2-day window that haven't been reminded yet
             var upcoming = await db.Appointments
                 .Include(a => a.Team)
                     .ThenInclude(t => t.TeamMembers)
@@ -88,39 +92,65 @@ namespace GP_BackEnd.Services
                                          ?? appt.Supervisor?.Username
                                          ?? "Your supervisor";
 
-                    var projectName = appt.Team?.ProjectTitle ?? "your project";
+                    var teamName = appt.Team?.ProjectTitle ?? "your project";
 
-                    // Collect personal emails of all team members
-                    var emails = appt.Team.TeamMembers
+                    // ?? Email team members ????????????????????????????????????
+                    var memberEmails = appt.Team.TeamMembers
                         .Select(tm => tm.User?.UserProfile?.PersonalEmail)
                         .Where(e => !string.IsNullOrWhiteSpace(e))
                         .Distinct()
                         .ToList();
 
-                    if (!emails.Any())
+                    if (memberEmails.Any())
                     {
-                        _logger.LogWarning("Appointment {Id}: no emails found for team {TeamId}, skipping.", appt.Id, appt.TeamId);
-                        continue;
+                        var (memberSubject, memberBody) = emailService.GenerateReminderEmail(
+                            supervisorName,
+                            teamName,
+                            appt.DateTime,
+                            appt.IsOnline ?? false,
+                            appt.Link);
+
+                        await emailService.SendEmailAsync(memberEmails!, memberSubject, memberBody);
+
+                        _logger.LogInformation(
+                            "Member reminder sent for appointment {Id} to {Count} members.",
+                            appt.Id, memberEmails.Count);
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "Appointment {Id}: no personal emails found for team members, skipping member email.",
+                            appt.Id);
                     }
 
-                    // Generate content via Gemini
-                    var (subject, body) = await emailService.GenerateReminderEmailAsync(
-                        supervisorName,
-                        projectName,
-                        appt.DateTime,
-                        appt.IsOnline ?? false,
-                        appt.Link);
+                    // ?? Email supervisor ??????????????????????????????????????
+                    var supervisorEmail = appt.Supervisor?.UserProfile?.PersonalEmail;
 
-                    // Send
-                    await emailService.SendEmailAsync(emails!, subject, body);
+                    if (!string.IsNullOrWhiteSpace(supervisorEmail))
+                    {
+                        var (supSubject, supBody) = emailService.GenerateSupervisorReminderEmail(
+                            supervisorName,
+                            teamName,
+                            appt.DateTime,
+                            appt.IsOnline ?? false,
+                            appt.Link);
 
-                    // Mark as reminded so we don't send again
+                        await emailService.SendEmailAsync(new[] { supervisorEmail }, supSubject, supBody);
+
+                        _logger.LogInformation(
+                            "Supervisor reminder sent for appointment {Id} to {SupervisorEmail}.",
+                            appt.Id, supervisorEmail);
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "Appointment {Id}: no personal email found for supervisor, skipping supervisor email.",
+                            appt.Id);
+                    }
+
+                    // ?? Mark as reminded ??????????????????????????????????????
                     appt.ReminderSentAt = DateTime.UtcNow;
                     await db.SaveChangesAsync(ct);
-
-                    _logger.LogInformation(
-                        "Reminder sent for appointment {Id} (team {TeamId}) to {Count} members.",
-                        appt.Id, appt.TeamId, emails.Count);
                 }
                 catch (Exception ex)
                 {

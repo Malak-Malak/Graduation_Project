@@ -9,9 +9,9 @@ namespace GP_BackEnd.Models
         public string FileName { get; set; }
         public string? Description { get; set; }
         public DateTime UploadedAt { get; set; }
-        public int TeamId { get; set; }
+        public int? TeamId { get; set; }
         public int UserId { get; set; }
-        public Team Team { get; set; }
+        public Team? Team { get; set; }
         public User User { get; set; }
     }
 }

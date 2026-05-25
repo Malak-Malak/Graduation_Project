@@ -23,6 +23,10 @@ import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
 import ArchiveOutlinedIcon from "@mui/icons-material/ArchiveOutlined";
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
+import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutlined";
+import LinkOutlinedIcon from "@mui/icons-material/LinkOutlined";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
 
 import studentApi from "../../../../api/handler/endpoints/studentApi";
 import archiveApi from "../../../../api/handler/endpoints/archiveApi";
@@ -55,10 +59,22 @@ const SK_CLR = [
 const CARDS_PER_PAGE = 9;
 const CARD_H = 220;
 
+// ── helpers ──────────────────────────────────────────────────────
 const getId = s => s?.userId ?? s?.id ?? s?._id ?? null;
 const ini = (n = "") => (n ?? "").split(" ").map(w => w[0] ?? "").join("").toUpperCase().slice(0, 2) || "?";
 const palette = i => PALETTE[i % PALETTE.length];
 const skClr = i => SK_CLR[i % SK_CLR.length];
+
+/**
+ * Safe data extractor — handles both:
+ *   axiosInstance that returns response.data automatically  → d is already the array
+ *   axiosInstance that returns the full response object     → d.data is the array
+ */
+const extractArray = (d) => {
+    if (Array.isArray(d)) return d;
+    if (Array.isArray(d?.data)) return d.data;
+    return [];
+};
 
 const normProfile = raw => {
     if (!raw) return null;
@@ -76,11 +92,14 @@ const normProfile = raw => {
     };
 };
 
+const formatDate = (dateStr, opts = { year: "numeric", month: "short", day: "numeric" }) => {
+    if (!dateStr) return null;
+    try { return new Date(dateStr).toLocaleDateString("en-US", opts); }
+    catch { return null; }
+};
+
 /* ═══════════════════════════════════════════════════════════════
    SPIN CARD WRAPPER
-   ─ الـ outer Box فيه overflow:hidden + الـ ::before هو اللي بيلف
-   ─ الـ ::after هو الـ mask اللي بيخفي الوسط ويبقي بس الحواف
-   ─ المحتوى على zIndex:2 فوق كل شي
 ═══════════════════════════════════════════════════════════════ */
 function SpinCard({ color, children }) {
     const theme = useTheme();
@@ -97,13 +116,10 @@ function SpinCard({ color, children }) {
                 borderRadius: "16px",
                 width: "100%",
                 height: CARD_H,
-                /* الـ overflow يقص الـ spinning disc خارج الكارد */
                 overflow: "hidden",
-                /* ── spinning conic-gradient disc ── */
                 "&::before": {
                     content: '""',
                     position: "absolute",
-                    /* 250% × 250% يضمن إن الـ disc يغطي كل الزوايا */
                     width: "250%",
                     height: "250%",
                     top: "50%",
@@ -127,11 +143,10 @@ function SpinCard({ color, children }) {
                     pointerEvents: "none",
                     borderRadius: "0",
                 },
-                /* ── inner mask: يأكل الوسط ويبقي الـ border بعرض 2px ── */
                 "&::after": {
                     content: '""',
                     position: "absolute",
-                    inset: "2px",           /* سمك الـ border = 2px */
+                    inset: "2px",
                     borderRadius: "14px",
                     background: bg,
                     zIndex: 1,
@@ -139,7 +154,6 @@ function SpinCard({ color, children }) {
                 },
             }}
         >
-            {/* المحتوى الفعلي فوق كل شي */}
             <Box sx={{
                 position: "relative",
                 zIndex: 2,
@@ -157,6 +171,7 @@ function SpinCard({ color, children }) {
 
 /* ═══════════════════════════════════════════════════════════════
    ARCHIVED PROJECT CARD
+   — fixed height stays at CARD_H using SpinCard
 ═══════════════════════════════════════════════════════════════ */
 function ArchivedProjectCard({ project, onView }) {
     const theme = useTheme();
@@ -166,15 +181,19 @@ function ArchivedProjectCard({ project, onView }) {
 
     const colorIdx = Math.abs((project.teamId ?? 0) + (project.projectName ?? "").charCodeAt(0)) % PALETTE.length;
     const aClr = palette(colorIdx);
-    const versionLabel = project.version === 0 ? "Phase 1" : "Phase 2";
-    const archivedDate = project.archivedAt
-        ? new Date(project.archivedAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
-        : null;
+
+    // Phase badges
+    const hasP1 = project.hasPhase1 ?? (project.version === 0);
+    const hasP2 = project.hasPhase2 ?? (project.version === 1);
+
+    const archivedDate = formatDate(project.archivedAtV0 ?? project.archivedAtV1 ?? project.archivedAt);
 
     return (
         <SpinCard color={aClr}>
             <Box sx={{ height: 3, flexShrink: 0, background: `linear-gradient(90deg,${aClr} 0%,${aClr}55 100%)` }} />
             <Box sx={{ p: "14px 16px", flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+
+                {/* Header row */}
                 <Stack direction="row" alignItems="center" gap={1.5} mb={1.2} sx={{ flexShrink: 0 }}>
                     <Box sx={{
                         width: 44, height: 44, borderRadius: "13px", flexShrink: 0,
@@ -197,6 +216,7 @@ function ArchivedProjectCard({ project, onView }) {
                     </Box>
                 </Stack>
 
+                {/* Description */}
                 <Box sx={{ height: 38, overflow: "hidden", flexShrink: 0, mb: .8 }}>
                     {project.projectDescription
                         ? <Typography fontSize=".72rem" sx={{ color: tSec, lineHeight: 1.55, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
@@ -206,13 +226,41 @@ function ArchivedProjectCard({ project, onView }) {
                     }
                 </Box>
 
-                <Stack direction="row" gap={.6} mb={.8} flexWrap="wrap">
-                    <Chip label={versionLabel} size="small" sx={{ height: 18, borderRadius: "5px", bgcolor: `${aClr}12`, color: aClr, fontSize: ".6rem", fontWeight: 700, border: `1px solid ${aClr}25` }} />
+                {/* Chips row — Phase 1 / Phase 2 / dept / date */}
+                <Stack direction="row" gap={.6} mb={.8} flexWrap="wrap" sx={{ flexShrink: 0 }}>
+                    <Chip
+                        icon={hasP1
+                            ? <CheckCircleOutlineIcon sx={{ fontSize: "10px !important", color: "#3DB97A !important" }} />
+                            : <CancelOutlinedIcon sx={{ fontSize: "10px !important", color: `${tSec} !important` }} />}
+                        label="Phase 1"
+                        size="small"
+                        sx={{
+                            height: 18, borderRadius: "5px",
+                            bgcolor: hasP1 ? "rgba(61,185,122,.1)" : isDark ? "rgba(255,255,255,.05)" : "rgba(0,0,0,.04)",
+                            color: hasP1 ? "#3DB97A" : tSec,
+                            fontSize: ".6rem", fontWeight: 700,
+                            border: `1px solid ${hasP1 ? "rgba(61,185,122,.25)" : "transparent"}`,
+                        }}
+                    />
+                    <Chip
+                        icon={hasP2
+                            ? <CheckCircleOutlineIcon sx={{ fontSize: "10px !important", color: "#3DB97A !important" }} />
+                            : <CancelOutlinedIcon sx={{ fontSize: "10px !important", color: `${tSec} !important` }} />}
+                        label="Phase 2"
+                        size="small"
+                        sx={{
+                            height: 18, borderRadius: "5px",
+                            bgcolor: hasP2 ? "rgba(61,185,122,.1)" : isDark ? "rgba(255,255,255,.05)" : "rgba(0,0,0,.04)",
+                            color: hasP2 ? "#3DB97A" : tSec,
+                            fontSize: ".6rem", fontWeight: 700,
+                            border: `1px solid ${hasP2 ? "rgba(61,185,122,.25)" : "transparent"}`,
+                        }}
+                    />
                     {project.department && (
-                        <Chip label={project.department} size="small" sx={{ height: 18, borderRadius: "5px", bgcolor: isDark ? "rgba(255,255,255,.06)" : "rgba(0,0,0,.04)", color: tSec, fontSize: ".6rem", fontWeight: 600 }} />
+                        <Chip label={project.department} size="small" sx={{ height: 18, borderRadius: "5px", bgcolor: `${aClr}12`, color: aClr, fontSize: ".6rem", fontWeight: 600, border: `1px solid ${aClr}25` }} />
                     )}
                     {archivedDate && (
-                        <Chip label={archivedDate} size="small" sx={{ height: 18, borderRadius: "5px", bgcolor: "rgba(61,185,122,.08)", color: "#3DB97A", fontSize: ".6rem", fontWeight: 600, border: "1px solid rgba(61,185,122,.2)" }} />
+                        <Chip label={archivedDate} size="small" sx={{ height: 18, borderRadius: "5px", bgcolor: isDark ? "rgba(255,255,255,.05)" : "rgba(0,0,0,.03)", color: tSec, fontSize: ".6rem", fontWeight: 600 }} />
                     )}
                 </Stack>
 
@@ -236,6 +284,7 @@ function ArchivedProjectCard({ project, onView }) {
 
 /* ═══════════════════════════════════════════════════════════════
    ARCHIVED PROJECT DETAIL DIALOG
+   — shows full info: phases, members, files with links, github
 ═══════════════════════════════════════════════════════════════ */
 function ArchiveDetailDialog({ open, onClose, project }) {
     const theme = useTheme();
@@ -248,10 +297,71 @@ function ArchiveDetailDialog({ open, onClose, project }) {
 
     const colorIdx = Math.abs((project.teamId ?? 0) + (project.projectName ?? "").charCodeAt(0)) % PALETTE.length;
     const aClr = palette(colorIdx);
-    const versionLabel = project.version === 0 ? "Phase 1" : "Phase 2";
-    const archivedDate = project.archivedAt
-        ? new Date(project.archivedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
-        : null;
+
+    const hasP1 = project.hasPhase1 ?? false;
+    const hasP2 = project.hasPhase2 ?? false;
+
+    const archivedP1 = formatDate(project.archivedAtV0, { year: "numeric", month: "long", day: "numeric" });
+    const archivedP2 = formatDate(project.archivedAtV1, { year: "numeric", month: "long", day: "numeric" });
+
+    // Separate files by phase
+    const filesP1 = (project.files ?? []).filter(f => f.version === 0);
+    const filesP2 = (project.files ?? []).filter(f => f.version === 1);
+
+    const PhaseBadge = ({ label, active, date }) => (
+        <Box sx={{
+            display: "flex", alignItems: "center", gap: .7,
+            px: 1.2, py: .5, borderRadius: "8px",
+            bgcolor: active ? "rgba(61,185,122,.1)" : isDark ? "rgba(255,255,255,.05)" : "rgba(0,0,0,.04)",
+            border: `1px solid ${active ? "rgba(61,185,122,.3)" : brd}`,
+        }}>
+            {active
+                ? <CheckCircleOutlineIcon sx={{ fontSize: 13, color: "#3DB97A" }} />
+                : <CancelOutlinedIcon sx={{ fontSize: 13, color: tSec, opacity: .5 }} />}
+            <Typography fontSize=".72rem" fontWeight={700} sx={{ color: active ? "#3DB97A" : tSec }}>
+                {label}
+            </Typography>
+            {date && <Typography fontSize=".65rem" sx={{ color: tSec }}>· {date}</Typography>}
+        </Box>
+    );
+
+    const FileRow = ({ file }) => (
+        <Stack direction="row" alignItems="center" gap={1.2}
+            sx={{
+                p: "9px 12px", borderRadius: "10px",
+                border: `1px solid ${isDark ? "rgba(255,255,255,.07)" : "rgba(0,0,0,.07)"}`,
+                bgcolor: isDark ? "rgba(255,255,255,.025)" : "rgba(0,0,0,.018)",
+            }}>
+            <Box sx={{
+                width: 30, height: 30, borderRadius: "8px", flexShrink: 0,
+                bgcolor: `${aClr}12`, border: `1px solid ${aClr}25`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+                <InsertDriveFileOutlinedIcon sx={{ fontSize: 14, color: aClr }} />
+            </Box>
+            <Box flex={1} minWidth={0}>
+                <Typography fontWeight={600} fontSize=".8rem" noWrap sx={{ color: tPri }}>{file.fileName}</Typography>
+                {file.description && (
+                    <Typography fontSize=".68rem" noWrap sx={{ color: tSec }}>{file.description}</Typography>
+                )}
+            </Box>
+            {file.filePath && (
+                <Tooltip title="Open file">
+                    <IconButton
+                        component="a" href={file.filePath} target="_blank" rel="noopener noreferrer"
+                        size="small"
+                        sx={{
+                            width: 28, height: 28, borderRadius: "7px", flexShrink: 0,
+                            bgcolor: `${aClr}0F`, border: `1px solid ${aClr}25`,
+                            color: aClr,
+                            "&:hover": { bgcolor: aClr, color: "#fff" }, transition: "all .15s",
+                        }}>
+                        <LinkOutlinedIcon sx={{ fontSize: 13 }} />
+                    </IconButton>
+                </Tooltip>
+            )}
+        </Stack>
+    );
 
     return (
         <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth
@@ -263,6 +373,7 @@ function ArchiveDetailDialog({ open, onClose, project }) {
                     boxShadow: isDark ? "0 40px 100px rgba(0,0,0,.7)" : "0 40px 100px rgba(0,0,0,.15)",
                 }
             }}>
+            {/* Banner */}
             <Box sx={{
                 height: 100, position: "relative", overflow: "hidden",
                 background: isDark
@@ -280,6 +391,7 @@ function ArchiveDetailDialog({ open, onClose, project }) {
                 </IconButton>
             </Box>
 
+            {/* Avatar */}
             <Box sx={{ px: 3, mt: "-28px", mb: 0, position: "relative", zIndex: 1 }}>
                 <Box sx={{
                     width: 56, height: 56, borderRadius: "16px",
@@ -293,11 +405,12 @@ function ArchiveDetailDialog({ open, onClose, project }) {
                 </Box>
             </Box>
 
+            {/* Title + chips */}
             <Box sx={{ px: 3, pt: 1.5, pb: 1 }}>
                 <Typography fontWeight={800} fontSize="1.1rem" sx={{ color: tPri, mb: .8 }}>
                     {project.projectName}
                 </Typography>
-                <Stack direction="row" gap={.7} flexWrap="wrap">
+                <Stack direction="row" gap={.7} flexWrap="wrap" mb={1.2}>
                     {project.supervisorName && (
                         <Chip
                             icon={<SchoolOutlinedIcon sx={{ fontSize: "11px !important", color: `${tSec} !important` }} />}
@@ -310,16 +423,20 @@ function ArchiveDetailDialog({ open, onClose, project }) {
                             sx={{ height: 24, borderRadius: "8px", bgcolor: `${aClr}14`, color: aClr, fontSize: ".69rem", fontWeight: 700, border: `1px solid ${aClr}2E` }}
                         />
                     )}
-                    <Chip label={versionLabel} size="small"
-                        sx={{ height: 24, borderRadius: "8px", bgcolor: "rgba(61,185,122,.1)", color: "#3DB97A", fontSize: ".69rem", fontWeight: 700, border: "1px solid rgba(61,185,122,.25)" }}
-                    />
+                </Stack>
+                {/* Phase status row */}
+                <Stack direction="row" gap={1} flexWrap="wrap">
+                    <PhaseBadge label="Phase 1" active={hasP1} date={archivedP1} />
+                    <PhaseBadge label="Phase 2" active={hasP2} date={archivedP2} />
                 </Stack>
             </Box>
 
             <Divider sx={{ borderColor: brd, mt: 1.5 }} />
 
-            <DialogContent sx={{ px: 3, py: 2.5 }}>
+            <DialogContent sx={{ px: 3, py: 2.5, overflowY: "auto", maxHeight: 420 }}>
                 <Stack spacing={2.5}>
+
+                    {/* Description */}
                     {project.projectDescription && (
                         <Box>
                             <Typography sx={{ fontSize: ".66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".8px", color: tSec, mb: .8 }}>Description</Typography>
@@ -327,6 +444,7 @@ function ArchiveDetailDialog({ open, onClose, project }) {
                         </Box>
                     )}
 
+                    {/* GitHub */}
                     {project.githubRepo && (
                         <Box>
                             <Typography sx={{ fontSize: ".66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".8px", color: tSec, mb: .8 }}>Repository</Typography>
@@ -348,6 +466,7 @@ function ArchiveDetailDialog({ open, onClose, project }) {
                         </Box>
                     )}
 
+                    {/* Members */}
                     {project.memberNames?.length > 0 && (
                         <Box>
                             <Typography sx={{ fontSize: ".66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".8px", color: tSec, mb: 1 }}>
@@ -376,12 +495,36 @@ function ArchiveDetailDialog({ open, onClose, project }) {
                         </Box>
                     )}
 
-                    {archivedDate && (
+                    {/* Files — Phase 1 */}
+                    {filesP1.length > 0 && (
                         <Box>
-                            <Typography sx={{ fontSize: ".66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".8px", color: tSec, mb: .5 }}>Archived On</Typography>
-                            <Typography fontSize=".83rem" sx={{ color: tPri }}>{archivedDate}</Typography>
+                            <Stack direction="row" alignItems="center" gap={.6} mb={1}>
+                                <CheckCircleOutlineIcon sx={{ fontSize: 13, color: "#3DB97A" }} />
+                                <Typography sx={{ fontSize: ".66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".8px", color: tSec }}>
+                                    Phase 1 Files ({filesP1.length})
+                                </Typography>
+                            </Stack>
+                            <Stack gap={.7}>
+                                {filesP1.map(f => <FileRow key={f.id} file={f} />)}
+                            </Stack>
                         </Box>
                     )}
+
+                    {/* Files — Phase 2 */}
+                    {filesP2.length > 0 && (
+                        <Box>
+                            <Stack direction="row" alignItems="center" gap={.6} mb={1}>
+                                <CheckCircleOutlineIcon sx={{ fontSize: 13, color: "#3DB97A" }} />
+                                <Typography sx={{ fontSize: ".66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".8px", color: tSec }}>
+                                    Phase 2 Files ({filesP2.length})
+                                </Typography>
+                            </Stack>
+                            <Stack gap={.7}>
+                                {filesP2.map(f => <FileRow key={f.id} file={f} />)}
+                            </Stack>
+                        </Box>
+                    )}
+
                 </Stack>
             </DialogContent>
 
@@ -397,7 +540,7 @@ function ArchiveDetailDialog({ open, onClose, project }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   STUDENT PROFILE DIALOG
+   STUDENT PROFILE DIALOG  (unchanged)
 ═══════════════════════════════════════════════════════════════ */
 function StudentProfileDialog({ open, onClose, student }) {
     const theme = useTheme();
@@ -417,7 +560,7 @@ function StudentProfileDialog({ open, onClose, student }) {
         if (!open || !sid) return;
         setProfile(null); setLoading(true);
         studentApi.getProfileById(sid)
-            .then(d => setProfile(normProfile(d)))
+            .then(d => setProfile(normProfile(extractArray(d).length ? extractArray(d)[0] : d)))
             .catch(() => setProfile(null))
             .finally(() => setLoading(false));
     }, [open, sid]);
@@ -448,16 +591,8 @@ function StudentProfileDialog({ open, onClose, student }) {
                     ? `linear-gradient(135deg,${aClr}30 0%,${aClr}10 100%)`
                     : `linear-gradient(135deg,${aClr}18 0%,${aClr}08 100%)`,
             }}>
-                <Box sx={{
-                    position: "absolute", inset: 0,
-                    backgroundImage: `radial-gradient(${aClr}30 1.5px,transparent 1.5px)`,
-                    backgroundSize: "24px 24px",
-                }} />
-                <Box sx={{
-                    position: "absolute", bottom: -20, right: -20,
-                    width: 120, height: 120, borderRadius: "50%",
-                    background: `radial-gradient(circle,${aClr}25 0%,transparent 70%)`,
-                }} />
+                <Box sx={{ position: "absolute", inset: 0, backgroundImage: `radial-gradient(${aClr}30 1.5px,transparent 1.5px)`, backgroundSize: "24px 24px" }} />
+                <Box sx={{ position: "absolute", bottom: -20, right: -20, width: 120, height: 120, borderRadius: "50%", background: `radial-gradient(circle,${aClr}25 0%,transparent 70%)` }} />
                 <IconButton size="small" onClick={onClose} sx={{
                     position: "absolute", top: 12, right: 12,
                     bgcolor: isDark ? "rgba(0,0,0,.5)" : "rgba(255,255,255,.9)",
@@ -502,23 +637,14 @@ function StudentProfileDialog({ open, onClose, student }) {
                 </Stack>
                 <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap">
                     {displayDept && (
-                        <Chip
-                            icon={<SchoolOutlinedIcon sx={{ fontSize: "11px !important", color: `${aClr} !important` }} />}
+                        <Chip icon={<SchoolOutlinedIcon sx={{ fontSize: "11px !important", color: `${aClr} !important` }} />}
                             label={displayDept} size="small"
-                            sx={{
-                                height: 26, borderRadius: "9px", bgcolor: `${aClr}14`, color: aClr,
-                                fontWeight: 700, fontSize: ".71rem", border: `1px solid ${aClr}2E`,
-                            }} />
+                            sx={{ height: 26, borderRadius: "9px", bgcolor: `${aClr}14`, color: aClr, fontWeight: 700, fontSize: ".71rem", border: `1px solid ${aClr}2E` }} />
                     )}
                     {profile?.linkedin && (
                         <Tooltip title="LinkedIn">
                             <IconButton component="a" href={profile.linkedin} target="_blank" size="small"
-                                sx={{
-                                    width: 28, height: 28, borderRadius: "8px",
-                                    bgcolor: isDark ? "rgba(0,119,181,.15)" : "rgba(0,119,181,.08)",
-                                    border: "1px solid rgba(0,119,181,.25)",
-                                    "&:hover": { bgcolor: "#0077B5", color: "#fff" }, transition: "all .18s",
-                                }}>
+                                sx={{ width: 28, height: 28, borderRadius: "8px", bgcolor: isDark ? "rgba(0,119,181,.15)" : "rgba(0,119,181,.08)", border: "1px solid rgba(0,119,181,.25)", "&:hover": { bgcolor: "#0077B5", color: "#fff" }, transition: "all .18s" }}>
                                 <LinkedInIcon sx={{ fontSize: 14 }} />
                             </IconButton>
                         </Tooltip>
@@ -526,12 +652,7 @@ function StudentProfileDialog({ open, onClose, student }) {
                     {profile?.github && (
                         <Tooltip title="GitHub">
                             <IconButton component="a" href={profile.github} target="_blank" size="small"
-                                sx={{
-                                    width: 28, height: 28, borderRadius: "8px",
-                                    bgcolor: isDark ? "rgba(255,255,255,.07)" : "rgba(0,0,0,.05)",
-                                    border: `1px solid ${brd}`,
-                                    "&:hover": { bgcolor: isDark ? "#fff" : "#000", color: isDark ? "#000" : "#fff" }, transition: "all .18s",
-                                }}>
+                                sx={{ width: 28, height: 28, borderRadius: "8px", bgcolor: isDark ? "rgba(255,255,255,.07)" : "rgba(0,0,0,.05)", border: `1px solid ${brd}`, "&:hover": { bgcolor: isDark ? "#fff" : "#000", color: isDark ? "#000" : "#fff" }, transition: "all .18s" }}>
                                 <GitHubIcon sx={{ fontSize: 14 }} />
                             </IconButton>
                         </Tooltip>
@@ -570,11 +691,7 @@ function StudentProfileDialog({ open, onClose, student }) {
                                     {skills.map((sk, j) => {
                                         const sc = skClr(j);
                                         return (
-                                            <Box key={sk} sx={{
-                                                px: 1.3, py: .5, borderRadius: "20px",
-                                                bgcolor: sc.bg, border: `1px solid ${sc.bd}`,
-                                                display: "flex", alignItems: "center", gap: .5,
-                                            }}>
+                                            <Box key={sk} sx={{ px: 1.3, py: .5, borderRadius: "20px", bgcolor: sc.bg, border: `1px solid ${sc.bd}`, display: "flex", alignItems: "center", gap: .5 }}>
                                                 <Box sx={{ width: 5, height: 5, borderRadius: "50%", bgcolor: sc.tx, flexShrink: 0 }} />
                                                 <Typography fontSize=".7rem" fontWeight={600} sx={{ color: sc.tx }}>{sk}</Typography>
                                             </Box>
@@ -584,10 +701,7 @@ function StudentProfileDialog({ open, onClose, student }) {
                             </Box>
                         )}
                         {!loading && !profile?.bio && skills.length === 0 && (
-                            <Box sx={{
-                                textAlign: "center", py: 5,
-                                border: `1px dashed ${ACCENT}35`, borderRadius: "14px", bgcolor: `${ACCENT}06`,
-                            }}>
+                            <Box sx={{ textAlign: "center", py: 5, border: `1px dashed ${ACCENT}35`, borderRadius: "14px", bgcolor: `${ACCENT}06` }}>
                                 <PersonOutlineIcon sx={{ fontSize: 30, color: ACCENT, opacity: .4, mb: 1 }} />
                                 <Typography fontSize=".82rem" sx={{ color: tSec }}>Profile not completed yet</Typography>
                             </Box>
@@ -597,18 +711,14 @@ function StudentProfileDialog({ open, onClose, student }) {
             </DialogContent>
 
             <Box sx={{ px: 3, py: 2, borderTop: `1px solid ${brd}`, display: "flex", justifyContent: "flex-end" }}>
-                <Button onClick={onClose} sx={{
-                    color: tSec, textTransform: "none", fontWeight: 600,
-                    borderRadius: "10px", px: 2.5, fontSize: ".8rem",
-                    "&:hover": { bgcolor: isDark ? "rgba(255,255,255,.05)" : "rgba(0,0,0,.04)" },
-                }}>Close</Button>
+                <Button onClick={onClose} sx={{ color: tSec, textTransform: "none", fontWeight: 600, borderRadius: "10px", px: 2.5, fontSize: ".8rem", "&:hover": { bgcolor: isDark ? "rgba(255,255,255,.05)" : "rgba(0,0,0,.04)" } }}>Close</Button>
             </Box>
         </Dialog>
     );
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   TEAM DETAIL DIALOG
+   TEAM DETAIL DIALOG  (unchanged)
 ═══════════════════════════════════════════════════════════════ */
 function TeamDetailDialog({ open, onClose, team }) {
     const theme = useTheme();
@@ -631,112 +741,50 @@ function TeamDetailDialog({ open, onClose, team }) {
         <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth
             PaperProps={{
                 sx: {
-                    borderRadius: "20px", overflow: "hidden",
-                    border: `1px solid ${brd}`,
+                    borderRadius: "20px", overflow: "hidden", border: `1px solid ${brd}`,
                     bgcolor: isDark ? "#1E2025" : "#fff",
                     boxShadow: isDark ? "0 40px 100px rgba(0,0,0,.7)" : "0 40px 100px rgba(0,0,0,.15)",
                 }
             }}>
             <Box sx={{
                 height: 100, position: "relative", overflow: "hidden",
-                background: isDark
-                    ? `linear-gradient(135deg,${ACCENT}28 0%,${ACCENT}0A 100%)`
-                    : `linear-gradient(135deg,${ACCENT}14 0%,${ACCENT}05 100%)`,
+                background: isDark ? `linear-gradient(135deg,${ACCENT}28 0%,${ACCENT}0A 100%)` : `linear-gradient(135deg,${ACCENT}14 0%,${ACCENT}05 100%)`,
             }}>
-                <Box sx={{
-                    position: "absolute", inset: 0,
-                    backgroundImage: `radial-gradient(${ACCENT}25 1.5px,transparent 1.5px)`,
-                    backgroundSize: "22px 22px",
-                }} />
-                <IconButton size="small" onClick={onClose} sx={{
-                    position: "absolute", top: 12, right: 12,
-                    bgcolor: isDark ? "rgba(0,0,0,.5)" : "rgba(255,255,255,.9)",
-                    border: `1px solid ${brd}`, color: tSec, width: 28, height: 28,
-                    "&:hover": { color: ACCENT }, transition: "all .18s", zIndex: 2,
-                }}>
+                <Box sx={{ position: "absolute", inset: 0, backgroundImage: `radial-gradient(${ACCENT}25 1.5px,transparent 1.5px)`, backgroundSize: "22px 22px" }} />
+                <IconButton size="small" onClick={onClose} sx={{ position: "absolute", top: 12, right: 12, bgcolor: isDark ? "rgba(0,0,0,.5)" : "rgba(255,255,255,.9)", border: `1px solid ${brd}`, color: tSec, width: 28, height: 28, "&:hover": { color: ACCENT }, transition: "all .18s", zIndex: 2 }}>
                     <CloseIcon sx={{ fontSize: 13 }} />
                 </IconButton>
             </Box>
-
             <Box sx={{ px: 3, mt: "-28px", mb: 0, position: "relative", zIndex: 1 }}>
-                <Box sx={{
-                    width: 56, height: 56, borderRadius: "16px",
-                    background: `linear-gradient(145deg,${ACCENT},${ACCENT}bb)`,
-                    border: `3px solid ${isDark ? "#1E2025" : "#fff"}`,
-                    boxShadow: `0 6px 20px ${ACCENT}45`,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: "1.2rem", fontWeight: 800, color: "#fff", letterSpacing: "-.5px",
-                }}>
+                <Box sx={{ width: 56, height: 56, borderRadius: "16px", background: `linear-gradient(145deg,${ACCENT},${ACCENT}bb)`, border: `3px solid ${isDark ? "#1E2025" : "#fff"}`, boxShadow: `0 6px 20px ${ACCENT}45`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", fontWeight: 800, color: "#fff", letterSpacing: "-.5px" }}>
                     {ini(project)}
                 </Box>
             </Box>
-
             <Box sx={{ px: 3, pt: 1.5, pb: 1 }}>
                 <Typography fontWeight={800} fontSize="1.1rem" sx={{ color: tPri, mb: .8 }}>{project}</Typography>
                 <Stack direction="row" gap={.7} flexWrap="wrap">
-                    {supervisor && (
-                        <Chip icon={<SchoolOutlinedIcon sx={{ fontSize: "11px !important", color: `${tSec} !important` }} />}
-                            label={supervisor} size="small"
-                            sx={{
-                                height: 24, borderRadius: "8px",
-                                bgcolor: isDark ? "rgba(255,255,255,.07)" : "rgba(0,0,0,.06)",
-                                color: tSec, fontSize: ".69rem", fontWeight: 600,
-                            }} />
-                    )}
-                    <Chip icon={<PeopleOutlineIcon sx={{ fontSize: "11px !important", color: `${ACCENT} !important` }} />}
-                        label={`${membersCount} / ${maxMembers} members`} size="small"
-                        sx={{
-                            height: 24, borderRadius: "8px", bgcolor: `${ACCENT}14`, color: ACCENT,
-                            fontSize: ".69rem", fontWeight: 700, border: `1px solid ${ACCENT}2E`,
-                        }} />
-                    {remaining > 0 && (
-                        <Chip label={`${remaining} slot${remaining !== 1 ? "s" : ""} open`} size="small"
-                            sx={{
-                                height: 24, borderRadius: "8px",
-                                bgcolor: "rgba(61,185,122,.1)", color: "#3DB97A",
-                                fontSize: ".69rem", fontWeight: 700, border: "1px solid rgba(61,185,122,.25)",
-                            }} />
-                    )}
+                    {supervisor && <Chip icon={<SchoolOutlinedIcon sx={{ fontSize: "11px !important", color: `${tSec} !important` }} />} label={supervisor} size="small" sx={{ height: 24, borderRadius: "8px", bgcolor: isDark ? "rgba(255,255,255,.07)" : "rgba(0,0,0,.06)", color: tSec, fontSize: ".69rem", fontWeight: 600 }} />}
+                    <Chip icon={<PeopleOutlineIcon sx={{ fontSize: "11px !important", color: `${ACCENT} !important` }} />} label={`${membersCount} / ${maxMembers} members`} size="small" sx={{ height: 24, borderRadius: "8px", bgcolor: `${ACCENT}14`, color: ACCENT, fontSize: ".69rem", fontWeight: 700, border: `1px solid ${ACCENT}2E` }} />
+                    {remaining > 0 && <Chip label={`${remaining} slot${remaining !== 1 ? "s" : ""} open`} size="small" sx={{ height: 24, borderRadius: "8px", bgcolor: "rgba(61,185,122,.1)", color: "#3DB97A", fontSize: ".69rem", fontWeight: 700, border: "1px solid rgba(61,185,122,.25)" }} />}
                 </Stack>
             </Box>
-
             <Divider sx={{ borderColor: brd, mt: 1.5 }} />
-
             <DialogContent sx={{ px: 3, py: 2.5 }}>
                 <Stack spacing={2.5}>
                     {desc && (
                         <Box>
-                            <Typography sx={{
-                                fontSize: ".66rem", fontWeight: 700, textTransform: "uppercase",
-                                letterSpacing: ".8px", color: tSec, mb: .8,
-                            }}>Project Description</Typography>
+                            <Typography sx={{ fontSize: ".66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".8px", color: tSec, mb: .8 }}>Project Description</Typography>
                             <Typography fontSize=".83rem" sx={{ color: tPri, lineHeight: 1.7 }}>{desc}</Typography>
                         </Box>
                     )}
                     <Box>
-                        <Typography sx={{
-                            fontSize: ".66rem", fontWeight: 700, textTransform: "uppercase",
-                            letterSpacing: ".8px", color: tSec, mb: 1,
-                        }}>
-                            Members ({memberNames.length}{maxMembers > 0 ? ` / ${maxMembers}` : ""})
-                        </Typography>
+                        <Typography sx={{ fontSize: ".66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".8px", color: tSec, mb: 1 }}>Members ({memberNames.length}{maxMembers > 0 ? ` / ${maxMembers}` : ""})</Typography>
                         {memberNames.length === 0
                             ? <Typography fontSize=".82rem" sx={{ color: tSec }}>No members yet</Typography>
                             : <Stack gap={.7}>
                                 {memberNames.map((mName, i) => (
-                                    <Stack key={i} direction="row" alignItems="center" gap={1.2}
-                                        sx={{
-                                            p: "10px 14px", borderRadius: "12px",
-                                            border: `1px solid ${isDark ? "rgba(255,255,255,.07)" : "rgba(0,0,0,.07)"}`,
-                                            bgcolor: isDark ? "rgba(255,255,255,.025)" : "rgba(0,0,0,.018)",
-                                        }}>
-                                        <Box sx={{
-                                            width: 32, height: 32, borderRadius: "10px",
-                                            bgcolor: palette(i), display: "flex", alignItems: "center",
-                                            justifyContent: "center", fontSize: ".72rem", fontWeight: 700, color: "#fff",
-                                        }}>
-                                            {ini(mName)}
-                                        </Box>
+                                    <Stack key={i} direction="row" alignItems="center" gap={1.2} sx={{ p: "10px 14px", borderRadius: "12px", border: `1px solid ${isDark ? "rgba(255,255,255,.07)" : "rgba(0,0,0,.07)"}`, bgcolor: isDark ? "rgba(255,255,255,.025)" : "rgba(0,0,0,.018)" }}>
+                                        <Box sx={{ width: 32, height: 32, borderRadius: "10px", bgcolor: palette(i), display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".72rem", fontWeight: 700, color: "#fff" }}>{ini(mName)}</Box>
                                         <Typography fontWeight={600} fontSize=".83rem" sx={{ color: tPri }}>{mName}</Typography>
                                     </Stack>
                                 ))}
@@ -745,20 +793,15 @@ function TeamDetailDialog({ open, onClose, team }) {
                     </Box>
                 </Stack>
             </DialogContent>
-
             <Box sx={{ px: 3, py: 2, borderTop: `1px solid ${brd}`, display: "flex", justifyContent: "flex-end" }}>
-                <Button onClick={onClose} sx={{
-                    color: tSec, textTransform: "none", fontWeight: 600,
-                    borderRadius: "10px", px: 2.5, fontSize: ".8rem",
-                    "&:hover": { bgcolor: isDark ? "rgba(255,255,255,.05)" : "rgba(0,0,0,.04)" },
-                }}>Close</Button>
+                <Button onClick={onClose} sx={{ color: tSec, textTransform: "none", fontWeight: 600, borderRadius: "10px", px: 2.5, fontSize: ".8rem", "&:hover": { bgcolor: isDark ? "rgba(255,255,255,.05)" : "rgba(0,0,0,.04)" } }}>Close</Button>
             </Box>
         </Dialog>
     );
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   STUDENT CARD
+   STUDENT CARD  (unchanged)
 ═══════════════════════════════════════════════════════════════ */
 function StudentCard({ student, onViewProfile }) {
     const theme = useTheme();
@@ -780,27 +823,17 @@ function StudentCard({ student, onViewProfile }) {
     return (
         <SpinCard color={aClr}>
             <Box sx={{ height: 3, flexShrink: 0, background: `linear-gradient(90deg,${aClr} 0%,${aClr}55 100%)` }} />
-
             <Box sx={{ p: "14px 16px", flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
                 <Stack direction="row" alignItems="center" gap={1.5} mb={1.2} sx={{ flexShrink: 0 }}>
-                    <Box sx={{
-                        width: 44, height: 44, borderRadius: "13px", flexShrink: 0,
-                        background: isDark ? `linear-gradient(145deg,${aClr}25,${aClr}10)` : `linear-gradient(145deg,${aClr}20,${aClr}08)`,
-                        border: `1.5px solid ${aClr}30`,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: ".95rem", fontWeight: 800, color: aClr, letterSpacing: "-.5px",
-                    }}>
+                    <Box sx={{ width: 44, height: 44, borderRadius: "13px", flexShrink: 0, background: isDark ? `linear-gradient(145deg,${aClr}25,${aClr}10)` : `linear-gradient(145deg,${aClr}20,${aClr}08)`, border: `1.5px solid ${aClr}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".95rem", fontWeight: 800, color: aClr, letterSpacing: "-.5px" }}>
                         {ini(name)}
                     </Box>
                     <Box minWidth={0} flex={1} overflow="hidden">
                         <Typography fontWeight={700} fontSize=".9rem" noWrap sx={{ color: tPri, lineHeight: 1.3 }}>{name}</Typography>
-                        {dept
-                            ? <Typography fontSize=".68rem" noWrap sx={{ color: aClr, fontWeight: 600, mt: .2 }}>{dept}</Typography>
-                            : email ? <Typography fontSize=".68rem" noWrap sx={{ color: tSec, mt: .2 }}>{email}</Typography>
-                                : null}
+                        {dept ? <Typography fontSize=".68rem" noWrap sx={{ color: aClr, fontWeight: 600, mt: .2 }}>{dept}</Typography>
+                            : email ? <Typography fontSize=".68rem" noWrap sx={{ color: tSec, mt: .2 }}>{email}</Typography> : null}
                     </Box>
                 </Stack>
-
                 <Box sx={{ height: 66, overflow: "hidden", flexShrink: 0 }}>
                     {topSkills.length > 0 ? (
                         <>
@@ -808,41 +841,16 @@ function StudentCard({ student, onViewProfile }) {
                             <Stack direction="row" flexWrap="wrap" gap={.6}>
                                 {topSkills.map((sk, j) => {
                                     const sc = skClr(j);
-                                    return (
-                                        <Box key={sk} sx={{ px: 1, py: "2px", borderRadius: "6px", bgcolor: sc.bg, border: `1px solid ${sc.bd}` }}>
-                                            <Typography fontSize=".63rem" fontWeight={600} sx={{ color: sc.tx }}>
-                                                {sk.length > 14 ? sk.slice(0, 12) + "…" : sk}
-                                            </Typography>
-                                        </Box>
-                                    );
+                                    return <Box key={sk} sx={{ px: 1, py: "2px", borderRadius: "6px", bgcolor: sc.bg, border: `1px solid ${sc.bd}` }}><Typography fontSize=".63rem" fontWeight={600} sx={{ color: sc.tx }}>{sk.length > 14 ? sk.slice(0, 12) + "…" : sk}</Typography></Box>;
                                 })}
-                                {rawSkills.length > 3 && (
-                                    <Box sx={{
-                                        px: 1, py: "2px", borderRadius: "6px",
-                                        bgcolor: isDark ? "rgba(255,255,255,.06)" : "rgba(0,0,0,.04)",
-                                        border: `1px solid ${isDark ? "rgba(255,255,255,.1)" : "rgba(0,0,0,.08)"}`,
-                                    }}>
-                                        <Typography fontSize=".63rem" fontWeight={600} sx={{ color: tSec }}>+{rawSkills.length - 3}</Typography>
-                                    </Box>
-                                )}
+                                {rawSkills.length > 3 && <Box sx={{ px: 1, py: "2px", borderRadius: "6px", bgcolor: isDark ? "rgba(255,255,255,.06)" : "rgba(0,0,0,.04)", border: `1px solid ${isDark ? "rgba(255,255,255,.1)" : "rgba(0,0,0,.08)"}` }}><Typography fontSize=".63rem" fontWeight={600} sx={{ color: tSec }}>+{rawSkills.length - 3}</Typography></Box>}
                             </Stack>
                         </>
-                    ) : (
-                        <Typography fontSize=".72rem" sx={{ color: tSec, fontStyle: "italic", mt: .5 }}>No skills listed</Typography>
-                    )}
+                    ) : <Typography fontSize=".72rem" sx={{ color: tSec, fontStyle: "italic", mt: .5 }}>No skills listed</Typography>}
                 </Box>
-
                 <Box sx={{ flex: 1 }} />
-
-                <Button variant="outlined" fullWidth size="small"
-                    startIcon={<InfoOutlinedIcon sx={{ fontSize: 13 }} />}
-                    onClick={() => onViewProfile(student)}
-                    sx={{
-                        flexShrink: 0, borderRadius: "10px", textTransform: "none",
-                        fontSize: ".72rem", fontWeight: 600, py: .75,
-                        borderColor: isDark ? "rgba(255,255,255,.12)" : "rgba(0,0,0,.12)", color: tSec,
-                        "&:hover": { borderColor: aClr, color: aClr, bgcolor: `${aClr}0A` }, transition: "all .18s",
-                    }}>
+                <Button variant="outlined" fullWidth size="small" startIcon={<InfoOutlinedIcon sx={{ fontSize: 13 }} />} onClick={() => onViewProfile(student)}
+                    sx={{ flexShrink: 0, borderRadius: "10px", textTransform: "none", fontSize: ".72rem", fontWeight: 600, py: .75, borderColor: isDark ? "rgba(255,255,255,.12)" : "rgba(0,0,0,.12)", color: tSec, "&:hover": { borderColor: aClr, color: aClr, bgcolor: `${aClr}0A` }, transition: "all .18s" }}>
                     View Profile
                 </Button>
             </Box>
@@ -851,7 +859,7 @@ function StudentCard({ student, onViewProfile }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   TEAM CARD
+   TEAM CARD  (unchanged)
 ═══════════════════════════════════════════════════════════════ */
 function TeamCard({ team, onView }) {
     const theme = useTheme();
@@ -872,80 +880,39 @@ function TeamCard({ team, onView }) {
     return (
         <SpinCard color={tClr}>
             <Box sx={{ height: 3, flexShrink: 0, background: `linear-gradient(90deg,${tClr} 0%,${tClr}55 100%)` }} />
-
             <Box sx={{ p: "14px 16px", flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
                 <Stack direction="row" alignItems="center" gap={1.5} mb={1.2} sx={{ flexShrink: 0 }}>
-                    <Box sx={{
-                        width: 44, height: 44, borderRadius: "13px", flexShrink: 0,
-                        background: isDark ? `linear-gradient(145deg,${tClr}25,${tClr}10)` : `linear-gradient(145deg,${tClr}20,${tClr}08)`,
-                        border: `1.5px solid ${tClr}30`,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: ".95rem", fontWeight: 800, color: tClr,
-                    }}>
+                    <Box sx={{ width: 44, height: 44, borderRadius: "13px", flexShrink: 0, background: isDark ? `linear-gradient(145deg,${tClr}25,${tClr}10)` : `linear-gradient(145deg,${tClr}20,${tClr}08)`, border: `1.5px solid ${tClr}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".95rem", fontWeight: 800, color: tClr }}>
                         {ini(project)}
                     </Box>
                     <Box minWidth={0} flex={1} overflow="hidden">
                         <Typography fontWeight={700} fontSize=".9rem" noWrap sx={{ color: tPri, lineHeight: 1.3 }}>{project}</Typography>
-                        {supervisor && (
-                            <Typography fontSize=".68rem" noWrap sx={{ color: tClr, fontWeight: 600, mt: .2 }}>{supervisor}</Typography>
-                        )}
+                        {supervisor && <Typography fontSize=".68rem" noWrap sx={{ color: tClr, fontWeight: 600, mt: .2 }}>{supervisor}</Typography>}
                     </Box>
                 </Stack>
-
                 <Box sx={{ height: 38, overflow: "hidden", flexShrink: 0, mb: .5 }}>
-                    {desc
-                        ? <Typography fontSize=".72rem" sx={{ color: tSec, lineHeight: 1.55, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{desc}</Typography>
-                        : <Typography fontSize=".72rem" sx={{ color: tSec, fontStyle: "italic" }}>No description</Typography>
-                    }
+                    {desc ? <Typography fontSize=".72rem" sx={{ color: tSec, lineHeight: 1.55, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{desc}</Typography>
+                        : <Typography fontSize=".72rem" sx={{ color: tSec, fontStyle: "italic" }}>No description</Typography>}
                 </Box>
-
                 <Box sx={{ height: 28, overflow: "hidden", flexShrink: 0 }}>
                     {memberNames.length > 0 && (
                         <Stack direction="row" alignItems="center" gap={.8}>
                             <Stack direction="row" alignItems="center">
                                 {memberNames.slice(0, 4).map((mn, i) => (
                                     <Tooltip key={i} title={mn}>
-                                        <Box sx={{
-                                            width: 24, height: 24, borderRadius: "7px", bgcolor: palette(i),
-                                            border: `2px solid ${isDark ? "#1A1D22" : "#fff"}`,
-                                            display: "flex", alignItems: "center", justifyContent: "center",
-                                            fontSize: ".55rem", fontWeight: 700, color: "#fff",
-                                            ml: i === 0 ? 0 : "-5px", zIndex: 4 - i, position: "relative",
-                                        }}>{ini(mn)}</Box>
+                                        <Box sx={{ width: 24, height: 24, borderRadius: "7px", bgcolor: palette(i), border: `2px solid ${isDark ? "#1A1D22" : "#fff"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".55rem", fontWeight: 700, color: "#fff", ml: i === 0 ? 0 : "-5px", zIndex: 4 - i, position: "relative" }}>{ini(mn)}</Box>
                                     </Tooltip>
                                 ))}
-                                {memberNames.length > 4 && (
-                                    <Box sx={{
-                                        width: 24, height: 24, borderRadius: "7px",
-                                        bgcolor: isDark ? "rgba(255,255,255,.1)" : "rgba(0,0,0,.07)",
-                                        border: `2px solid ${isDark ? "#1A1D22" : "#fff"}`,
-                                        display: "flex", alignItems: "center", justifyContent: "center",
-                                        fontSize: ".55rem", fontWeight: 700, color: tSec,
-                                        ml: "-5px", position: "relative",
-                                    }}>+{memberNames.length - 4}</Box>
-                                )}
+                                {memberNames.length > 4 && <Box sx={{ width: 24, height: 24, borderRadius: "7px", bgcolor: isDark ? "rgba(255,255,255,.1)" : "rgba(0,0,0,.07)", border: `2px solid ${isDark ? "#1A1D22" : "#fff"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".55rem", fontWeight: 700, color: tSec, ml: "-5px", position: "relative" }}>+{memberNames.length - 4}</Box>}
                             </Stack>
-                            <Chip label={`${membersCount}/${maxMembers}`} size="small"
-                                sx={{ height: 18, borderRadius: "5px", bgcolor: `${tClr}12`, color: tClr, fontSize: ".6rem", fontWeight: 700, border: `1px solid ${tClr}25` }} />
-                            {remaining > 0 && (
-                                <Chip label={`${remaining} open`} size="small"
-                                    sx={{ height: 18, borderRadius: "5px", bgcolor: "rgba(61,185,122,.1)", color: "#3DB97A", fontSize: ".6rem", fontWeight: 700, border: "1px solid rgba(61,185,122,.22)" }} />
-                            )}
+                            <Chip label={`${membersCount}/${maxMembers}`} size="small" sx={{ height: 18, borderRadius: "5px", bgcolor: `${tClr}12`, color: tClr, fontSize: ".6rem", fontWeight: 700, border: `1px solid ${tClr}25` }} />
+                            {remaining > 0 && <Chip label={`${remaining} open`} size="small" sx={{ height: 18, borderRadius: "5px", bgcolor: "rgba(61,185,122,.1)", color: "#3DB97A", fontSize: ".6rem", fontWeight: 700, border: "1px solid rgba(61,185,122,.22)" }} />}
                         </Stack>
                     )}
                 </Box>
-
                 <Box sx={{ flex: 1 }} />
-
-                <Button variant="outlined" fullWidth size="small"
-                    startIcon={<InfoOutlinedIcon sx={{ fontSize: 13 }} />}
-                    onClick={() => onView(team)}
-                    sx={{
-                        flexShrink: 0, borderRadius: "10px", textTransform: "none",
-                        fontSize: ".72rem", fontWeight: 600, py: .75,
-                        borderColor: isDark ? "rgba(255,255,255,.12)" : "rgba(0,0,0,.12)", color: tSec,
-                        "&:hover": { borderColor: tClr, color: tClr, bgcolor: `${tClr}0A` }, transition: "all .18s",
-                    }}>
+                <Button variant="outlined" fullWidth size="small" startIcon={<InfoOutlinedIcon sx={{ fontSize: 13 }} />} onClick={() => onView(team)}
+                    sx={{ flexShrink: 0, borderRadius: "10px", textTransform: "none", fontSize: ".72rem", fontWeight: 600, py: .75, borderColor: isDark ? "rgba(255,255,255,.12)" : "rgba(0,0,0,.12)", color: tSec, "&:hover": { borderColor: tClr, color: tClr, bgcolor: `${tClr}0A` }, transition: "all .18s" }}>
                     View Details
                 </Button>
             </Box>
@@ -986,6 +953,7 @@ export default function DiscoveryHub() {
     const [snack, setSnack] = useState({ open: false, msg: "", sev: "success" });
     const snap = (msg, sev = "success") => setSnack({ open: true, msg, sev });
 
+    // Swipe handlers
     const touchStartX = useRef(null);
     const isDragging = useRef(false);
     const handlePointerDown = (e) => {
@@ -999,14 +967,12 @@ export default function DiscoveryHub() {
         if (Math.abs(currentX - touchStartX.current) > 10) isDragging.current = true;
     };
     const handlePointerUp = (e) => {
-        if (touchStartX.current === null || !isDragging.current) {
-            touchStartX.current = null; isDragging.current = false; return;
-        }
+        if (touchStartX.current === null || !isDragging.current) { touchStartX.current = null; isDragging.current = false; return; }
         const endX = e.changedTouches?.[0]?.clientX ?? e.clientX;
         const diff = touchStartX.current - endX;
         if (Math.abs(diff) > 50) {
-            if (diff > 0 && tab === 0) setTab(1);
-            if (diff < 0 && tab === 1) setTab(0);
+            if (diff > 0 && tab < 2) setTab(t => t + 1);
+            if (diff < 0 && tab > 0) setTab(t => t - 1);
         }
         touchStartX.current = null; isDragging.current = false;
     };
@@ -1014,7 +980,7 @@ export default function DiscoveryHub() {
     const fetchStudents = useCallback(async () => {
         if (students.length > 0) return;
         setLoadingStudents(true);
-        try { const d = await studentApi.getAllStudents(); setStudents(Array.isArray(d) ? d : []); }
+        try { const d = await studentApi.getAllStudents(); setStudents(extractArray(d)); }
         catch { snap("Failed to load students", "error"); }
         finally { setLoadingStudents(false); }
     }, [students.length]);
@@ -1022,7 +988,7 @@ export default function DiscoveryHub() {
     const fetchTeams = useCallback(async () => {
         if (teams.length > 0) return;
         setLoadingTeams(true);
-        try { const d = await studentApi.getAvailableTeams(); setTeams(Array.isArray(d) ? d : []); }
+        try { const d = await studentApi.getAvailableTeams(); setTeams(extractArray(d)); }
         catch { snap("Failed to load teams", "error"); }
         finally { setLoadingTeams(false); }
     }, [teams.length]);
@@ -1032,7 +998,7 @@ export default function DiscoveryHub() {
         setLoadingArchive(true);
         try {
             const d = await archiveApi.getAllArchivedProjects();
-            setArchivedProjects(Array.isArray(d) ? d : []);
+            setArchivedProjects(extractArray(d));   // ← fixed: handles both response shapes
         } catch {
             snap("Failed to load archived projects", "error");
         } finally {
@@ -1061,15 +1027,13 @@ export default function DiscoveryHub() {
         const q = searchTeams.toLowerCase();
         return (t.projectTitle ?? "").toLowerCase().includes(q) || (t.projectDescription ?? "").toLowerCase().includes(q) || (t.supervisorName ?? "").toLowerCase().includes(q);
     });
-    const filteredArchive = archivedProjects.filter((p) => {
+    const filteredArchive = archivedProjects.filter(p => {
         if (!searchArchive) return true;
         const q = searchArchive.toLowerCase();
-        return (
-            (p.projectName ?? "").toLowerCase().includes(q) ||
-            (p.projectDescription ?? "").toLowerCase().includes(q) ||
-            (p.supervisorName ?? "").toLowerCase().includes(q) ||
-            (p.department ?? "").toLowerCase().includes(q)
-        );
+        return (p.projectName ?? "").toLowerCase().includes(q)
+            || (p.projectDescription ?? "").toLowerCase().includes(q)
+            || (p.supervisorName ?? "").toLowerCase().includes(q)
+            || (p.department ?? "").toLowerCase().includes(q);
     });
 
     const totalStudentPages = Math.ceil(filteredStudents.length / CARDS_PER_PAGE);
@@ -1077,10 +1041,8 @@ export default function DiscoveryHub() {
     const totalTeamPages = Math.ceil(filteredTeams.length / CARDS_PER_PAGE);
     const pagedTeams = filteredTeams.slice((teamPage - 1) * CARDS_PER_PAGE, teamPage * CARDS_PER_PAGE);
     const totalArchivePages = Math.ceil(filteredArchive.length / CARDS_PER_PAGE);
-    const pagedArchive = filteredArchive.slice(
-        (archivePage - 1) * CARDS_PER_PAGE,
-        archivePage * CARDS_PER_PAGE
-    );
+    const pagedArchive = filteredArchive.slice((archivePage - 1) * CARDS_PER_PAGE, archivePage * CARDS_PER_PAGE);
+
     const gridCols = { xs: "1fr", sm: "1fr 1fr", md: "1fr 1fr 1fr" };
 
     const searchSx = {
@@ -1115,11 +1077,14 @@ export default function DiscoveryHub() {
             sx={{ minHeight: "100%", py: 3.5, bgcolor: "transparent", userSelect: "none" }}
         >
             <Box sx={{ maxWidth: 1050, mx: "auto", px: { xs: 2, sm: 3 } }}>
+
+                {/* Page title */}
                 <Box sx={{ mb: 4, textAlign: "center" }}>
                     <Typography variant="h4" sx={{ fontWeight: 800, color: tPri, mb: .5, letterSpacing: "-.5px" }}>Discovery Hub</Typography>
-                    <Typography sx={{ color: tSec, fontSize: ".88rem" }}>Explore students and teams in your program</Typography>
+                    <Typography sx={{ color: tSec, fontSize: ".88rem" }}>Explore students, teams and archived projects in your program</Typography>
                 </Box>
 
+                {/* Tabs */}
                 <Box sx={{ mb: 3, bgcolor: cardBg, borderRadius: "14px", border: `1px solid ${brd}`, overflow: "hidden" }}>
                     <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{
                         px: 1, minHeight: 50,
@@ -1127,114 +1092,84 @@ export default function DiscoveryHub() {
                         "& .Mui-selected": { color: ACCENT },
                         "& .MuiTabs-indicator": { bgcolor: ACCENT, height: 2.5, borderRadius: "2px" },
                     }}>
-                        <Tab label={<Stack direction="row" alignItems="center" gap={.9}><PeopleOutlineIcon sx={{ fontSize: 17 }} /><span>Available Students</span>{students.length > 0 && <Chip label={filteredStudents.length} size="small" sx={{ height: 19, minWidth: 24, bgcolor: `${ACCENT}18`, color: ACCENT, fontWeight: 700, fontSize: ".68rem", border: `1px solid ${ACCENT}25`, borderRadius: "6px" }} />}</Stack>} />
+                        <Tab label={<Stack direction="row" alignItems="center" gap={.9}><PeopleOutlineIcon sx={{ fontSize: 17 }} /><span>Students</span>{students.length > 0 && <Chip label={filteredStudents.length} size="small" sx={{ height: 19, minWidth: 24, bgcolor: `${ACCENT}18`, color: ACCENT, fontWeight: 700, fontSize: ".68rem", border: `1px solid ${ACCENT}25`, borderRadius: "6px" }} />}</Stack>} />
                         <Tab label={<Stack direction="row" alignItems="center" gap={.9}><GroupsOutlinedIcon sx={{ fontSize: 17 }} /><span>Teams</span>{teams.length > 0 && <Chip label={filteredTeams.length} size="small" sx={{ height: 19, minWidth: 24, bgcolor: `${ACCENT}18`, color: ACCENT, fontWeight: 700, fontSize: ".68rem", border: `1px solid ${ACCENT}25`, borderRadius: "6px" }} />}</Stack>} />
-                        <Tab label={<Stack direction="row" alignItems="center" gap={.9}><ArchiveOutlinedIcon sx={{ fontSize: 17 }} /><span>Archived Projects</span>{archivedProjects.length > 0 && <Chip label={filteredArchive.length} size="small" sx={{ height: 19, minWidth: 24, bgcolor: `${ACCENT}18`, color: ACCENT, fontWeight: 700, fontSize: ".68rem", border: `1px solid ${ACCENT}25`, borderRadius: "6px" }} />}</Stack>} />
+                        <Tab label={<Stack direction="row" alignItems="center" gap={.9}><ArchiveOutlinedIcon sx={{ fontSize: 17 }} /><span>Archive</span>{archivedProjects.length > 0 && <Chip label={filteredArchive.length} size="small" sx={{ height: 19, minWidth: 24, bgcolor: `${ACCENT}18`, color: ACCENT, fontWeight: 700, fontSize: ".68rem", border: `1px solid ${ACCENT}25`, borderRadius: "6px" }} />}</Stack>} />
                     </Tabs>
                 </Box>
 
+                {/* ── Students tab ── */}
                 {tab === 0 && (
                     <Box>
                         <TextField fullWidth size="small" placeholder="Search by name, department or skill…" value={searchStudents} onChange={e => setSearchStudents(e.target.value)} sx={{ mb: 3, ...searchSx }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 17, color: tSec }} /></InputAdornment> }} />
-                        {loadingStudents ? (
-                            <Box display="flex" justifyContent="center" py={10}><CircularProgress size={36} sx={{ color: ACCENT }} /></Box>
-                        ) : filteredStudents.length === 0 ? (
-                            <EmptyState msg="No students found" sub={searchStudents ? "Try a different search term" : "No available students right now"} />
-                        ) : (
-                            <>
-                                <Box sx={{ display: "grid", gridTemplateColumns: gridCols, gap: "20px", mb: 3 }}>
-                                    {pagedStudents.map(s => <StudentCard key={getId(s) ?? s.fullName ?? s.name} student={s} onViewProfile={st => { setSelectedStudent(st); setProfileOpen(true); }} />)}
-                                </Box>
-                                {totalStudentPages > 1 && (
-                                    <Stack alignItems="center" gap={.8} sx={{ pt: 2.5, borderTop: `1px solid ${brd}` }}>
-                                        <Pagination count={totalStudentPages} page={studentPage} onChange={(_, v) => { setStudentPage(v); window.scrollTo({ top: 0, behavior: "smooth" }); }} size="small" sx={paginationSx} />
-                                        <Typography fontSize=".71rem" sx={{ color: tSec }}>Showing {(studentPage - 1) * CARDS_PER_PAGE + 1}–{Math.min(studentPage * CARDS_PER_PAGE, filteredStudents.length)} of {filteredStudents.length} students</Typography>
-                                    </Stack>
-                                )}
-                            </>
-                        )}
+                        {loadingStudents ? <Box display="flex" justifyContent="center" py={10}><CircularProgress size={36} sx={{ color: ACCENT }} /></Box>
+                            : filteredStudents.length === 0 ? <EmptyState msg="No students found" sub={searchStudents ? "Try a different search term" : "No available students right now"} />
+                                : <>
+                                    <Box sx={{ display: "grid", gridTemplateColumns: gridCols, gap: "20px", mb: 3 }}>
+                                        {pagedStudents.map(s => <StudentCard key={getId(s) ?? s.fullName ?? s.name} student={s} onViewProfile={st => { setSelectedStudent(st); setProfileOpen(true); }} />)}
+                                    </Box>
+                                    {totalStudentPages > 1 && (
+                                        <Stack alignItems="center" gap={.8} sx={{ pt: 2.5, borderTop: `1px solid ${brd}` }}>
+                                            <Pagination count={totalStudentPages} page={studentPage} onChange={(_, v) => { setStudentPage(v); window.scrollTo({ top: 0, behavior: "smooth" }); }} size="small" sx={paginationSx} />
+                                            <Typography fontSize=".71rem" sx={{ color: tSec }}>Showing {(studentPage - 1) * CARDS_PER_PAGE + 1}–{Math.min(studentPage * CARDS_PER_PAGE, filteredStudents.length)} of {filteredStudents.length} students</Typography>
+                                        </Stack>
+                                    )}
+                                </>}
                     </Box>
                 )}
 
+                {/* ── Teams tab ── */}
                 {tab === 1 && (
                     <Box>
                         <TextField fullWidth size="small" placeholder="Search by project or supervisor…" value={searchTeams} onChange={e => setSearchTeams(e.target.value)} sx={{ mb: 3, ...searchSx }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 17, color: tSec }} /></InputAdornment> }} />
-                        {loadingTeams ? (
-                            <Box display="flex" justifyContent="center" py={10}><CircularProgress size={36} sx={{ color: ACCENT }} /></Box>
-                        ) : filteredTeams.length === 0 ? (
-                            <EmptyState msg="No teams found" sub={searchTeams ? "Try a different search term" : "No teams available right now"} />
-                        ) : (
-                            <>
-                                <Box sx={{ display: "grid", gridTemplateColumns: gridCols, gap: "20px", mb: 3 }}>
-                                    {pagedTeams.map((team, i) => <TeamCard key={team.id ?? team.teamId ?? i} team={team} onView={t => { setSelectedTeam(t); setTeamOpen(true); }} />)}
-                                </Box>
-                                {totalTeamPages > 1 && (
-                                    <Stack alignItems="center" gap={.8} sx={{ pt: 2.5, borderTop: `1px solid ${brd}` }}>
-                                        <Pagination count={totalTeamPages} page={teamPage} onChange={(_, v) => { setTeamPage(v); window.scrollTo({ top: 0, behavior: "smooth" }); }} size="small" sx={paginationSx} />
-                                        <Typography fontSize=".71rem" sx={{ color: tSec }}>Showing {(teamPage - 1) * CARDS_PER_PAGE + 1}–{Math.min(teamPage * CARDS_PER_PAGE, filteredTeams.length)} of {filteredTeams.length} teams</Typography>
-                                    </Stack>
-                                )}
-                            </>
-                        )}
+                        {loadingTeams ? <Box display="flex" justifyContent="center" py={10}><CircularProgress size={36} sx={{ color: ACCENT }} /></Box>
+                            : filteredTeams.length === 0 ? <EmptyState msg="No teams found" sub={searchTeams ? "Try a different search term" : "No teams available right now"} />
+                                : <>
+                                    <Box sx={{ display: "grid", gridTemplateColumns: gridCols, gap: "20px", mb: 3 }}>
+                                        {pagedTeams.map((team, i) => <TeamCard key={team.id ?? team.teamId ?? i} team={team} onView={t => { setSelectedTeam(t); setTeamOpen(true); }} />)}
+                                    </Box>
+                                    {totalTeamPages > 1 && (
+                                        <Stack alignItems="center" gap={.8} sx={{ pt: 2.5, borderTop: `1px solid ${brd}` }}>
+                                            <Pagination count={totalTeamPages} page={teamPage} onChange={(_, v) => { setTeamPage(v); window.scrollTo({ top: 0, behavior: "smooth" }); }} size="small" sx={paginationSx} />
+                                            <Typography fontSize=".71rem" sx={{ color: tSec }}>Showing {(teamPage - 1) * CARDS_PER_PAGE + 1}–{Math.min(teamPage * CARDS_PER_PAGE, filteredTeams.length)} of {filteredTeams.length} teams</Typography>
+                                        </Stack>
+                                    )}
+                                </>}
                     </Box>
                 )}
 
+                {/* ── Archive tab ── */}
                 {tab === 2 && (
                     <Box>
-                        <TextField
-                            fullWidth size="small"
-                            placeholder="Search by project, supervisor or department…"
-                            value={searchArchive}
-                            onChange={e => setSearchArchive(e.target.value)}
-                            sx={{ mb: 3, ...searchSx }}
-                            InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 17, color: tSec }} /></InputAdornment> }}
-                        />
-                        {loadingArchive ? (
-                            <Box display="flex" justifyContent="center" py={10}>
-                                <CircularProgress size={36} sx={{ color: ACCENT }} />
-                            </Box>
-                        ) : filteredArchive.length === 0 ? (
-                            <EmptyState
-                                msg="No archived projects"
-                                sub={searchArchive ? "Try a different search term" : "No projects have been archived yet"}
-                            />
-                        ) : (
-                            <>
-                                <Box sx={{ display: "grid", gridTemplateColumns: gridCols, gap: "20px", mb: 3 }}>
-                                    {pagedArchive.map((project, i) => (
-                                        <ArchivedProjectCard
-                                            key={project.teamId ?? i}
-                                            project={project}
-                                            onView={(p) => { setSelectedArchive(p); setArchiveDetailOpen(true); }}
-                                        />
-                                    ))}
-                                </Box>
-                                {totalArchivePages > 1 && (
-                                    <Stack alignItems="center" gap={.8} sx={{ pt: 2.5, borderTop: `1px solid ${brd}` }}>
-                                        <Pagination
-                                            count={totalArchivePages}
-                                            page={archivePage}
-                                            onChange={(_, v) => { setArchivePage(v); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                                            size="small" sx={paginationSx}
-                                        />
-                                        <Typography fontSize=".71rem" sx={{ color: tSec }}>
-                                            Showing {(archivePage - 1) * CARDS_PER_PAGE + 1}–{Math.min(archivePage * CARDS_PER_PAGE, filteredArchive.length)} of {filteredArchive.length} projects
-                                        </Typography>
-                                    </Stack>
-                                )}
-                            </>
-                        )}
+                        <TextField fullWidth size="small" placeholder="Search by project, supervisor or department…" value={searchArchive} onChange={e => setSearchArchive(e.target.value)} sx={{ mb: 3, ...searchSx }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 17, color: tSec }} /></InputAdornment> }} />
+                        {loadingArchive ? <Box display="flex" justifyContent="center" py={10}><CircularProgress size={36} sx={{ color: ACCENT }} /></Box>
+                            : filteredArchive.length === 0 ? <EmptyState msg="No archived projects" sub={searchArchive ? "Try a different search term" : "No projects have been archived yet"} />
+                                : <>
+                                    <Box sx={{ display: "grid", gridTemplateColumns: gridCols, gap: "20px", mb: 3 }}>
+                                        {pagedArchive.map((project, i) => (
+                                            <ArchivedProjectCard
+                                                key={project.teamId ?? i}
+                                                project={project}
+                                                onView={p => { setSelectedArchive(p); setArchiveDetailOpen(true); }}
+                                            />
+                                        ))}
+                                    </Box>
+                                    {totalArchivePages > 1 && (
+                                        <Stack alignItems="center" gap={.8} sx={{ pt: 2.5, borderTop: `1px solid ${brd}` }}>
+                                            <Pagination count={totalArchivePages} page={archivePage} onChange={(_, v) => { setArchivePage(v); window.scrollTo({ top: 0, behavior: "smooth" }); }} size="small" sx={paginationSx} />
+                                            <Typography fontSize=".71rem" sx={{ color: tSec }}>Showing {(archivePage - 1) * CARDS_PER_PAGE + 1}–{Math.min(archivePage * CARDS_PER_PAGE, filteredArchive.length)} of {filteredArchive.length} projects</Typography>
+                                        </Stack>
+                                    )}
+                                </>}
                     </Box>
                 )}
             </Box>
 
+            {/* Dialogs */}
             <StudentProfileDialog open={profileOpen} onClose={() => { setProfileOpen(false); setSelectedStudent(null); }} student={selectedStudent} />
             <TeamDetailDialog open={teamOpen} onClose={() => { setTeamOpen(false); setSelectedTeam(null); }} team={selectedTeam} />
-            <ArchiveDetailDialog
-                open={archiveDetailOpen}
-                onClose={() => { setArchiveDetailOpen(false); setSelectedArchive(null); }}
-                project={selectedArchive}
-            />
+            <ArchiveDetailDialog open={archiveDetailOpen} onClose={() => { setArchiveDetailOpen(false); setSelectedArchive(null); }} project={selectedArchive} />
+
             <Snackbar open={snack.open} autoHideDuration={3500} onClose={() => setSnack(s => ({ ...s, open: false }))} anchorOrigin={{ vertical: "bottom", horizontal: "right" }}>
                 <Alert severity={snack.sev} variant="filled" sx={{ borderRadius: "12px" }}>{snack.msg}</Alert>
             </Snackbar>

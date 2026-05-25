@@ -2,7 +2,7 @@ import axiosInstance from "./../../axiosInstance";
 
 // ══════════════════════════════════════════════════════════════════════════════
 // POST /api/Archive/submit
-// Body: 0 (version 1) or 1 (version 2)
+// Body: 0 (Phase 1) or 1 (Phase 2) — raw integer
 // Role: Student only
 // ══════════════════════════════════════════════════════════════════════════════
 export const submitProject = (version = 0) =>
@@ -18,12 +18,22 @@ export const getSubmittedTeams = () =>
     axiosInstance.get("/Archive/submitted-teams");
 
 // ══════════════════════════════════════════════════════════════════════════════
+// GET /api/Archive/team-files/{teamId}?version=0
+// Role: Supervisor only
+// Returns list of files uploaded by the team for a specific phase
+// ══════════════════════════════════════════════════════════════════════════════
+export const getTeamFiles = (teamId, version) =>
+    axiosInstance.get(`/Archive/team-files/${teamId}`, {
+        params: { version },
+    });
+
+// ══════════════════════════════════════════════════════════════════════════════
 // POST /api/Archive/send-to-archive
-// Body: { teamId: number, version: number }
+// Body: { teamId: number, version: number, fileIds: number[] }
 // Role: Supervisor only
 // ══════════════════════════════════════════════════════════════════════════════
-export const sendToArchive = (teamId, version) =>
-    axiosInstance.post("/Archive/send-to-archive", { teamId, version });
+export const sendToArchive = (teamId, version, fileIds) =>
+    axiosInstance.post("/Archive/send-to-archive", { teamId, version, fileIds });
 
 // ══════════════════════════════════════════════════════════════════════════════
 // GET /api/Archive
@@ -42,6 +52,7 @@ export const getArchivedProjectById = (teamId) =>
 const archiveApi = {
     submitProject,
     getSubmittedTeams,
+    getTeamFiles,
     sendToArchive,
     getAllArchivedProjects,
     getArchivedProjectById,

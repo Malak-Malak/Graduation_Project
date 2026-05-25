@@ -889,8 +889,7 @@ export default function MyTeamPage() {
 
     /* ── Archive ── */
     const [archiveOpen, setArchiveOpen] = useState(false);
-    const [archiveGithub, setArchiveGithub] = useState("");
-    const [archiveNotes, setArchiveNotes] = useState("");
+
     const [archiveBusy, setArchiveBusy] = useState(false);
 
     /* ── AI Project Suggester ── */
@@ -1123,18 +1122,11 @@ export default function MyTeamPage() {
 
     /* ── Archive handler ── */
     const handleSubmitArchive = async () => {
-        if (!archiveGithub.trim()) return;
         try {
             setArchiveBusy(true);
-            await archiveApi.submitProject({
-                version: myTeam?.version ?? 0,
-                githubRepo: archiveGithub.trim(),
-                notes: archiveNotes.trim() || undefined,
-            });
+            await archiveApi.submitProject(myTeam?.version ?? 0);
             snap("Project submitted for supervisor review!");
             setArchiveOpen(false);
-            setArchiveGithub("");
-            setArchiveNotes("");
             fetchTeam();
         } catch (e) {
             snap(extractErrorMsg(e, "Could not submit project. Please try again."), "error");
@@ -1142,7 +1134,6 @@ export default function MyTeamPage() {
             setArchiveBusy(false);
         }
     };
-
     /* ══ LOADING ════════════════════════════════════════════════ */
     if (loadingTeam) return (
         <Box sx={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1748,45 +1739,33 @@ export default function MyTeamPage() {
             </Dialog>
 
             {/* ══ ARCHIVE DIALOG ══ */}
+
             <Dialog open={archiveOpen} onClose={() => !archiveBusy && setArchiveOpen(false)} maxWidth="xs" fullWidth
                 PaperProps={{ sx: { borderRadius: "18px", border: `1px solid ${brd}`, bgcolor: paperBg } }}>
                 <Box sx={{ height: 3, bgcolor: accent, borderRadius: "18px 18px 0 0" }} />
                 <Box sx={{ px: 3, py: 2.5, borderBottom: `1px solid ${brd}` }}>
                     <Stack direction="row" alignItems="center" gap={1}>
                         <ArchiveOutlinedIcon sx={{ fontSize: 18, color: accent }} />
-                        <Typography fontWeight={700} fontSize="0.95rem" sx={{ color: tPri }}>Submit Project for Archive - Final Submission</Typography>
+                        <Typography fontWeight={700} fontSize="0.95rem" sx={{ color: tPri }}>
+                            Submit {myTeam?.version === 1 ? "Phase 2" : "Phase 1"} for Archive
+                        </Typography>
                     </Stack>
                     <Typography fontSize="0.78rem" sx={{ color: tSec, mt: 0.5 }}>
-                        ⚠️ This is the final submission of your project after completing all work. Your supervisor will be notified for review.
+                        Your supervisor will be notified to review your uploaded files and select which ones to keep.
                     </Typography>
                 </Box>
                 <Box sx={{ px: 3, py: 2.5 }}>
-                    <Stack gap={2}>
-                        <TextField
-                            label="GitHub Repository URL"
-                            size="small"
-                            fullWidth
-                            required
-                            placeholder="https://github.com/username/repo"
-                            value={archiveGithub}
-                            onChange={e => setArchiveGithub(e.target.value)}
-                            sx={inputSx}
-                            InputProps={{
-                                startAdornment: <GitHubIcon sx={{ fontSize: 15, color: tSec, mr: 0.8 }} />,
-                            }}
-                        />
-                        <TextField
-                            label="Additional Notes (Optional)"
-                            size="small"
-                            fullWidth
-                            multiline
-                            rows={2}
-                            placeholder="Any notes you'd like to add for your supervisor..."
-                            value={archiveNotes}
-                            onChange={e => setArchiveNotes(e.target.value)}
-                            sx={inputSx}
-                        />
-                    </Stack>
+                    <Box sx={{
+                        p: 2, borderRadius: "12px",
+                        bgcolor: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
+                        border: `1px solid ${brd}`,
+                    }}>
+                        <Typography fontSize="0.78rem" sx={{ color: tSec, lineHeight: 1.7 }}>
+                            After submission, your supervisor will choose which uploaded files to include in the
+                            public archive. All task data, feedback, and progress reports for this phase will
+                            be cleaned up after archiving.
+                        </Typography>
+                    </Box>
                 </Box>
                 <Box sx={{ px: 3, pb: 3, display: "flex", justifyContent: "flex-end", gap: 1 }}>
                     <Button disabled={archiveBusy} onClick={() => setArchiveOpen(false)}
@@ -1795,7 +1774,7 @@ export default function MyTeamPage() {
                     </Button>
                     <Button
                         variant="contained"
-                        disabled={archiveBusy || !archiveGithub.trim()}
+                        disabled={archiveBusy}
                         onClick={handleSubmitArchive}
                         startIcon={archiveBusy ? null : <SendOutlinedIcon sx={{ fontSize: 14 }} />}
                         sx={{
@@ -1805,7 +1784,7 @@ export default function MyTeamPage() {
                             "&.Mui-disabled": { opacity: 0.5 },
                         }}
                     >
-                        {archiveBusy ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : "Submit Archive Request"}
+                        {archiveBusy ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : "Submit for Archive"}
                     </Button>
                 </Box>
             </Dialog>

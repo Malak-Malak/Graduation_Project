@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
     Box, Typography, Stack, Button, CircularProgress,
     Alert, Paper, Chip, Dialog, DialogTitle,
-    DialogContent, DialogActions, TextField, InputAdornment,
+    DialogContent, DialogActions,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import ArchiveOutlinedIcon from "@mui/icons-material/ArchiveOutlined";
@@ -10,8 +10,6 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import HourglassEmptyOutlinedIcon from "@mui/icons-material/HourglassEmptyOutlined";
 import SendOutlinedIcon from "@mui/icons-material/SendOutlined";
 import InventoryOutlinedIcon from "@mui/icons-material/InventoryOutlined";
-import LinkOutlinedIcon from "@mui/icons-material/LinkOutlined";
-import GitHubIcon from "@mui/icons-material/GitHub";
 
 import archiveApi from "../../../../api/handler/endpoints/archiveApi";
 
@@ -26,11 +24,7 @@ export default function SubmitProject({ teamStatus, version = 0, onSubmitSuccess
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState(null);
     const [confirmOpen, setConfirmOpen] = useState(false);
-    const [githubRepo, setGithubRepo] = useState("");
-    const [notes, setNotes] = useState("");
-    const [githubError, setGithubError] = useState("");
 
-    // teamStatus shape: { isActive, isSubmitted, isArchived }
     const isActive = teamStatus?.isActive ?? false;
     const isSubmitted = teamStatus?.isSubmitted ?? false;
     const isArchived = teamStatus?.isArchived ?? false;
@@ -38,38 +32,14 @@ export default function SubmitProject({ teamStatus, version = 0, onSubmitSuccess
     const border = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)";
     const paperBg = theme.palette.background.paper;
 
-    // Validate GitHub URL
-    const validateGithubUrl = (url) => {
-        if (!url.trim()) {
-            setGithubError("GitHub repository URL is required");
-            return false;
-        }
-        const githubRegex = /^https?:\/\/(www\.)?github\.com\/[\w-]+\/[\w-]+(\/)?$/;
-        if (!githubRegex.test(url.trim())) {
-            setGithubError("Please enter a valid GitHub repository URL (e.g., https://github.com/username/repo)");
-            return false;
-        }
-        setGithubError("");
-        return true;
-    };
-
-    const handleOpenConfirm = () => {
-        if (!validateGithubUrl(githubRepo)) return;
-        setConfirmOpen(true);
-    };
+    const phaseLabel = version === 0 ? "Phase 1" : "Phase 2";
 
     const handleSubmit = async () => {
-        if (!validateGithubUrl(githubRepo)) return;
-
         setConfirmOpen(false);
         setSubmitting(true);
         setError(null);
         try {
-            await archiveApi.submitProject({
-                version: version,
-                githubRepo: githubRepo.trim(),
-                notes: notes.trim() || undefined,
-            });
+            await archiveApi.submitProject(version);
             onSubmitSuccess?.();
         } catch (err) {
             setError(
@@ -82,7 +52,7 @@ export default function SubmitProject({ teamStatus, version = 0, onSubmitSuccess
         }
     };
 
-    // ── Archived state ────────────────────────────────────────────────────────
+    // ── Archived ──────────────────────────────────────────────────────────────
     if (isArchived) {
         return (
             <Paper elevation={0} sx={{
@@ -102,7 +72,7 @@ export default function SubmitProject({ teamStatus, version = 0, onSubmitSuccess
                         </Box>
                         <Box>
                             <Typography sx={{ fontWeight: 700, fontSize: "0.95rem", color: t.textPrimary }}>
-                                Project Archived
+                                {phaseLabel} Archived
                             </Typography>
                             <Typography sx={{ fontSize: "0.78rem", color: t.textSecondary }}>
                                 Your project has been successfully archived and is now publicly visible.
@@ -124,7 +94,7 @@ export default function SubmitProject({ teamStatus, version = 0, onSubmitSuccess
         );
     }
 
-    // ── Submitted / Pending review ────────────────────────────────────────────
+    // ── Submitted / Pending ───────────────────────────────────────────────────
     if (isSubmitted) {
         return (
             <Paper elevation={0} sx={{
@@ -147,7 +117,7 @@ export default function SubmitProject({ teamStatus, version = 0, onSubmitSuccess
                                 Under Supervisor Review
                             </Typography>
                             <Typography sx={{ fontSize: "0.78rem", color: t.textSecondary }}>
-                                Your project has been submitted. Waiting for supervisor approval to archive.
+                                {phaseLabel} submitted. Waiting for supervisor approval to archive.
                             </Typography>
                         </Box>
                     </Stack>
@@ -201,59 +171,13 @@ export default function SubmitProject({ teamStatus, version = 0, onSubmitSuccess
                         </Box>
                         <Box>
                             <Typography sx={{ fontWeight: 700, fontSize: "0.95rem", color: t.textPrimary }}>
-                                Submit for Archive
+                                Submit {phaseLabel} for Archive
                             </Typography>
                             <Typography sx={{ fontSize: "0.78rem", color: t.textSecondary }}>
-                                Submit your completed project for supervisor review
+                                Notify your supervisor to review and archive this phase
                             </Typography>
                         </Box>
                     </Stack>
-
-                    {/* GitHub Repository Field */}
-                    <TextField
-                        fullWidth
-                        required
-                        label="GitHub Repository URL"
-                        placeholder="https://github.com/username/repo"
-                        value={githubRepo}
-                        onChange={(e) => setGithubRepo(e.target.value)}
-                        onBlur={() => validateGithubUrl(githubRepo)}
-                        error={!!githubError}
-                        helperText={githubError || "Required. Link to your project's code repository"}
-                        sx={{ mb: 2 }}
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <GitHubIcon sx={{ fontSize: 18, color: t.textSecondary }} />
-                                </InputAdornment>
-                            ),
-                        }}
-                        inputProps={{
-                            sx: { fontSize: "0.85rem" }
-                        }}
-                    />
-
-                    {/* Optional Notes Field */}
-                    <TextField
-                        fullWidth
-                        label="Additional Notes (Optional)"
-                        placeholder="Any additional information for your supervisor..."
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        sx={{ mb: 2 }}
-                        multiline
-                        rows={2}
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <LinkOutlinedIcon sx={{ fontSize: 18, color: t.textSecondary }} />
-                                </InputAdornment>
-                            ),
-                        }}
-                        inputProps={{
-                            sx: { fontSize: "0.85rem" }
-                        }}
-                    />
 
                     {/* Info box */}
                     <Box sx={{
@@ -262,9 +186,9 @@ export default function SubmitProject({ teamStatus, version = 0, onSubmitSuccess
                         border: `1px solid ${border}`,
                     }}>
                         <Typography sx={{ fontSize: "0.78rem", color: t.textSecondary, lineHeight: 1.7 }}>
-                            Once submitted, your supervisor will be notified to review your project.
-                            After approval, your project will be added to the public archive and all
-                            task data, feedback, and appointments will be cleaned up.
+                            Once submitted, your supervisor will be notified to review your uploaded
+                            files and select which ones to keep in the archive. After approval,
+                            task data, feedback, and progress reports for this phase will be cleaned up.
                         </Typography>
                     </Box>
 
@@ -280,8 +204,8 @@ export default function SubmitProject({ teamStatus, version = 0, onSubmitSuccess
                             ? <CircularProgress size={14} color="inherit" />
                             : <SendOutlinedIcon />
                         }
-                        onClick={handleOpenConfirm}
-                        disabled={submitting || !githubRepo.trim() || !!githubError}
+                        onClick={() => setConfirmOpen(true)}
+                        disabled={submitting}
                         sx={{
                             bgcolor: accentColor, borderRadius: 2, boxShadow: "none",
                             fontWeight: 600, fontSize: "0.85rem",
@@ -289,7 +213,7 @@ export default function SubmitProject({ teamStatus, version = 0, onSubmitSuccess
                             "&.Mui-disabled": { opacity: 0.5 },
                         }}
                     >
-                        {submitting ? "Submitting…" : "Submit Project"}
+                        {submitting ? "Submitting…" : `Submit ${phaseLabel}`}
                     </Button>
                 </Box>
             </Paper>
@@ -332,44 +256,16 @@ export default function SubmitProject({ teamStatus, version = 0, onSubmitSuccess
                         fontSize: "0.82rem",
                         color: t.textSecondary,
                         lineHeight: 1.7,
-                        mb: 2,
                     }}>
-                        Are you sure you want to submit your project for archiving? Your supervisor
-                        will be notified to review it. This action cannot be undone.
+                        Are you sure you want to submit <strong style={{ color: "inherit" }}>{phaseLabel}</strong> for
+                        archiving? Your supervisor will be notified to review your files.
+                        This action cannot be undone.
                     </Typography>
-
-                    {/* Summary of submission */}
-                    <Box sx={{
-                        p: 1.5, borderRadius: 2,
-                        bgcolor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.03)",
-                        border: `1px solid ${border}`,
-                    }}>
-                        <Typography sx={{ fontSize: "0.7rem", fontWeight: 700, color: t.textSecondary, mb: 0.5 }}>
-                            GitHub Repository:
-                        </Typography>
-                        <Typography sx={{ fontSize: "0.75rem", color: accentColor, wordBreak: "break-all", mb: 1 }}>
-                            {githubRepo}
-                        </Typography>
-                        {notes && (
-                            <>
-                                <Typography sx={{ fontSize: "0.7rem", fontWeight: 700, color: t.textSecondary, mb: 0.5 }}>
-                                    Additional Notes:
-                                </Typography>
-                                <Typography sx={{ fontSize: "0.75rem", color: t.textPrimary, wordBreak: "break-all" }}>
-                                    {notes}
-                                </Typography>
-                            </>
-                        )}
-                    </Box>
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
                     <Button
                         onClick={() => setConfirmOpen(false)}
-                        sx={{
-                            color: t.textSecondary,
-                            textTransform: "none",
-                            borderRadius: 2,
-                        }}
+                        sx={{ color: t.textSecondary, textTransform: "none", borderRadius: 2 }}
                     >
                         Cancel
                     </Button>

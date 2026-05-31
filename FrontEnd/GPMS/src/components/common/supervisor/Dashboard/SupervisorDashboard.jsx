@@ -7,33 +7,35 @@ import {
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { useNavigate } from "react-router-dom";
-import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
-import PendingActionsOutlinedIcon from "@mui/icons-material/PendingActionsOutlined";
-import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
-import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
-import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
-import PeopleOutlinedIcon from "@mui/icons-material/PeopleOutlined";
-import NotificationsNoneOutlinedIcon from "@mui/icons-material/NotificationsNoneOutlined";
-import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
-import GroupAddOutlinedIcon from "@mui/icons-material/GroupAddOutlined";
-import CheckCircleOutlineOutlinedIcon from "@mui/icons-material/CheckCircleOutlineOutlined";
-import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
-import ReplyOutlinedIcon from "@mui/icons-material/ReplyOutlined";
-import FolderOpenOutlinedIcon from "@mui/icons-material/FolderOpenOutlined";
-import EventOutlinedIcon from "@mui/icons-material/EventOutlined";
+import GroupsOutlinedIcon                from "@mui/icons-material/GroupsOutlined";
+import PendingActionsOutlinedIcon        from "@mui/icons-material/PendingActionsOutlined";
+import FolderOutlinedIcon                from "@mui/icons-material/FolderOutlined";
+import CalendarMonthOutlinedIcon         from "@mui/icons-material/CalendarMonthOutlined";
+import ArrowForwardIcon                  from "@mui/icons-material/ArrowForward";
+import PeopleOutlinedIcon                from "@mui/icons-material/PeopleOutlined";
+import NotificationsNoneOutlinedIcon     from "@mui/icons-material/NotificationsNoneOutlined";
+import CalendarTodayOutlinedIcon         from "@mui/icons-material/CalendarTodayOutlined";
+import GroupAddOutlinedIcon              from "@mui/icons-material/GroupAddOutlined";
+import CheckCircleOutlineOutlinedIcon    from "@mui/icons-material/CheckCircleOutlineOutlined";
+import CancelOutlinedIcon                from "@mui/icons-material/CancelOutlined";
+import ReplyOutlinedIcon                 from "@mui/icons-material/ReplyOutlined";
+import FolderOpenOutlinedIcon            from "@mui/icons-material/FolderOpenOutlined";
+import EventOutlinedIcon                 from "@mui/icons-material/EventOutlined";
 
-import { useAuth } from "../../../../contexts/AuthContext";
+import { useAuth }                       from "../../../../contexts/AuthContext";
 import {
     getPendingTeamRequests,
     getSupervisorTeams,
-} from "../../../../api/handler/endpoints/supervisorApi";
-import { notificationApi } from "../../../../api/handler/endpoints/notificationApi";
+    getAllAppointments,
+}                                        from "../../../../api/handler/endpoints/supervisorApi";
+import fileSystemApi                     from "../../../../api/handler/endpoints/fileSystemApi";
+import { notificationApi }               from "../../../../api/handler/endpoints/notificationApi";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
-const PALETTE = ["#B46F4C", "#6D8A7D", "#C49A6C", "#7E9FC4", "#9B7EC8", "#C47E7E"];
-const avatarBg = (name = "") => PALETTE[(name?.charCodeAt(0) ?? 0) % PALETTE.length];
-const initials = (name = "") =>
+const PALETTE   = ["#B46F4C", "#6D8A7D", "#C49A6C", "#7E9FC4", "#9B7EC8", "#C47E7E"];
+const avatarBg  = (name = "") => PALETTE[(name?.charCodeAt(0) ?? 0) % PALETTE.length];
+const initials  = (name = "") =>
     (name || "?").split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase()).join("");
 
 const deriveProgress = (team) => {
@@ -44,7 +46,7 @@ const deriveProgress = (team) => {
 const deriveRisk = (team) => {
     if (team.risk) return team.risk;
     const s = (team.status ?? "").toLowerCase();
-    if (s === "active") return "low";
+    if (s === "active")   return "low";
     if (s === "inactive") return "high";
     return "medium";
 };
@@ -53,15 +55,27 @@ const RISK_COLOR = { low: "#6D8A7D", medium: "#C49A6C", high: "#C47E7E" };
 
 const fmtDate = (iso) => {
     if (!iso) return "";
-    const d = new Date(iso);
+    const d    = new Date(iso);
     const diff = Math.floor((Date.now() - d) / 1000);
-    if (diff < 60) return "Just now";
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 60)    return "Just now";
+    if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
     if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
     return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
 };
 
-// Map notification title → icon + accent color
+/** Returns true if the ISO date falls within the current calendar week (Mon–Sun). */
+function isThisWeek(iso) {
+    const d    = new Date(iso);
+    const now  = new Date();
+    const day  = now.getDay();                              // 0=Sun … 6=Sat
+    const mon  = new Date(now);
+    mon.setDate(now.getDate() - ((day + 6) % 7));          // Monday of this week
+    mon.setHours(0, 0, 0, 0);
+    const sun  = new Date(mon);
+    sun.setDate(mon.getDate() + 7);                        // Monday of next week
+    return d >= mon && d < sun;
+}
+
 const getNotifMeta = (title = "") => {
     const t = title.toLowerCase();
     if (t.includes("appointment") && t.includes("approv"))
@@ -94,7 +108,6 @@ function NotificationItem({ notif, t }) {
             "&:hover": { bgcolor: `${color}0D` },
             transition: "background 0.15s",
         }}>
-            {/* Icon */}
             <Box sx={{
                 width: 30, height: 30, borderRadius: 2, flexShrink: 0,
                 bgcolor: `${color}15`, color,
@@ -103,14 +116,11 @@ function NotificationItem({ notif, t }) {
             }}>
                 {icon}
             </Box>
-
             <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1}>
                     <Typography sx={{
-                        fontSize: "0.8rem",
-                        fontWeight: isUnread ? 700 : 500,
-                        color: t.textPrimary,
-                        lineHeight: 1.3,
+                        fontSize: "0.8rem", fontWeight: isUnread ? 700 : 500,
+                        color: t.textPrimary, lineHeight: 1.3,
                     }}>
                         {notif.title}
                     </Typography>
@@ -120,8 +130,7 @@ function NotificationItem({ notif, t }) {
                 </Stack>
                 {notif.message && (
                     <Typography sx={{
-                        fontSize: "0.74rem", color: t.textSecondary,
-                        mt: 0.3, lineHeight: 1.45,
+                        fontSize: "0.74rem", color: t.textSecondary, mt: 0.3, lineHeight: 1.45,
                         overflow: "hidden", textOverflow: "ellipsis",
                         display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
                     }}>
@@ -129,13 +138,8 @@ function NotificationItem({ notif, t }) {
                     </Typography>
                 )}
             </Box>
-
-            {/* Unread dot */}
             {isUnread && (
-                <Box sx={{
-                    width: 7, height: 7, borderRadius: "50%",
-                    bgcolor: color, flexShrink: 0, mt: 0.9,
-                }} />
+                <Box sx={{ width: 7, height: 7, borderRadius: "50%", bgcolor: color, flexShrink: 0, mt: 0.9 }} />
             )}
         </Stack>
     );
@@ -145,15 +149,13 @@ function NotificationItem({ notif, t }) {
 
 function TeamCard({ team, onClick, t, theme }) {
     const progress = deriveProgress(team);
-    const risk = deriveRisk(team);
-    const members = Array.isArray(team.members) ? team.members : [];
+    const risk     = deriveRisk(team);
+    const members  = Array.isArray(team.members) ? team.members : [];
 
     return (
         <Box onClick={onClick} sx={{
-            p: 2, borderRadius: 2.5,
-            border: `1px solid ${t.borderLight}`,
-            cursor: "pointer",
-            transition: "background 0.15s, box-shadow 0.15s",
+            p: 2, borderRadius: 2.5, border: `1px solid ${t.borderLight}`,
+            cursor: "pointer", transition: "background 0.15s, box-shadow 0.15s",
             "&:hover": { bgcolor: t.surfaceHover, boxShadow: theme.shadows[1] },
         }}>
             <Stack direction="row" alignItems="flex-start" justifyContent="space-between" mb={1}>
@@ -177,7 +179,6 @@ function TeamCard({ team, onClick, t, theme }) {
                         </Typography>
                     )}
                 </Box>
-
                 {members.length > 0 ? (
                     <AvatarGroup max={4} sx={{ "& .MuiAvatar-root": { width: 26, height: 26, fontSize: "0.62rem", fontWeight: 700 } }}>
                         {members.map((m, i) => {
@@ -233,18 +234,22 @@ function TeamCardSkeleton() {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function SupervisorDashboard() {
-    const theme = useTheme();
+    const theme    = useTheme();
     const navigate = useNavigate();
     const { user } = useAuth();
-    const t = theme.palette.custom;
+    const t        = theme.palette.custom;
 
-    const [pendingCount, setPendingCount] = useState(null);
-    const [pendingLoading, setPendingLoading] = useState(true);
-    const [teams, setTeams] = useState([]);
-    const [teamsLoading, setTeamsLoading] = useState(true);
-    const [teamsError, setTeamsError] = useState(null);
-    const [notifs, setNotifs] = useState([]);
-    const [notifsLoading, setNotifsLoading] = useState(true);
+    const [pendingCount,    setPendingCount]    = useState(null);
+    const [pendingLoading,  setPendingLoading]  = useState(true);
+    const [teams,           setTeams]           = useState([]);
+    const [teamsLoading,    setTeamsLoading]    = useState(true);
+    const [teamsError,      setTeamsError]      = useState(null);
+    const [notifs,          setNotifs]          = useState([]);
+    const [notifsLoading,   setNotifsLoading]   = useState(true);
+
+    // ── new: real data for files + meetings ───────────────────────────────────
+    const [filesCount,      setFilesCount]      = useState(null);
+    const [meetingsCount,   setMeetingsCount]   = useState(null);
 
     useEffect(() => {
         // Pending requests
@@ -258,11 +263,11 @@ export default function SupervisorDashboard() {
             .catch(() => setPendingCount("—"))
             .finally(() => setPendingLoading(false));
 
-        // Teams — ✅ مع فلتر pending
+        // Teams
         getSupervisorTeams()
             .then((data) => {
                 const all = Array.isArray(data) ? data : [];
-                setTeams(all.filter(t => (t.status ?? t.teamStatus ?? "").toLowerCase() !== "pending"));
+                setTeams(all.filter((tm) => (tm.status ?? tm.teamStatus ?? "").toLowerCase() !== "pending"));
             })
             .catch((err) => setTeamsError(err?.message ?? "Failed to load teams."))
             .finally(() => setTeamsLoading(false));
@@ -275,32 +280,52 @@ export default function SupervisorDashboard() {
             })
             .catch(() => setNotifs([]))
             .finally(() => setNotifsLoading(false));
+
+        // ── Files uploaded by students ────────────────────────────────────────
+        fileSystemApi.getStudentFiles()
+            .then((data) => setFilesCount(Array.isArray(data) ? data.length : 0))
+            .catch(() => setFilesCount("—"));
+
+        // ── Appointments this week ────────────────────────────────────────────
+        getAllAppointments()
+            .then((data) => {
+                const list    = Array.isArray(data) ? data : [];
+                const thisWk  = list.filter(
+                    (a) => a.status === "Approved" && isThisWeek(a.dateTime)
+                ).length;
+                setMeetingsCount(thisWk);
+            })
+            .catch(() => setMeetingsCount("—"));
     }, []);
 
     const STATS = [
         {
             label: "My Groups",
-            value: teamsLoading ? null : String(teams.length),
-            icon: <GroupsOutlinedIcon />, color: "#B46F4C",
-            path: "/supervisor/groups",
+            value:   teamsLoading   ? null : String(teams.length),
+            icon:    <GroupsOutlinedIcon />,
+            color:   "#B46F4C",
+            path:    "/supervisor/groups",
         },
         {
             label: "Pending Requests",
-            value: pendingLoading ? null : String(pendingCount ?? "—"),
-            icon: <PendingActionsOutlinedIcon />, color: "#C49A6C",
-            path: "/supervisor/requests",
+            value:   pendingLoading ? null : String(pendingCount ?? "—"),
+            icon:    <PendingActionsOutlinedIcon />,
+            color:   "#C49A6C",
+            path:    "/supervisor/requests",
         },
         {
             label: "Files to Review",
-            value: "—",
-            icon: <FolderOutlinedIcon />, color: "#6D8A7D",
-            path: "/supervisor/files",
+            value:   filesCount === null ? null : String(filesCount),
+            icon:    <FolderOutlinedIcon />,
+            color:   "#6D8A7D",
+            path:    "/supervisor/files",
         },
         {
             label: "Meetings This Wk",
-            value: "—",
-            icon: <CalendarMonthOutlinedIcon />, color: "#7E9FC4",
-            path: "/supervisor/meetings",
+            value:   meetingsCount === null ? null : String(meetingsCount),
+            icon:    <CalendarMonthOutlinedIcon />,
+            color:   "#7E9FC4",
+            path:    "/supervisor/meetings",
         },
     ];
 
@@ -409,9 +434,7 @@ export default function SupervisorDashboard() {
 
                         {/* Recent Notifications */}
                         <Paper elevation={1} sx={{
-                            borderRadius: 3,
-                            bgcolor: theme.palette.background.paper,
-                            overflow: "hidden",
+                            borderRadius: 3, bgcolor: theme.palette.background.paper, overflow: "hidden",
                         }}>
                             <Stack direction="row" justifyContent="space-between" alignItems="center"
                                 sx={{ px: 2.5, pt: 2, pb: 1.5, borderBottom: `1px solid ${t.borderLight}` }}>
@@ -430,7 +453,6 @@ export default function SupervisorDashboard() {
                                     <CircularProgress size={22} sx={{ color: t.accentPrimary }} />
                                 </Box>
                             )}
-
                             {!notifsLoading && notifs.length === 0 && (
                                 <Box sx={{ py: 5, textAlign: "center" }}>
                                     <NotificationsNoneOutlinedIcon sx={{ fontSize: 34, color: t.textTertiary, mb: 1 }} />
@@ -439,7 +461,6 @@ export default function SupervisorDashboard() {
                                     </Typography>
                                 </Box>
                             )}
-
                             {!notifsLoading && notifs.length > 0 && (
                                 <Stack divider={<Divider sx={{ borderColor: `${t.borderLight}80` }} />}>
                                     {notifs.map((n) => (
@@ -454,10 +475,10 @@ export default function SupervisorDashboard() {
                             <Typography variant="h4" sx={{ color: t.textPrimary, mb: 1.5 }}>Quick Actions</Typography>
                             <Stack spacing={1}>
                                 {[
-                                    { label: "Pending Requests", path: "/supervisor/requests", color: t.accentPrimary },
-                                    { label: "Review Files", path: "/supervisor/files", color: t.accentSecondary ?? "#6D8A7D" },
-                                    { label: "AI Reports", path: "/supervisor/ai-reports", color: "#9B7EC8" },
-                                    { label: "My Availability", path: "/supervisor/meetings", color: t.accentTertiary ?? "#7E9FC4" },
+                                    { label: "Pending Requests", path: "/supervisor/requests",  color: t.accentPrimary },
+                                    { label: "Review Files",     path: "/supervisor/files",     color: t.accentSecondary ?? "#6D8A7D" },
+                                    { label: "AI Reports",       path: "/supervisor/ai-reports",color: "#9B7EC8" },
+                                    { label: "My Availability",  path: "/supervisor/meetings",  color: t.accentTertiary  ?? "#7E9FC4" },
                                 ].map((a) => (
                                     <Button key={a.label} variant="outlined" fullWidth
                                         onClick={() => navigate(a.path)}

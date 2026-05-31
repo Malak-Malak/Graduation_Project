@@ -19,24 +19,44 @@ import IconButton from "@mui/material/IconButton";
 import CheckIcon from "@mui/icons-material/Check";
 import studentApi from "../../../../api/handler/endpoints/studentApi";
 
-// ── ثوابت خارج الـ component ─────────────────────────────────────────────────
-const SUGGESTED_SKILLS = [
+// ── Departments (shared) ──────────────────────────────────────────────────────
+const ALL_DEPARTMENTS = [
+    "Computer Engineering",
+    "Electrical Engineering",
+    "Mechanical Engineering",
+    "Mechatronics Engineering",
+    "Telecommunications Engineering",
+    "Power & Energy Engineering",
+];
+
+// ── Skills per role ───────────────────────────────────────────────────────────
+const STUDENT_SKILLS = [
     "Frontend", "Backend", "AI / ML", "Data Analysis",
     "UI/UX", "DevOps", "Mobile", "Security",
     "Database", "Testing / QA", "Embedded", "Networks",
 ];
 
-const ALL_DEPARTMENTS = [
-    "Computer Science", "Computer Engineering",
-    "Electrical Engineering", "Information Technology",
-    "Software Engineering", "Cybersecurity",
+const SUPERVISOR_SKILLS = [
+    "Artificial Intelligence",
+    "Machine Learning",
+    "Deep Learning",
+    "Big Data & Analytics",
+    "Data Science",
+    "Cybersecurity & Networks",
+    "Software Engineering & Architecture",
+    "Cloud Computing & DevOps",
+    "Human-Computer Interaction",
+    "Embedded Systems & IoT",
+    "Database Systems",
+    "Computer Vision & NLP",
+    "Distributed Systems & Blockchain",
 ];
 
 const STEPS = [
-    { id: "department", label: "Department", icon: SchoolOutlinedIcon, desc: "Select your academic department" },
-    { id: "skills", label: "Skills", icon: CodeOutlinedIcon, desc: "Pick your skills — teammates will find you based on these" },
-    { id: "contact", label: "Contact Info", icon: BadgeOutlinedIcon, desc: "Let teammates know how to reach you" },
-    { id: "bio", label: "About You", icon: PersonOutlineIcon, desc: "Write a short bio about yourself" },
+    { id: "department", label: "Department",   icon: SchoolOutlinedIcon, desc: "Select your engineering department" },
+    { id: "skills",     label: "Skills",        icon: CodeOutlinedIcon,   desc: "Pick your skills — teammates will find you based on these" },
+    { id: "contact",    label: "Contact Info",  icon: BadgeOutlinedIcon,  desc: "Let teammates know how to reach you" },
+    { id: "bio",        label: "About You",     icon: PersonOutlineIcon,  desc: "Write a short bio about yourself" },
 ];
 
 const INPUT_SX = {
@@ -49,7 +69,6 @@ const INPUT_SX = {
     "& .MuiInputLabel-root": { fontSize: "0.875rem" },
 };
 
-// ── InnerCard خارج الـ component عشان ما يحصل unmount/remount ──────────────
 function InnerCard({ icon: Icon, title, count, action, children, border, cardAlt, isDark, accent, a10, a22, labelSx }) {
     return (
         <Box sx={{ borderRadius: 2.5, border: `1px solid ${border}`, bgcolor: cardAlt, overflow: "hidden" }}>
@@ -73,28 +92,46 @@ function InnerCard({ icon: Icon, title, count, action, children, border, cardAlt
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-export default function ProfileSetupModal({ open, onDone }) {
-    const theme = useTheme();
+export default function ProfileSetupModal({ open, onDone, role = "student" }) {
+    const theme  = useTheme();
     const isDark = theme.palette.mode === "dark";
 
-    const [step, setStep] = useState(0);
-    const [department, setDepartment] = useState("");
-    const [skills, setSkills] = useState([]);
-    const [customSkillInput, setCustomSkillInput] = useState("");
-    const [fullName, setFullName] = useState("");
-    const [email, setEmail] = useState("");
-    const [phoneNumber, setPhoneNumber] = useState("");
-    const [linkedin, setLinkedin] = useState("");
-    const [github, setGithub] = useState("");
-    const [bio, setBio] = useState("");
-    const [saving, setSaving] = useState(false);
-    const [error, setError] = useState("");
+    const normalizedRole = (role ?? "student").toLowerCase();
+    const isSupervisor   = normalizedRole === "supervisor";
+    const isAdmin        = normalizedRole === "admin";
 
-    // ── Design tokens ───────────────────────────────────────────────────────
-    const accent = "#d0895b";
-    const a10 = isDark ? "rgba(208,137,91,0.10)" : "rgba(208,137,91,0.07)";
-    const a22 = "rgba(208,137,91,0.22)";
-    const border = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)";
+    // ── Admins don't use this modal ──────────────────────────────────────────
+    if (isAdmin || !open) return null;
+
+    const suggestedSkills  = isSupervisor ? SUPERVISOR_SKILLS : STUDENT_SKILLS;
+    const skillsStepLabel  = isSupervisor ? "Research Areas" : "Skills";
+    const skillsStepDesc   = isSupervisor
+        ? "Select your academic research specializations"
+        : "Pick your skills — teammates will find you based on these";
+
+    // patch step desc dynamically
+    const steps = STEPS.map(s =>
+        s.id === "skills" ? { ...s, label: skillsStepLabel, desc: skillsStepDesc } : s
+    );
+
+    const [step,             setStep]             = useState(0);
+    const [department,       setDepartment]       = useState("");
+    const [skills,           setSkills]           = useState([]);
+    const [customSkillInput, setCustomSkillInput] = useState("");
+    const [fullName,         setFullName]         = useState("");
+    const [email,            setEmail]            = useState("");
+    const [phoneNumber,      setPhoneNumber]      = useState("");
+    const [linkedin,         setLinkedin]         = useState("");
+    const [github,           setGithub]           = useState("");
+    const [bio,              setBio]              = useState("");
+    const [saving,           setSaving]           = useState(false);
+    const [error,            setError]            = useState("");
+
+    /* ── Design tokens ── */
+    const accent  = "#d0895b";
+    const a10     = isDark ? "rgba(208,137,91,0.10)" : "rgba(208,137,91,0.07)";
+    const a22     = "rgba(208,137,91,0.22)";
+    const border  = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)";
     const cardAlt = isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)";
     const paperBg = theme.palette.background.paper;
     const textPri = theme.palette.text.primary;
@@ -114,7 +151,7 @@ export default function ProfileSetupModal({ open, onDone }) {
         "&:hover": { bgcolor: sel ? "#be7a4f" : a10, borderColor: sel ? "#be7a4f" : a22 },
     });
 
-    // ── Skills helpers ──────────────────────────────────────────────────────
+    /* ── Skills helpers ── */
     const toggleSkill = (s) =>
         setSkills((p) => p.includes(s) ? p.filter((x) => x !== s) : [...p, s]);
 
@@ -126,9 +163,9 @@ export default function ProfileSetupModal({ open, onDone }) {
 
     const removeSkill = (s) => setSkills((p) => p.filter((x) => x !== s));
 
-    // ── Next / Finish ───────────────────────────────────────────────────────
+    /* ── Next / Finish ── */
     const handleNext = async () => {
-        if (step < STEPS.length - 1) { setStep((s) => s + 1); return; }
+        if (step < steps.length - 1) { setStep((s) => s + 1); return; }
 
         const data = { department, skills, fullName, email, phoneNumber, linkedin, github, bio };
         setSaving(true);
@@ -136,11 +173,10 @@ export default function ProfileSetupModal({ open, onDone }) {
 
         try {
             await studentApi.createProfile(data);
-            // ✅ البروفايل اتحفظ بنجاح → ضع الـ flag عشان ما يظهر Setup مرة ثانية
             sessionStorage.setItem("gpms_profile_done", "true");
             onDone(data);
         } catch (e) {
-            const status = e?.response?.status;
+            const status  = e?.response?.status;
             const message = e?.response?.data?.message ?? e?.response?.data ?? "";
             const isExists =
                 status === 409 ||
@@ -148,10 +184,8 @@ export default function ProfileSetupModal({ open, onDone }) {
                     message.toLowerCase().includes("exist"));
 
             if (isExists) {
-                // ✅ البروفايل موجود → UPDATE
                 try {
                     await studentApi.updateProfile(data);
-                    // ✅ ضع الـ flag هون كمان
                     sessionStorage.setItem("gpms_profile_done", "true");
                     onDone(data);
                 } catch (e2) {
@@ -170,7 +204,7 @@ export default function ProfileSetupModal({ open, onDone }) {
             step === 2 ? Boolean(fullName.trim()) && Boolean(email.trim()) :
                 true;
 
-    const CurrentIcon = STEPS[step].icon;
+    const CurrentIcon = steps[step].icon;
 
     return (
         <Dialog
@@ -189,7 +223,7 @@ export default function ProfileSetupModal({ open, onDone }) {
             {/* Progress bar */}
             <LinearProgress
                 variant="determinate"
-                value={((step + 1) / STEPS.length) * 100}
+                value={((step + 1) / steps.length) * 100}
                 sx={{
                     height: 3,
                     bgcolor: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)",
@@ -208,15 +242,15 @@ export default function ProfileSetupModal({ open, onDone }) {
                 </Box>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography fontWeight={700} fontSize="0.95rem" sx={{ color: textPri, lineHeight: 1.2 }}>
-                        {STEPS[step].label}
+                        {steps[step].label}
                     </Typography>
                     <Typography fontSize="0.77rem" sx={{ color: textSec, mt: 0.3 }}>
-                        {STEPS[step].desc}
+                        {steps[step].desc}
                     </Typography>
                 </Box>
                 <Box sx={{ px: 1.5, py: 0.4, borderRadius: 10, flexShrink: 0, bgcolor: a10, border: `1px solid ${a22}` }}>
                     <Typography fontSize="0.7rem" fontWeight={700} sx={{ color: accent }}>
-                        {step + 1} / {STEPS.length}
+                        {step + 1} / {steps.length}
                     </Typography>
                 </Box>
             </Box>
@@ -227,12 +261,12 @@ export default function ProfileSetupModal({ open, onDone }) {
                 bgcolor: isDark ? "rgba(255,255,255,0.015)" : "rgba(0,0,0,0.012)",
             }}>
                 <Stack direction="row" alignItems="center">
-                    {STEPS.map((s, i) => {
-                        const done = i < step;
+                    {steps.map((s, i) => {
+                        const done    = i < step;
                         const current = i === step;
                         return (
                             <Stack key={i} direction="row" alignItems="center"
-                                sx={{ flex: i < STEPS.length - 1 ? 1 : 0 }}>
+                                sx={{ flex: i < steps.length - 1 ? 1 : 0 }}>
                                 <Stack alignItems="center" spacing={0.5}>
                                     <Box sx={{
                                         width: 22, height: 22, borderRadius: "50%",
@@ -252,7 +286,7 @@ export default function ProfileSetupModal({ open, onDone }) {
                                         {s.label}
                                     </Typography>
                                 </Stack>
-                                {i < STEPS.length - 1 && (
+                                {i < steps.length - 1 && (
                                     <Box sx={{
                                         flex: 1, height: "1.5px", mx: 0.8, mb: 2.2, borderRadius: 1,
                                         bgcolor: done ? accent : border,
@@ -283,7 +317,7 @@ export default function ProfileSetupModal({ open, onDone }) {
                                     </Box>
                                     <Box>
                                         <Typography fontWeight={700} fontSize="0.88rem" sx={{ color: textPri }}>{department}</Typography>
-                                        <Typography fontSize="0.72rem" sx={{ color: textSec }}>Your academic department</Typography>
+                                        <Typography fontSize="0.72rem" sx={{ color: textSec }}>Your engineering department</Typography>
                                     </Box>
                                 </Stack>
                             ) : (
@@ -301,39 +335,44 @@ export default function ProfileSetupModal({ open, onDone }) {
                     </Stack>
                 )}
 
-                {/* STEP 1: Skills */}
+                {/* STEP 1: Skills / Research Areas */}
                 {step === 1 && (
                     <Stack spacing={2}>
                         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                            <InnerCard {...cardProps} icon={AddIcon} title="Add Custom Skill">
-                                <TextField
-                                    size="small" fullWidth
-                                    placeholder="e.g. Flutter, Figma, PyTorch…"
-                                    value={customSkillInput}
-                                    onChange={(e) => setCustomSkillInput(e.target.value)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); addCustomSkill(); }
-                                    }}
-                                    sx={INPUT_SX}
-                                    InputProps={{
-                                        endAdornment: (
-                                            <InputAdornment position="end">
-                                                <IconButton size="small" onClick={addCustomSkill} sx={{
-                                                    color: accent, bgcolor: a10, borderRadius: 1.5,
-                                                    mr: -0.5, "&:hover": { bgcolor: a22 },
-                                                }}>
-                                                    <AddIcon sx={{ fontSize: 17 }} />
-                                                </IconButton>
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                />
-                                <Typography fontSize="0.7rem" sx={{ color: textSec, mt: 0.8 }}>
-                                    Press Enter or + to add
-                                </Typography>
-                            </InnerCard>
+                            {/* Custom input — students only */}
+                            {!isSupervisor && (
+                                <InnerCard {...cardProps} icon={AddIcon} title="Add Custom Skill">
+                                    <TextField
+                                        size="small" fullWidth
+                                        placeholder="e.g. Flutter, Figma, PyTorch…"
+                                        value={customSkillInput}
+                                        onChange={(e) => setCustomSkillInput(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); addCustomSkill(); }
+                                        }}
+                                        sx={INPUT_SX}
+                                        InputProps={{
+                                            endAdornment: (
+                                                <InputAdornment position="end">
+                                                    <IconButton size="small" onClick={addCustomSkill} sx={{
+                                                        color: accent, bgcolor: a10, borderRadius: 1.5,
+                                                        mr: -0.5, "&:hover": { bgcolor: a22 },
+                                                    }}>
+                                                        <AddIcon sx={{ fontSize: 17 }} />
+                                                    </IconButton>
+                                                </InputAdornment>
+                                            ),
+                                        }}
+                                    />
+                                    <Typography fontSize="0.7rem" sx={{ color: textSec, mt: 0.8 }}>
+                                        Press Enter or + to add
+                                    </Typography>
+                                </InnerCard>
+                            )}
 
-                            <InnerCard {...cardProps} icon={CodeOutlinedIcon} title="Selected" count={skills.length}
+                            <InnerCard {...cardProps} icon={CodeOutlinedIcon}
+                                title={isSupervisor ? "Selected Areas" : "Selected"}
+                                count={skills.length}
                                 action={skills.length > 0 && (
                                     <Button size="small" onClick={() => setSkills([])}
                                         sx={{ fontSize: "0.68rem", color: textSec, textTransform: "none", p: 0, minWidth: 0 }}>
@@ -351,14 +390,17 @@ export default function ProfileSetupModal({ open, onDone }) {
                                         ))}
                                     </Stack>
                                 ) : (
-                                    <Typography fontSize="0.8rem" sx={{ color: textSec }}>None yet</Typography>
+                                    <Typography fontSize="0.8rem" sx={{ color: textSec }}>
+                                        {isSupervisor ? "No areas selected yet" : "None yet"}
+                                    </Typography>
                                 )}
                             </InnerCard>
                         </Stack>
 
-                        <InnerCard {...cardProps} icon={CodeOutlinedIcon} title="Suggestions">
+                        <InnerCard {...cardProps} icon={CodeOutlinedIcon}
+                            title={isSupervisor ? "Research Areas" : "Suggestions"}>
                             <Stack direction="row" flexWrap="wrap" gap={1}>
-                                {SUGGESTED_SKILLS.map((s) => (
+                                {suggestedSkills.map((s) => (
                                     <Chip key={s} label={s} onClick={() => toggleSkill(s)} sx={chipSx(skills.includes(s))} />
                                 ))}
                             </Stack>
@@ -418,12 +460,17 @@ export default function ProfileSetupModal({ open, onDone }) {
                             </Box>
                             <Stack spacing={0.3}>
                                 <Typography fontSize="0.78rem" fontWeight={700} sx={{ color: textPri }}>Tips for a great bio</Typography>
-                                {[
+                                {(isSupervisor ? [
+                                    "Your research interests and specializations",
+                                    "Publications or academic contributions",
+                                    "Industry experience or projects",
+                                    "What kind of projects you prefer to supervise",
+                                ] : [
                                     "Programming languages: Python, JavaScript, C++…",
                                     "Frameworks & tools: React, Django, Flutter…",
                                     "Previous projects or experience",
                                     "Competitions or contributions (e.g. hackathons)",
-                                ].map((t) => (
+                                ]).map((t) => (
                                     <Typography key={t} fontSize="0.74rem" sx={{ color: textSec }}>· {t}</Typography>
                                 ))}
                             </Stack>
@@ -433,7 +480,9 @@ export default function ProfileSetupModal({ open, onDone }) {
                             count={bio.length > 0 ? `${bio.length}/400` : undefined}>
                             <TextField
                                 multiline rows={5} fullWidth
-                                placeholder="Tell teammates about yourself…"
+                                placeholder={isSupervisor
+                                    ? "Tell students about your research interests and supervision style…"
+                                    : "Tell teammates about yourself…"}
                                 value={bio}
                                 onChange={(e) => setBio(e.target.value)}
                                 inputProps={{ maxLength: 400 }}
@@ -454,7 +503,7 @@ export default function ProfileSetupModal({ open, onDone }) {
                 px: 3.5, py: 2, borderTop: `1px solid ${border}`,
             }}>
                 <Typography fontSize="0.74rem" sx={{ color: textSec }}>
-                    {step < STEPS.length - 1 ? `Next: ${STEPS[step + 1].label}` : "Almost done!"}
+                    {step < steps.length - 1 ? `Next: ${steps[step + 1].label}` : "Almost done!"}
                 </Typography>
                 <Stack direction="row" gap={1}>
                     {step > 0 && (
@@ -471,7 +520,7 @@ export default function ProfileSetupModal({ open, onDone }) {
                         fontWeight: 700, fontSize: "0.85rem", boxShadow: "none",
                         "&.Mui-disabled": { opacity: 0.45 },
                     }}>
-                        {saving ? "Saving…" : step === STEPS.length - 1 ? "Finish" : "Next"}
+                        {saving ? "Saving…" : step === steps.length - 1 ? "Finish" : "Next"}
                     </Button>
                 </Stack>
             </Box>

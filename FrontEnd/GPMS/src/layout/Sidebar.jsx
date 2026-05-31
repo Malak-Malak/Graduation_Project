@@ -37,7 +37,7 @@ import { useThemeContext } from "../contexts/ThemeContext";
 const NAV_ITEMS = {
     admin: [
         { label: "Dashboard", icon: <DashboardOutlinedIcon />, path: "/admin" },
-        { label: "Profile", icon: <AccountCircleOutlinedIcon />, path: "/admin/profile" },
+        // { label: "Profile", icon: <AccountCircleOutlinedIcon />, path: "/admin/profile" },
         { label: "Pending Requests", icon: <HowToRegOutlinedIcon />, path: "/admin/pending-requests" },
         { label: "User Management", icon: <PeopleOutlineIcon />, path: "/admin/users" },
         { label: "Reports", icon: <AssessmentOutlinedIcon />, path: "/admin/reports" },

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
     Dialog, DialogContent,
@@ -21,30 +20,49 @@ import ContactPhoneOutlinedIcon from "@mui/icons-material/ContactPhoneOutlined";
 import AddIcon from "@mui/icons-material/Add";
 import CheckIcon from "@mui/icons-material/Check";
 
-// ══════════════════════════════════════════════════════════════════════
-// ✅ FIX #1 (TextFields): كل الثوابت خارج الـ component
-// ══════════════════════════════════════════════════════════════════════
+// ── Departments (shared for all roles) ───────────────────────────────────────
+const ALL_DEPARTMENTS = [
+    "Computer Engineering",
+    "Electrical Engineering",
+    "Mechanical Engineering",
+    "Mechatronics Engineering",
+    "Telecommunications Engineering",
+    "Power & Energy Engineering",
+];
 
-const SUGGESTED_SKILLS = [
+// ── Skills per role ───────────────────────────────────────────────────────────
+const STUDENT_SKILLS = [
     "Frontend", "Backend", "AI / ML", "Data Analysis",
     "UI/UX", "DevOps", "Mobile", "Security",
     "Database", "Testing / QA", "Embedded", "Networks",
 ];
 
-const ALL_DEPARTMENTS = [
-    "Computer Science", "Computer Engineering",
-    "Electrical Engineering", "Information Technology",
-    "Software Engineering", "Cybersecurity",
+const SUPERVISOR_SKILLS = [
+    "Artificial Intelligence",
+    "Machine Learning",
+    "Deep Learning",
+    "Big Data & Analytics",
+    "Data Science",
+    "Cybersecurity & Networks",
+    "Software Engineering & Architecture",
+    "Cloud Computing & DevOps",
+    "Human-Computer Interaction",
+    "Embedded Systems & IoT",
+    "Database Systems",
+    "Computer Vision & NLP",
+    "Distributed Systems & Blockchain",
 ];
+
+const getSuggestedSkills = (role) =>
+    role === "supervisor" ? SUPERVISOR_SKILLS : STUDENT_SKILLS;
 
 const SECTIONS = [
     { id: "department", label: "Department", icon: SchoolOutlinedIcon },
-    { id: "skills", label: "Skills", icon: CodeOutlinedIcon },
-    { id: "contact", label: "Contact", icon: ContactPhoneOutlinedIcon },
-    { id: "bio", label: "Bio", icon: PersonOutlineIcon },
+    { id: "skills",     label: "Skills",      icon: CodeOutlinedIcon },
+    { id: "contact",    label: "Contact",     icon: ContactPhoneOutlinedIcon },
+    { id: "bio",        label: "Bio",         icon: PersonOutlineIcon },
 ];
 
-// ✅ INPUT_SX ثابت خارج الـ component — الـ accent لون ثابت "#d0895b"
 const INPUT_SX = {
     "& .MuiOutlinedInput-root": {
         borderRadius: 2,
@@ -55,10 +73,6 @@ const INPUT_SX = {
     "& .MuiInputLabel-root": { fontSize: "0.875rem" },
 };
 
-// ══════════════════════════════════════════════════════════════════════
-// ✅ FIX #2 (TextFields): InnerCard و CardHeader كـ components مستقلة
-//    خارج EditProfileModal تماماً
-// ══════════════════════════════════════════════════════════════════════
 function InnerCard({ children, sx = {}, border, cardAlt }) {
     return (
         <Box sx={{ borderRadius: 2.5, border: `1px solid ${border}`, bgcolor: cardAlt, overflow: "hidden", ...sx }}>
@@ -75,7 +89,9 @@ function CardHeader({ icon: Icon, title, count, action, accent, border, isDark, 
             bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.015)",
         }}>
             <Icon sx={{ fontSize: 14, color: accent }} />
-            <Typography sx={{ ...labelSx, letterSpacing: "0.07em" }}>{title}</Typography>
+            <Typography sx={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                {title}
+            </Typography>
             {count !== undefined && (
                 <Box sx={{ px: 1, py: 0.1, borderRadius: 10, bgcolor: accentSoft, border: `1px solid ${accentBorder}` }}>
                     <Typography fontSize="0.64rem" fontWeight={700} sx={{ color: accent }}>{count}</Typography>
@@ -86,21 +102,25 @@ function CardHeader({ icon: Icon, title, count, action, accent, border, isDark, 
     );
 }
 
-export default function EditProfileModal({ open, profile, onSave, onClose }) {
-    const theme = useTheme();
-    const isDark = theme.palette.mode === "dark";
+// ─────────────────────────────────────────────────────────────────────────────
+export default function EditProfileModal({ open, profile, onSave, onClose, role = "student" }) {
+    const theme      = useTheme();
+    const isDark     = theme.palette.mode === "dark";
     const fullScreen = useMediaQuery(theme.breakpoints.down("sm"));
 
-    const [activeSection, setActiveSection] = useState("department");
-    const [department, setDepartment] = useState("");
-    const [skills, setSkills] = useState([]);
+    const normalizedRole = (role ?? "student").toLowerCase();
+    const isSupervisor   = normalizedRole === "supervisor";
+
+    const [activeSection,    setActiveSection]    = useState("department");
+    const [department,       setDepartment]       = useState("");
+    const [skills,           setSkills]           = useState([]);
     const [customSkillInput, setCustomSkillInput] = useState("");
-    const [fullName, setFullName] = useState("");
-    const [email, setEmail] = useState("");
-    const [phoneNumber, setPhoneNumber] = useState("");
-    const [linkedin, setLinkedin] = useState("");
-    const [github, setGithub] = useState("");
-    const [bio, setBio] = useState("");
+    const [fullName,         setFullName]         = useState("");
+    const [email,            setEmail]            = useState("");
+    const [phoneNumber,      setPhoneNumber]      = useState("");
+    const [linkedin,         setLinkedin]         = useState("");
+    const [github,           setGithub]           = useState("");
+    const [bio,              setBio]              = useState("");
 
     useEffect(() => {
         if (open) {
@@ -118,26 +138,26 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
     }, [open, profile]);
 
     /* ── Design tokens ── */
-    const accent = "#d0895b";
-    const accentSoft = isDark ? "rgba(208,137,91,0.09)" : "rgba(208,137,91,0.06)";
+    const accent      = "#d0895b";
+    const accentSoft  = isDark ? "rgba(208,137,91,0.09)" : "rgba(208,137,91,0.06)";
     const accentBorder = "rgba(208,137,91,0.22)";
-    const border = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)";
-    const sidebarBg = isDark ? "rgba(255,255,255,0.02)" : "#fafaf9";
-    const cardAlt = isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)";
-    const paperBg = theme.palette.background.paper;
-    const textPri = theme.palette.text.primary;
-    const textSec = theme.palette.text.secondary;
+    const border      = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)";
+    const cardAlt     = isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)";
+    const paperBg     = theme.palette.background.paper;
+    const textPri     = theme.palette.text.primary;
+    const textSec     = theme.palette.text.secondary;
 
     const labelSx = {
         fontSize: "0.68rem", fontWeight: 700,
         letterSpacing: "0.08em", textTransform: "uppercase", color: textSec,
     };
 
-    // shared props للـ InnerCard و CardHeader
-    const cardBaseProps = { border, cardAlt };
+    const cardBaseProps   = { border, cardAlt };
     const headerBaseProps = { accent, border, isDark, labelSx, accentSoft, accentBorder };
 
     /* ── Skills helpers ── */
+    const suggestedSkills = getSuggestedSkills(normalizedRole);
+
     const toggleSuggestedSkill = (s) =>
         setSkills((p) => p.includes(s) ? p.filter((x) => x !== s) : [...p, s]);
 
@@ -154,8 +174,10 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
 
     const canSave = Boolean(fullName.trim()) && Boolean(email.trim()) && Boolean(department);
 
-    // ✅ FIX #4: Mobile BottomNavigation index
     const sectionIndex = SECTIONS.findIndex(s => s.id === activeSection);
+
+    /* ── Skills section label ── */
+    const skillsSectionTitle = isSupervisor ? "Research Areas" : "Skills";
 
     return (
         <Dialog
@@ -176,8 +198,7 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
                 {/* ── Top header ── */}
                 <Box sx={{
                     display: "flex", alignItems: "center", justifyContent: "space-between",
-                    px: 3, py: 2, borderBottom: `1px solid ${border}`,
-                    flexShrink: 0,
+                    px: 3, py: 2, borderBottom: `1px solid ${border}`, flexShrink: 0,
                 }}>
                     <Typography fontWeight={700} fontSize="0.9rem" sx={{ color: textPri }}>
                         Edit Profile
@@ -193,7 +214,7 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
                     {/* ── Desktop Sidebar ── */}
                     <Box sx={{
                         width: 185, flexShrink: 0,
-                        bgcolor: sidebarBg,
+                        bgcolor: isDark ? "rgba(255,255,255,0.02)" : "#fafaf9",
                         borderRight: `1px solid ${border}`,
                         display: { xs: "none", sm: "flex" },
                         flexDirection: "column",
@@ -205,6 +226,7 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
                         <Stack spacing={0.3} sx={{ p: 1.5, flex: 1 }}>
                             {SECTIONS.map(({ id, label, icon: Icon }) => {
                                 const active = activeSection === id;
+                                const displayLabel = id === "skills" ? skillsSectionTitle : label;
                                 return (
                                     <Box key={id} onClick={() => setActiveSection(id)} sx={{
                                         display: "flex", alignItems: "center", gap: 1.5,
@@ -217,7 +239,7 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
                                         <Icon sx={{ fontSize: 15, color: active ? accent : textSec, flexShrink: 0 }} />
                                         <Typography fontSize="0.82rem" fontWeight={active ? 700 : 400}
                                             sx={{ color: active ? accent : textSec }}>
-                                            {label}
+                                            {displayLabel}
                                         </Typography>
                                     </Box>
                                 );
@@ -231,11 +253,12 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
                         {/* Section label header */}
                         <Box sx={{
                             px: 3, py: 1.5, borderBottom: `1px solid ${border}`,
-                            display: { xs: "none", sm: "flex" },
-                            alignItems: "center",
+                            display: { xs: "none", sm: "flex" }, alignItems: "center",
                         }}>
                             <Typography fontWeight={700} fontSize="0.85rem" sx={{ color: textPri }}>
-                                {SECTIONS.find(s => s.id === activeSection)?.label}
+                                {activeSection === "skills"
+                                    ? skillsSectionTitle
+                                    : SECTIONS.find(s => s.id === activeSection)?.label}
                             </Typography>
                         </Box>
 
@@ -258,7 +281,7 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
                                                     </Box>
                                                     <Box>
                                                         <Typography fontWeight={700} fontSize="0.88rem" sx={{ color: textPri }}>{department}</Typography>
-                                                        <Typography fontSize="0.72rem" sx={{ color: textSec }}>Your academic department</Typography>
+                                                        <Typography fontSize="0.72rem" sx={{ color: textSec }}>Your engineering department</Typography>
                                                     </Box>
                                                 </Stack>
                                             ) : (
@@ -291,45 +314,50 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
                                 </Stack>
                             )}
 
-                            {/* SKILLS */}
+                            {/* SKILLS / RESEARCH AREAS */}
                             {activeSection === "skills" && (
                                 <Stack spacing={2}>
                                     <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-                                        <InnerCard {...cardBaseProps} sx={{ flex: 1 }}>
-                                            <CardHeader {...headerBaseProps} icon={AddIcon} title="Add Custom Skill" />
-                                            <Box sx={{ px: 2.5, py: 2 }}>
-                                                {/* ✅ controlled input */}
-                                                <TextField
-                                                    size="small" fullWidth
-                                                    placeholder="e.g. Flutter, Figma, PyTorch…"
-                                                    value={customSkillInput}
-                                                    onChange={(e) => setCustomSkillInput(e.target.value)}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); addCustomSkill(); }
-                                                    }}
-                                                    sx={INPUT_SX}
-                                                    InputProps={{
-                                                        endAdornment: (
-                                                            <InputAdornment position="end">
-                                                                <IconButton size="small" onClick={addCustomSkill} sx={{
-                                                                    color: accent, bgcolor: accentSoft,
-                                                                    borderRadius: 1.5, mr: -0.5,
-                                                                    "&:hover": { bgcolor: accentBorder },
-                                                                }}>
-                                                                    <AddIcon sx={{ fontSize: 17 }} />
-                                                                </IconButton>
-                                                            </InputAdornment>
-                                                        ),
-                                                    }}
-                                                />
-                                                <Typography fontSize="0.7rem" sx={{ color: textSec, mt: 0.8 }}>
-                                                    Press Enter or click + to add
-                                                </Typography>
-                                            </Box>
-                                        </InnerCard>
+                                        {/* Custom skill input — students only */}
+                                        {!isSupervisor && (
+                                            <InnerCard {...cardBaseProps} sx={{ flex: 1 }}>
+                                                <CardHeader {...headerBaseProps} icon={AddIcon} title="Add Custom Skill" />
+                                                <Box sx={{ px: 2.5, py: 2 }}>
+                                                    <TextField
+                                                        size="small" fullWidth
+                                                        placeholder="e.g. Flutter, Figma, PyTorch…"
+                                                        value={customSkillInput}
+                                                        onChange={(e) => setCustomSkillInput(e.target.value)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); addCustomSkill(); }
+                                                        }}
+                                                        sx={INPUT_SX}
+                                                        InputProps={{
+                                                            endAdornment: (
+                                                                <InputAdornment position="end">
+                                                                    <IconButton size="small" onClick={addCustomSkill} sx={{
+                                                                        color: accent, bgcolor: accentSoft,
+                                                                        borderRadius: 1.5, mr: -0.5,
+                                                                        "&:hover": { bgcolor: accentBorder },
+                                                                    }}>
+                                                                        <AddIcon sx={{ fontSize: 17 }} />
+                                                                    </IconButton>
+                                                                </InputAdornment>
+                                                            ),
+                                                        }}
+                                                    />
+                                                    <Typography fontSize="0.7rem" sx={{ color: textSec, mt: 0.8 }}>
+                                                        Press Enter or click + to add
+                                                    </Typography>
+                                                </Box>
+                                            </InnerCard>
+                                        )}
 
                                         <InnerCard {...cardBaseProps} sx={{ flex: 1 }}>
-                                            <CardHeader {...headerBaseProps} icon={CodeOutlinedIcon} title="Selected" count={skills.length}
+                                            <CardHeader {...headerBaseProps}
+                                                icon={CodeOutlinedIcon}
+                                                title={isSupervisor ? "Selected Areas" : "Selected"}
+                                                count={skills.length}
                                                 action={skills.length > 0 && (
                                                     <Button size="small" onClick={() => setSkills([])}
                                                         sx={{ fontSize: "0.68rem", color: textSec, textTransform: "none", p: 0, minWidth: 0 }}>
@@ -351,17 +379,22 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
                                                         ))}
                                                     </Stack>
                                                 ) : (
-                                                    <Typography fontSize="0.8rem" sx={{ color: textSec }}>No skills selected yet</Typography>
+                                                    <Typography fontSize="0.8rem" sx={{ color: textSec }}>
+                                                        {isSupervisor ? "No research areas selected yet" : "No skills selected yet"}
+                                                    </Typography>
                                                 )}
                                             </Box>
                                         </InnerCard>
                                     </Stack>
 
                                     <InnerCard {...cardBaseProps}>
-                                        <CardHeader {...headerBaseProps} icon={CodeOutlinedIcon} title="Suggestions" />
+                                        <CardHeader {...headerBaseProps}
+                                            icon={CodeOutlinedIcon}
+                                            title={isSupervisor ? "Research Areas" : "Suggestions"}
+                                        />
                                         <Box sx={{ px: 2.5, py: 2 }}>
                                             <Stack direction="row" flexWrap="wrap" gap={1}>
-                                                {SUGGESTED_SKILLS.map((skill) => {
+                                                {suggestedSkills.map((skill) => {
                                                     const sel = skills.includes(skill);
                                                     return (
                                                         <Chip key={skill} label={skill} onClick={() => toggleSuggestedSkill(skill)} sx={{
@@ -445,7 +478,12 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
                                                 Tips for a great bio
                                             </Typography>
                                             <Stack spacing={0.3}>
-                                                {[
+                                                {isSupervisor ? [
+                                                    "Your research interests and specializations",
+                                                    "Publications or academic contributions",
+                                                    "Industry experience or projects",
+                                                    "What kind of projects you prefer to supervise",
+                                                ] : [
                                                     "Programming languages: Python, JavaScript, C++…",
                                                     "Frameworks & tools: React, Django, Flutter…",
                                                     "Previous projects or experience",
@@ -463,7 +501,9 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
                                         <Box sx={{ px: 2.5, py: 2 }}>
                                             <TextField
                                                 multiline rows={6} fullWidth
-                                                placeholder="Tell teammates about yourself…"
+                                                placeholder={isSupervisor
+                                                    ? "Tell students about your research interests and supervision style…"
+                                                    : "Tell teammates about yourself…"}
                                                 value={bio}
                                                 onChange={(e) => setBio(e.target.value)}
                                                 inputProps={{ maxLength: 400 }}
@@ -479,8 +519,7 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
                         {/* Footer */}
                         <Box sx={{
                             display: "flex", alignItems: "center", justifyContent: "flex-end",
-                            gap: 1, px: 3, py: 2, borderTop: `1px solid ${border}`,
-                            flexShrink: 0,
+                            gap: 1, px: 3, py: 2, borderTop: `1px solid ${border}`, flexShrink: 0,
                         }}>
                             <Button onClick={onClose} sx={{
                                 color: textSec, textTransform: "none",
@@ -490,9 +529,8 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
                             </Button>
                             <Button variant="contained" onClick={handleSave} disabled={!canSave} sx={{
                                 bgcolor: accent, "&:hover": { bgcolor: "#be7a4f", boxShadow: "none" },
-                                borderRadius: 2, px: 3,
-                                textTransform: "none", fontWeight: 700, fontSize: "0.85rem",
-                                boxShadow: "none",
+                                borderRadius: 2, px: 3, textTransform: "none",
+                                fontWeight: 700, fontSize: "0.85rem", boxShadow: "none",
                                 "&.Mui-disabled": { opacity: 0.45 },
                             }}>
                                 Save Changes
@@ -501,24 +539,16 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
                     </Box>
                 </Box>
 
-                {/* ✅ FIX #4: Mobile Bottom Navigation Bar */}
+                {/* Mobile Bottom Navigation */}
                 {fullScreen && (
-                    <Paper
-                        elevation={0}
-                        sx={{
-                            borderTop: `1px solid ${border}`,
-                            bgcolor: paperBg,
-                            flexShrink: 0,
-                        }}
-                    >
+                    <Paper elevation={0} sx={{ borderTop: `1px solid ${border}`, bgcolor: paperBg, flexShrink: 0 }}>
                         <BottomNavigation
                             value={sectionIndex}
                             onChange={(_, newIndex) => setActiveSection(SECTIONS[newIndex].id)}
                             sx={{
                                 bgcolor: "transparent",
                                 "& .MuiBottomNavigationAction-root": {
-                                    color: textSec,
-                                    minWidth: 0,
+                                    color: textSec, minWidth: 0,
                                     "&.Mui-selected": { color: accent },
                                 },
                                 "& .MuiBottomNavigationAction-label": {
@@ -530,7 +560,7 @@ export default function EditProfileModal({ open, profile, onSave, onClose }) {
                             {SECTIONS.map(({ id, label, icon: Icon }) => (
                                 <BottomNavigationAction
                                     key={id}
-                                    label={label}
+                                    label={id === "skills" ? skillsSectionTitle : label}
                                     icon={<Icon sx={{ fontSize: 20 }} />}
                                 />
                             ))}

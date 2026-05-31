@@ -3,35 +3,66 @@
 // Backend keys:
 //   fullName, phoneNumber, department, field, gitHubLink, linkedinLink, personalEmail
 //
-// Mapping:
-//   department  →  academic major (Computer Science, Software Engineering…)
-//   field       →  skills joined by comma  e.g. "Frontend,Backend,AI / ML"
+// field max length = 100 chars.
+// Supervisor research-area labels are long, so we store short codes in `field`
+// and expand them back to full labels in normalizeProfile (ProfilePage).
 //
-// Endpoints:
-//   GET  /api/Student/my-team
-//   GET  /api/Student/supervisors
-//   GET  /api/Student/available-students
-//   GET  /api/Student/available-teams
-//   GET  /api/Student/my-invitations
-//   GET  /api/Student/my-join-requests        → requests the student sent to teams (⚠ pending backend)
-//   GET  /api/Student/team-join-requests      → requests received by the student's team (leader only)
-//   POST /api/Student/create-team
-//   POST /api/Student/send-invitation
-//   POST /api/Student/request-to-join
-//   POST /api/Student/respond-to-invitation
-//   POST /api/Student/respond-to-join-request
-//   POST /api/Student/reject-join-request/{requestId}
-//   POST /api/Student/request-leave
-//   PUT  /api/Student/update-project-info
-//   DELETE /api/Student/delete-join-request/{requestId}
-//   GET  /api/Student/supervisor-office-hours  ← Get supervisor's available slots
-//   POST /api/Student/request-appointment      ← { officeHourId }  (isOnline determined by backend from slot)
-//   GET  /api/Student/my-appointments          ← returns dateTime ISO + status + link + isOnline …
-//   PUT  /api/Student/update-appointment       ← { appointmentId, officeHourId, excuse }
-//   POST /api/Student/switch-version           ← Phase switching
-//   GET  /api/Student/current-version          ← Get current phase
+// Short-code map lives here so encoding/decoding is co-located.
 
 import axiosInstance from "./../../axiosInstance";
+
+// ── Supervisor Research-Area short codes ──────────────────────────────────────
+// key   = what gets stored in backend `field` (short, ≤4 chars each)
+// value = full display label shown in the UI
+export const SUPERVISOR_AREA_MAP = {
+    "AI":   "Artificial Intelligence",
+    "ML":   "Machine Learning",
+    "DL":   "Deep Learning",
+    "BDA":  "Big Data & Analytics",
+    "DS":   "Data Science",
+    "CN":   "Cybersecurity & Networks",
+    "SEA":  "Software Engineering & Architecture",
+    "CCD":  "Cloud Computing & DevOps",
+    "HCI":  "Human-Computer Interaction",
+    "IOT":  "Embedded Systems & IoT",
+    "DB":   "Database Systems",
+    "CVN":  "Computer Vision & NLP",
+    "DSB":  "Distributed Systems & Blockchain",
+};
+
+// reverse: full label → short code
+const LABEL_TO_CODE = Object.fromEntries(
+    Object.entries(SUPERVISOR_AREA_MAP).map(([k, v]) => [v, k])
+);
+
+/**
+ * Encode skills array → comma-separated string for backend.
+ * Supervisor area labels are replaced with their short codes.
+ * Student free-text skills are stored as-is (they're already short).
+ * Truncated to 100 chars as a safety net.
+ */
+function encodeField(skills = []) {
+    const encoded = skills
+        .map((s) => LABEL_TO_CODE[s] ?? s)   // replace known labels with codes
+        .join(",");
+    return encoded.slice(0, 100);             // hard cap at 100
+}
+
+/**
+ * Decode field string → skills array.
+ * Short codes are expanded back to full labels.
+ * Unknown tokens (student free-text) are kept as-is.
+ */
+export function decodeField(field = "") {
+    if (!field) return [];
+    return field
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .map((s) => SUPERVISOR_AREA_MAP[s] ?? s);  // expand code → label if known
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const studentApi = {
 
@@ -68,10 +99,10 @@ const studentApi = {
 
     createTeam: (body) =>
         axiosInstance.post("/Student/create-team", {
-            projectTitle: body.projectTitle,
+            projectTitle:       body.projectTitle,
             projectDescription: body.projectDescription ?? "",
-            supervisorId: body.supervisorId,
-            studentIds: body.studentIds ?? [],
+            supervisorId:       body.supervisorId,
+            studentIds:         body.studentIds ?? [],
         }).then((r) => r.data),
 
     sendInvitation: (studentId) =>
@@ -94,7 +125,7 @@ const studentApi = {
 
     updateProjectInfo: (body) =>
         axiosInstance.put("/Student/update-project-info", {
-            projectTitle: body.projectTitle ?? "",
+            projectTitle:       body.projectTitle ?? "",
             projectDescription: body.projectDescription ?? "",
         }).then((r) => r.data),
 
@@ -105,102 +136,57 @@ const studentApi = {
 
     getProfile: () =>
         axiosInstance.get("/UserProfile").then((r) => r.data),
+
     getProfileById: (userId) =>
         axiosInstance.get(`/UserProfile/${userId}`).then((r) => r.data),
+
     getAllStudents: () =>
         axiosInstance.get("/Student/all-students").then((r) => r.data),
 
     createProfile: (data) =>
         axiosInstance.post("/UserProfile", {
-            phoneNumber: data.phoneNumber ?? "",
-            fullName: data.fullName ?? "",
-            department: data.department ?? "",
-            gitHubLink: data.github ?? "",
-            linkedinLink: data.linkedin ?? "",
-            field: (data.skills ?? []).join(","),
-            personalEmail: data.email ?? "",
-            bio: data.bio ?? "",
+            phoneNumber:   data.phoneNumber   ?? "",
+            fullName:      data.fullName      ?? "",
+            department:    data.department    ?? "",
+            gitHubLink:    data.github        ?? "",
+            linkedinLink:  data.linkedin      ?? "",
+            field:         encodeField(data.skills),   // ← encoded, ≤100 chars
+            personalEmail: data.email         ?? "",
+            bio:           data.bio           ?? "",
         }).then((r) => r.data),
 
     updateProfile: (data) =>
         axiosInstance.put("/UserProfile", {
-            phoneNumber: data.phoneNumber ?? "",
-            fullName: data.fullName ?? "",
-            department: data.department ?? "",
-            gitHubLink: data.github ?? "",
-            linkedinLink: data.linkedin ?? "",
-            field: (data.skills ?? []).join(","),
+            phoneNumber:          data.phoneNumber ?? "",
+            fullName:             data.fullName    ?? "",
+            department:           data.department  ?? "",
+            gitHubLink:           data.github      ?? "",
+            linkedinLink:         data.linkedin    ?? "",
+            field:                encodeField(data.skills),   // ← encoded, ≤100 chars
             totalNumOfCreditCards: 0,
-            personalEmail: data.email ?? "",
-            bio: data.bio ?? "",
+            personalEmail:        data.email       ?? "",
+            bio:                  data.bio         ?? "",
         }).then((r) => r.data),
 
     // ── Appointments ──────────────────────────────────────────────────────────
 
-    /**
-     * GET /api/Student/supervisor-office-hours
-     * Returns the supervisor's available office hour slots.
-     *
-     * Expected response shape per item:
-     * {
-     *   officeHourId : number,
-     *   dayOfWeek    : string,   // e.g. "Monday"
-     *   startTime    : string,   // e.g. "09:00"
-     *   endTime      : string,   // e.g. "11:00"
-     *   isOnline     : boolean,
-     * }
-     */
     getSupervisorOfficeHours: () =>
         axiosInstance.get("/Student/supervisor-office-hours").then((r) => r.data),
 
-    /**
-     * POST /api/Student/request-appointment
-     * Student requests an appointment based on a specific office hour slot.
-     * NOTE: isOnline is NOT sent — backend determines it from the office hour slot.
-     *
-     * @param {{ officeHourId: number }} body
-     */
     requestAppointment: (body) =>
         axiosInstance
-            .post("/Student/request-appointment", {
-                officeHourId: body.officeHourId,
-            })
+            .post("/Student/request-appointment", { officeHourId: body.officeHourId })
             .then((r) => r.data),
 
-    /**
-     * GET /api/Student/my-appointments
-     * Returns all appointments for the logged-in student.
-     *
-     * Response shape per item:
-     * {
-     *   id             : number,
-     *   dateTime       : string (ISO),   // e.g. "2026-05-14T09:00:00Z"
-     *   status         : "Pending" | "Approved" | "Rejected",
-     *   link           : string,
-     *   isOnline       : boolean,
-     *   excuse         : string | null,
-     *   teamId         : number,
-     *   projectName    : string,
-     *   supervisorId   : number,
-     *   supervisorName : string,
-     * }
-     */
     getMyAppointments: () =>
         axiosInstance.get("/Student/my-appointments").then((r) => r.data),
 
-    /**
-     * PUT /api/Student/update-appointment
-     * Student updates a pending appointment (reschedule or add excuse).
-     * NOTE: isOnline is NOT sent — backend determines it from the new office hour slot.
-     *
-     * @param {{ appointmentId: number, officeHourId: number, excuse: string }} body
-     */
     updateAppointment: (body) =>
         axiosInstance
             .put("/Student/update-appointment", {
                 appointmentId: body.appointmentId,
-                officeHourId: body.officeHourId,
-                excuse: body.excuse ?? "",
+                officeHourId:  body.officeHourId,
+                excuse:        body.excuse ?? "",
             })
             .then((r) => r.data),
 

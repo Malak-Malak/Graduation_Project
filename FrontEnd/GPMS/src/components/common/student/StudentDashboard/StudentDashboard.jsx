@@ -19,7 +19,7 @@ import RefreshOutlinedIcon        from "@mui/icons-material/RefreshOutlined";
 import DoneAllIcon                from "@mui/icons-material/DoneAll";
 
 import { useAuth }               from "../../../../contexts/AuthContext";
-import { getKanbanBoard }        from "../../../../api/handler/endpoints/kanbanApi";
+import { getKanbanBoard } from "../../../../api/handler/endpoints/Kanbanapi";
 import { notificationApi }       from "../../../../api/handler/endpoints/notificationApi";
 import { getMyDiscussionSlot }   from "../../../../api/handler/endpoints/headOfDepartmentApi";
 import studentApi                from "../../../../api/handler/endpoints/studentApi";

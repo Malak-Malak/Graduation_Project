@@ -68,7 +68,7 @@ const NAV_ITEMS = {
         { label: "Profile", icon: <AccountCircleOutlinedIcon />, path: "/student/profile" },
         { label: "Discovery Hub", icon: <SearchOutlinedIcon />, path: "/student/team-finder" },
         { label: "Kanban Board", icon: <ViewKanbanOutlinedIcon />, path: "/student/kanban" },
-        { label: "Timeline", icon: <TimelineOutlinedIcon />, path: "/student/timeline" },
+       
         { label: "Requirements", icon: <AssignmentOutlinedIcon />, path: "/student/requirements", phase2Only: true },
         { label: "Files", icon: <FolderOutlinedIcon />, path: "/student/files" },
         { label: "Meetings", icon: <CalendarMonthOutlinedIcon />, path: "/student/meetings" },

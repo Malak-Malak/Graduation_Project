@@ -11,7 +11,7 @@ import FileRepository from "../../components/common/student/FileRepository/FileR
 import StudentMeetings from "../../components/common/student/Meetings/StudentMeetings";
 import StudentAnalytics from "../../components/common/student/Analytics/StudentAnalytics";
 import ProfilePage from "../../components/common/student/Profile/ProfilePage";
-import ProjectTimeline from "../../components/common/student/Timeline/ProjectTimeline";
+
 import OnboardingGate from "../../components/common/student/Onboarding/OnboardingGate";
 import JoinOrCreateModal from "../../components/common/student/Onboarding/JoinOrCreateModal";
 import CreateTeamFlow from "../../components/common/student/Onboarding/CreateTeamFlow";
@@ -220,7 +220,7 @@ export default function StudentPage() {
                     <Route path="files" element={<FileRepository />} />
                     <Route path="meetings" element={<StudentMeetings />} />
                     <Route path="analytics" element={<StudentAnalytics />} />
-                    <Route path="timeline" element={<ProjectTimeline />} />
+                    
                     <Route path="requirements" element={<ProjectRequirements />} />
                     <Route path="profile" element={<ProfilePage />} />
                     <Route path="my-team" element={<MyTeamPage />} />

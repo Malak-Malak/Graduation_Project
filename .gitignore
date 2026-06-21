@@ -1,6 +1,8 @@
 BackEnd/GP-BackEnd/obj/
+BackEnd/GP-BackEnd/bin/
 BackEnd/GP-BackEnd/.vs/
 .vs/
 *.sqlite
 *.user
 VSWorkspaceState.json
+BackEnd/GP-BackEnd/appsettings.Development.json

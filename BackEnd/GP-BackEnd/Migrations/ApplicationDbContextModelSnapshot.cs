@@ -430,6 +430,12 @@ namespace GP_BackEnd.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<bool>("Notified24h")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("Notified48h")
+                        .HasColumnType("boolean");
+
                     b.Property<int?>("ProjectId")
                         .HasColumnType("integer");
 

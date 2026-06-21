@@ -98,6 +98,8 @@ builder.Services.AddScoped<EmailService>();
 builder.Services.AddHostedService<AppointmentReminderService>();
 builder.Services.AddScoped<ArchiveService>();
 builder.Services.AddScoped<HeadOfDepartmentService>();
+builder.Services.AddScoped<NotificationService>();
+builder.Services.AddHostedService<TaskNotificationService>();
 
 
 var app = builder.Build();

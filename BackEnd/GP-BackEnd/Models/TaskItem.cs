@@ -21,7 +21,8 @@ namespace GP_BackEnd.Models
         public User CreatedBy { get; set; }
         public int Version { get; set; } = 0;
         public ICollection<TaskAssignment> Assignments { get; set; }
-
         public ICollection<Feedback> Feedbacks { get; set; }
+        public bool Notified24h { get; set; } = false; 
+        public bool Notified48h { get; set; } = false;  
     }
 }

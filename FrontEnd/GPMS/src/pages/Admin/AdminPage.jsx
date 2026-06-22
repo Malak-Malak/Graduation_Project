@@ -7,10 +7,10 @@ import AdminDashboard from "../../components/common/admin/Dashboard/AdminDashboa
 import UserManagement from "../../components/common/admin/UserManagement/UserManagement";
 import Reports from "../../components/common/admin/Reports/Reports";
 import ActivityLogs from "../../components/common/admin/ActivityLogs/ActivityLogs";
-import SystemConfiguration from "../../components/common/admin/SystemConfiguration/SystemConfiguration";
+
 import PendingRequests from "../../components/common/admin/PendingRequests/PendingRequests";
 import AllRequests from "../../components/common/admin/AllRequests/AllRequests";
-import ManageSupervisors from "../../components/common/admin/ManageSupervisors/ManageSupervisors"; // ✅
+import ManageSupervisors from "../../components/common/admin/ManageSupervisors/ManageSupervisors";
 import ProfilePage from "../../components/common/student/Profile/ProfilePage";
 
 export default function AdminPage() {
@@ -21,7 +21,7 @@ export default function AdminPage() {
         <Route path="users" element={<UserManagement />} />
         <Route path="reports" element={<Reports />} />
         <Route path="logs" element={<ActivityLogs />} />
-        <Route path="settings" element={<SystemConfiguration />} />
+        
         <Route path="pending-requests" element={<PendingRequests />} />
         <Route path="all-requests" element={<AllRequests />} />
         <Route path="manage-supervisors" element={<ManageSupervisors />} /> {/* ✅ */}

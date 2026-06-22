@@ -25,15 +25,10 @@ import SupervisorAccountOutlinedIcon from "@mui/icons-material/SupervisorAccount
 import RateReviewOutlinedIcon from "@mui/icons-material/RateReviewOutlined";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import DriveFileRenameOutlineOutlinedIcon from "@mui/icons-material/DriveFileRenameOutlineOutlined";
-import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
-import TipsAndUpdatesOutlinedIcon from "@mui/icons-material/TipsAndUpdatesOutlined";
-import WarningAmberOutlinedIcon from "@mui/icons-material/WarningAmberOutlined";
-import ArrowForwardOutlinedIcon from "@mui/icons-material/ArrowForwardOutlined";
 
 import fileSystemApi from "../../../../api/handler/endpoints/fileSystemApi";
 import feedbackApi from "../../../../api/handler/endpoints/feedbackApi";
 import { useAuth } from "../../../../contexts/AuthContext";
-import DocumentAnalysisDialog from "./DocumentAnalysisDialog";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -74,151 +69,6 @@ function TabPanel({ children, value, index }) {
     return value === index ? <Box sx={{ pt: 3 }}>{children}</Box> : null;
 }
 
-// ── AI Review Card ────────────────────────────────────────────────────────────
-
-function AiReviewCard({ review, t, theme }) {
-    const scoreColor = (score) => {
-        if (score === "good") return "#6D8A7D";
-        if (score === "needs_improvement") return "#C49A6C";
-        if (score === "missing") return "#C47E7E";
-        return t.textTertiary;
-    };
-    const scoreIcon = (score) => score === "good"
-        ? <CheckOutlinedIcon sx={{ fontSize: 13 }} />
-        : <WarningAmberOutlinedIcon sx={{ fontSize: 13 }} />;
-    const scoreLabel = (score) => {
-        if (score === "good") return "Good";
-        if (score === "needs_improvement") return "Needs improvement";
-        if (score === "missing") return "Missing";
-        return score;
-    };
-
-    return (
-        <Box sx={{
-            mt: 2.5, borderRadius: 3,
-            border: `1px solid ${t.accentPrimary}30`,
-            overflow: "hidden",
-            background: `linear-gradient(135deg, ${t.accentPrimary}06 0%, ${t.accentPrimary}02 100%)`,
-        }}>
-            <Stack direction="row" alignItems="center" gap={1} sx={{
-                px: 2, py: 1.2,
-                borderBottom: `1px solid ${t.accentPrimary}20`,
-                bgcolor: `${t.accentPrimary}08`,
-            }}>
-                <AutoAwesomeOutlinedIcon sx={{ fontSize: 15, color: t.accentPrimary }} />
-                <Typography sx={{ fontSize: "0.75rem", fontWeight: 700, color: t.accentPrimary, textTransform: "uppercase", letterSpacing: "0.07em" }}>
-                    AI Pre-Review
-                </Typography>
-                <Chip label="Before submitting to supervisor" size="small" sx={{
-                    height: 15, fontSize: "0.55rem", fontWeight: 600,
-                    bgcolor: `${t.accentPrimary}15`, color: t.accentPrimary,
-                    "& .MuiChip-label": { px: 0.7 },
-                }} />
-            </Stack>
-
-            <Stack spacing={0} divider={<Divider sx={{ borderColor: `${t.borderLight}60` }} />}>
-                <Box sx={{ px: 2, py: 1.5 }}>
-                    <Stack direction="row" alignItems="center" gap={1} mb={0.6}>
-                        <DriveFileRenameOutlineOutlinedIcon sx={{ fontSize: 14, color: t.textTertiary }} />
-                        <Typography sx={{ fontSize: "0.72rem", fontWeight: 700, color: t.textSecondary }}>File Name</Typography>
-                        <Chip icon={scoreIcon(review.fileName.score)} label={scoreLabel(review.fileName.score)} size="small" sx={{
-                            height: 16, fontSize: "0.58rem", fontWeight: 600,
-                            bgcolor: `${scoreColor(review.fileName.score)}15`,
-                            color: scoreColor(review.fileName.score),
-                            border: `1px solid ${scoreColor(review.fileName.score)}30`,
-                            "& .MuiChip-label": { px: 0.6 },
-                            "& .MuiChip-icon": { fontSize: "11px !important", color: "inherit" },
-                        }} />
-                    </Stack>
-                    <Typography sx={{ fontSize: "0.8rem", color: t.textSecondary, lineHeight: 1.6, pl: 0.3 }}>
-                        {review.fileName.feedback}
-                    </Typography>
-                </Box>
-
-                <Box sx={{ px: 2, py: 1.5 }}>
-                    <Stack direction="row" alignItems="center" gap={1} mb={0.6}>
-                        <ChatBubbleOutlineOutlinedIcon sx={{ fontSize: 14, color: t.textTertiary }} />
-                        <Typography sx={{ fontSize: "0.72rem", fontWeight: 700, color: t.textSecondary }}>Description</Typography>
-                        <Chip icon={scoreIcon(review.description.score)} label={scoreLabel(review.description.score)} size="small" sx={{
-                            height: 16, fontSize: "0.58rem", fontWeight: 600,
-                            bgcolor: `${scoreColor(review.description.score)}15`,
-                            color: scoreColor(review.description.score),
-                            border: `1px solid ${scoreColor(review.description.score)}30`,
-                            "& .MuiChip-label": { px: 0.6 },
-                            "& .MuiChip-icon": { fontSize: "11px !important", color: "inherit" },
-                        }} />
-                    </Stack>
-                    <Typography sx={{ fontSize: "0.8rem", color: t.textSecondary, lineHeight: 1.6, pl: 0.3 }}>
-                        {review.description.feedback}
-                    </Typography>
-                </Box>
-
-                {review.general?.tips?.length > 0 && (
-                    <Box sx={{ px: 2, py: 1.5 }}>
-                        <Stack direction="row" alignItems="center" gap={1} mb={1}>
-                            <TipsAndUpdatesOutlinedIcon sx={{ fontSize: 14, color: t.textTertiary }} />
-                            <Typography sx={{ fontSize: "0.72rem", fontWeight: 700, color: t.textSecondary }}>General Tips</Typography>
-                        </Stack>
-                        <Stack spacing={0.7} sx={{ pl: 0.3 }}>
-                            {review.general.tips.map((tip, i) => (
-                                <Stack key={i} direction="row" gap={1} alignItems="flex-start">
-                                    <ArrowForwardOutlinedIcon sx={{ fontSize: 12, color: t.accentPrimary, mt: "5px", flexShrink: 0 }} />
-                                    <Typography sx={{ fontSize: "0.8rem", color: t.textSecondary, lineHeight: 1.6 }}>{tip}</Typography>
-                                </Stack>
-                            ))}
-                        </Stack>
-                    </Box>
-                )}
-            </Stack>
-
-            <Box sx={{ px: 2, py: 1, borderTop: `1px solid ${t.accentPrimary}15`, bgcolor: `${t.accentPrimary}04` }}>
-                <Typography sx={{ fontSize: "0.68rem", color: t.textTertiary, fontStyle: "italic" }}>
-                    AI-generated review to help before sharing with your supervisor. You can still save without changes.
-                </Typography>
-            </Box>
-        </Box>
-    );
-}
-
-// ── Mini flow steps in dialog ─────────────────────────────────────────────────
-
-function MiniFlowSteps({ t }) {
-    const steps = [
-        { Icon: CloudOutlinedIcon, label: "Upload to Drive / GitHub" },
-        { Icon: LinkOutlinedIcon, label: "Paste link here" },
-        { Icon: AutoAwesomeOutlinedIcon, label: "Optional: AI review" },
-        { Icon: SendOutlinedIcon, label: "Save & share" },
-    ];
-    return (
-        <Stack direction="row" alignItems="center" gap={0} sx={{
-            p: 1.5, borderRadius: 2,
-            bgcolor: `${t.accentPrimary}06`,
-            border: `1px solid ${t.accentPrimary}18`,
-            mb: 2, flexWrap: "wrap",
-        }}>
-            {steps.map((s, i) => (
-                <Stack key={i} direction="row" alignItems="center">
-                    <Stack direction="row" alignItems="center" gap={0.6} sx={{ flexShrink: 0 }}>
-                        <Box sx={{
-                            width: 22, height: 22, borderRadius: 1,
-                            bgcolor: `${t.accentPrimary}12`,
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                        }}>
-                            <s.Icon sx={{ fontSize: 12, color: t.accentPrimary }} />
-                        </Box>
-                        <Typography sx={{ fontSize: "0.68rem", color: t.textSecondary, whiteSpace: "nowrap" }}>
-                            {s.label}
-                        </Typography>
-                    </Stack>
-                    {i < steps.length - 1 && (
-                        <ArrowForwardOutlinedIcon sx={{ fontSize: 12, color: `${t.accentPrimary}40`, mx: 0.8 }} />
-                    )}
-                </Stack>
-            ))}
-        </Stack>
-    );
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function FileRepository() {
@@ -248,14 +98,6 @@ export default function FileRepository() {
     const [form, setForm] = useState(EMPTY_FORM);
     const [formError, setFormError] = useState("");
     const [saving, setSaving] = useState(false);
-
-    // AI review (inside add/edit dialog)
-    const [aiReview, setAiReview] = useState(null);
-    const [aiReviewLoading, setAiReviewLoading] = useState(false);
-    const [aiReviewError, setAiReviewError] = useState("");
-
-    // Document Analysis Dialog (standalone — opened from header)
-    const [analysisDialog, setAnalysisDialog] = useState({ open: false, file: null });
 
     // reply
     const [replyOpen, setReplyOpen] = useState({});
@@ -322,60 +164,9 @@ export default function FileRepository() {
 
     // ── dialog helpers ────────────────────────────────────────────────────────
 
-    const resetAiState = () => { setAiReview(null); setAiReviewError(""); setAiReviewLoading(false); };
-    const openAdd = () => { setEditTarget(null); setForm(EMPTY_FORM); setFormError(""); resetAiState(); setDialogOpen(true); };
-    const openEdit = (f) => { setEditTarget(f); setForm({ filePath: f.filePath ?? "", fileName: f.fileName ?? "", description: f.description ?? "" }); setFormError(""); resetAiState(); setDialogOpen(true); };
-    const closeDialog = () => { if (!saving) { setDialogOpen(false); resetAiState(); } };
-
-    // ── AI Analyze (inside add/edit dialog) ───────────────────────────────────
-
-    const handleAiAnalyze = async () => {
-        if (!form.filePath.trim()) { setAiReviewError("Please enter a file link first before analyzing."); return; }
-        setAiReviewLoading(true); setAiReviewError(""); setAiReview(null);
-
-        const prompt = `You are a helpful academic supervisor assistant. A student is submitting a file link for their graduation project.
-
-File details:
-- Link: ${form.filePath.trim()}
-- File Name: ${form.fileName.trim() || "(not provided)"}
-- Description: ${form.description.trim() || "(not provided)"}
-
-Respond ONLY with a valid JSON object (no markdown, no backticks, no extra text) in this exact format:
-{
-  "fileName": { "score": "good", "feedback": "your feedback here" },
-  "description": { "score": "needs_improvement", "feedback": "your feedback here" },
-  "general": { "tips": ["tip 1", "tip 2", "tip 3"] }
-}
-Rules:
-- score for fileName: "good" or "needs_improvement"
-- score for description: "good", "needs_improvement", or "missing"
-- tips: 2-4 short practical tips
-- Return ONLY the JSON`;
-
-        try {
-            const response = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-                }
-            );
-            if (!response.ok) {
-                const errData = await response.json().catch(() => ({}));
-                throw new Error(errData?.error?.message ?? `Error ${response.status}`);
-            }
-            const data = await response.json();
-            const raw = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-            const cleaned = raw.replace(/```json|```/gi, "").trim();
-            const parsed = JSON.parse(cleaned);
-            if (!parsed.fileName || !parsed.description || !parsed.general) throw new Error("Unexpected response format.");
-            setAiReview(parsed);
-        } catch (err) {
-            console.error("AI Analyze error:", err);
-            setAiReviewError(err?.message ?? "Failed to get AI review. Please try again.");
-        } finally { setAiReviewLoading(false); }
-    };
+    const openAdd = () => { setEditTarget(null); setForm(EMPTY_FORM); setFormError(""); setDialogOpen(true); };
+    const openEdit = (f) => { setEditTarget(f); setForm({ filePath: f.filePath ?? "", fileName: f.fileName ?? "", description: f.description ?? "" }); setFormError(""); setDialogOpen(true); };
+    const closeDialog = () => { if (!saving) setDialogOpen(false); };
 
     // ── save / delete ─────────────────────────────────────────────────────────
 
@@ -393,7 +184,6 @@ Rules:
             }
             await fetchMyFiles();
             setDialogOpen(false);
-            resetAiState();
         } catch (err) {
             setFormError(err?.response?.data?.message ?? (typeof err?.response?.data === "string" ? err.response.data : null) ?? err?.message ?? "Something went wrong.");
         } finally { setSaving(false); }
@@ -777,40 +567,15 @@ Rules:
                     </Typography>
                 </Box>
 
-                {/* ── Header action buttons ── */}
                 {activeTab === 0 && (
-                    <Stack direction="row" alignItems="center" gap={1.5} sx={{ flexShrink: 0 }}>
-                        {/* Analyze Document — standalone, no file required */}
-                        <Button
-                            variant="outlined"
-                            startIcon={<AutoAwesomeOutlinedIcon sx={{ fontSize: 16 }} />}
-                            onClick={() => setAnalysisDialog({ open: true, file: null })}
-                            sx={{
-                                borderRadius: 2,
-                                fontSize: "0.82rem",
-                                fontWeight: 600,
-                                color: t.accentPrimary,
-                                borderColor: `${t.accentPrimary}40`,
-                                textTransform: "none",
-                                "&:hover": {
-                                    borderColor: t.accentPrimary,
-                                    bgcolor: `${t.accentPrimary}08`,
-                                },
-                            }}
-                        >
-                            Analyze Document
-                        </Button>
-
-                        {/* Add Link */}
-                        <Button
-                            variant="contained"
-                            startIcon={<AddLinkOutlinedIcon />}
-                            onClick={openAdd}
-                            sx={{ bgcolor: t.accentPrimary, borderRadius: 2, flexShrink: 0 }}
-                        >
-                            Add Link
-                        </Button>
-                    </Stack>
+                    <Button
+                        variant="contained"
+                        startIcon={<AddLinkOutlinedIcon />}
+                        onClick={openAdd}
+                        sx={{ bgcolor: t.accentPrimary, borderRadius: 2, flexShrink: 0 }}
+                    >
+                        Add Link
+                    </Button>
                 )}
             </Stack>
 
@@ -847,7 +612,6 @@ Rules:
                         <Typography sx={{ fontSize: "0.78rem", color: t.textSecondary, lineHeight: 1.6 }}>
                             Upload your work to <strong>Google Drive</strong>, <strong>OneDrive</strong>, or <strong>GitHub</strong>, then paste the link here.
                             Your supervisor can leave feedback directly on the link.{" "}
-                            Use <strong>Analyze Document</strong> above to get AI feedback on your PDF before submitting.{" "}
                             <strong>Only you can edit or delete files you uploaded.</strong>
                         </Typography>
                     </Box>
@@ -909,7 +673,6 @@ Rules:
                             ? "Update the link or description below."
                             : "Add a link to your file hosted on Drive, OneDrive, or GitHub."}
                     </Typography>
-                    <MiniFlowSteps t={t} />
                 </Box>
 
                 <DialogContent sx={{ pt: 0.5 }}>
@@ -917,7 +680,7 @@ Rules:
                         fullWidth label="File Name"
                         placeholder="e.g. Project Report Phase 2"
                         value={form.fileName}
-                        onChange={(e) => { setForm(p => ({ ...p, fileName: e.target.value })); setAiReview(null); }}
+                        onChange={(e) => setForm(p => ({ ...p, fileName: e.target.value }))}
                         sx={{ mb: 2 }}
                         InputProps={{ startAdornment: <InputAdornment position="start"><DriveFileRenameOutlineOutlinedIcon sx={{ color: t.textTertiary, fontSize: 18 }} /></InputAdornment> }}
                     />
@@ -925,7 +688,7 @@ Rules:
                         fullWidth label="File Link *"
                         placeholder="https://drive.google.com/file/…"
                         value={form.filePath}
-                        onChange={(e) => { setForm(p => ({ ...p, filePath: e.target.value })); setAiReview(null); setAiReviewError(""); }}
+                        onChange={(e) => { setForm(p => ({ ...p, filePath: e.target.value })); setFormError(""); }}
                         error={Boolean(formError)}
                         sx={{ mb: 2 }}
                         InputProps={{ startAdornment: <InputAdornment position="start"><LinkOutlinedIcon sx={{ color: t.textTertiary, fontSize: 18 }} /></InputAdornment> }}
@@ -934,42 +697,11 @@ Rules:
                         fullWidth label="Description (optional)"
                         placeholder="e.g. Final report PDF for Phase 2"
                         value={form.description}
-                        onChange={(e) => { setForm(p => ({ ...p, description: e.target.value })); setAiReview(null); }}
+                        onChange={(e) => setForm(p => ({ ...p, description: e.target.value }))}
                         multiline minRows={2}
                     />
 
                     {formError && <Alert severity="error" sx={{ mt: 1.5, borderRadius: 2, fontSize: "0.8rem" }}>{formError}</Alert>}
-
-                    {/* AI Pre-Review inside dialog */}
-                    <Box sx={{ mt: 2.5, p: 1.5, borderRadius: 2, border: `1px solid ${t.accentPrimary}20`, bgcolor: `${t.accentPrimary}04` }}>
-                        <Stack direction="row" alignItems="center" gap={1} mb={1}>
-                            <AutoAwesomeOutlinedIcon sx={{ fontSize: 15, color: t.accentPrimary }} />
-                            <Typography sx={{ fontSize: "0.75rem", fontWeight: 700, color: t.accentPrimary }}>
-                                AI Pre-Review (optional)
-                            </Typography>
-                        </Stack>
-                        <Typography sx={{ fontSize: "0.74rem", color: t.textSecondary, lineHeight: 1.6, mb: 1.2 }}>
-                            Let AI check your file name and description before sharing with your supervisor.
-                        </Typography>
-                        <Button
-                            fullWidth variant="outlined"
-                            onClick={handleAiAnalyze}
-                            disabled={aiReviewLoading || !form.filePath.trim()}
-                            startIcon={aiReviewLoading ? <CircularProgress size={15} color="inherit" /> : <AutoAwesomeOutlinedIcon sx={{ fontSize: 16 }} />}
-                            sx={{
-                                borderRadius: 2, fontSize: "0.82rem", fontWeight: 600,
-                                color: t.accentPrimary, borderColor: `${t.accentPrimary}50`,
-                                textTransform: "none", py: 0.9,
-                                "&:hover": { borderColor: t.accentPrimary, bgcolor: `${t.accentPrimary}08` },
-                                "&.Mui-disabled": { borderColor: t.borderLight, color: t.textTertiary },
-                            }}
-                        >
-                            {aiReviewLoading ? "Analyzing…" : aiReview ? "Re-analyze with AI" : "Analyze with AI"}
-                        </Button>
-                    </Box>
-
-                    {aiReviewError && <Alert severity="warning" sx={{ mt: 1.5, borderRadius: 2, fontSize: "0.8rem" }}>{aiReviewError}</Alert>}
-                    {aiReview && <AiReviewCard review={aiReview} t={t} theme={theme} />}
                 </DialogContent>
 
                 <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
@@ -984,12 +716,6 @@ Rules:
                 </DialogActions>
             </Dialog>
 
-            {/* ── Document Analysis Dialog ── */}
-            <DocumentAnalysisDialog
-                open={analysisDialog.open}
-                onClose={() => setAnalysisDialog({ open: false, file: null })}
-                file={analysisDialog.file}
-            />
         </Box>
     );
 }

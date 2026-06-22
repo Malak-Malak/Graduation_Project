@@ -15,7 +15,6 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import RefreshOutlinedIcon from "@mui/icons-material/RefreshOutlined";
 import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
 import SchoolOutlinedIcon from "@mui/icons-material/SchoolOutlined";
-import HowToRegOutlinedIcon from "@mui/icons-material/HowToRegOutlined";
 import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
@@ -36,8 +35,6 @@ import {
     unassignTeam,
     getDepartmentTeams,
     getDepartmentSupervisors,
-    getStudentRequests,
-    reviewStudentRequest,
     getDepartmentStudents,
 } from "../../../../api/handler/endpoints/headOfDepartmentApi";
 
@@ -73,27 +70,15 @@ const fmtDateTime = (dt) => {
     } catch { return dt; }
 };
 
-/** Resolve the display name of a team from any field the backend may return */
 const resolveTeamName = (t) =>
     t?.teamName ?? t?.name ?? t?.projectName ?? t?.projectTitle ?? "Team";
 
-/**
- * Resolve the numeric ID of a slot object.
- * Backend may call it slotId, id, discussionSlotId, etc.
- */
 const resolveSlotId = (slot) =>
     slot?.slotId ?? slot?.id ?? slot?.discussionSlotId ?? null;
 
-/**
- * Resolve the numeric ID of a team object.
- */
 const resolveTeamId = (team) =>
     team?.teamId ?? team?.id ?? null;
 
-/**
- * Determine whether a team already has an assigned slot.
- * Checks all plausible field names the backend might return.
- */
 const teamHasSlot = (team) => {
     if (team.assignedSlot != null) return true;
     if (team.slot != null) return true;
@@ -107,9 +92,6 @@ const teamHasSlot = (team) => {
     return false;
 };
 
-/**
- * Extract the slot display object from a team (for showing date/location inline).
- */
 const teamSlotDisplay = (team) => {
     const obj = team.assignedSlot ?? team.slot ?? team.discussionSlot ?? null;
     if (obj) return obj;
@@ -145,24 +127,20 @@ function DiscussionSlotsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
     const [teams, setTeams] = useState([]);
     const [loading, setLoading] = useState(false);
 
-    // Create dialog
     const [createOpen, setCreateOpen] = useState(false);
     const [form, setForm] = useState({ dateTime: "", location: "", notes: "" });
     const [createBusy, setCreateBusy] = useState(false);
 
-    // Assign dialog
     const [assignOpen, setAssignOpen] = useState(false);
     const [selectedSlot, setSelectedSlot] = useState(null);
     const [selectedTeamId, setSelectedTeamId] = useState("");
     const [assignBusy, setAssignBusy] = useState(false);
 
-    // Reassign dialog
     const [reassignOpen, setReassignOpen] = useState(false);
     const [reassignTeam, setReassignTeam] = useState(null);
     const [reassignSlotId, setReassignSlotId] = useState("");
     const [reassignBusy, setReassignBusy] = useState(false);
 
-    // Unassign
     const [unassignBusy, setUnassignBusy] = useState(null);
 
     const [snack, setSnack] = useState({ open: false, msg: "", sev: "success" });
@@ -180,7 +158,6 @@ function DiscussionSlotsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
     const load = useCallback(async () => {
         setLoading(true);
         try {
-            // Both APIs now return arrays directly (handled in the API layer)
             const [s, t] = await Promise.all([getSlots(), getDepartmentTeams()]);
             setSlots(s);
             setTeams(t);
@@ -193,7 +170,6 @@ function DiscussionSlotsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
 
     useEffect(() => { load(); }, [load]);
 
-    // ── Create slot ────────────────────────────────────────────────────────────
     const handleCreate = async () => {
         if (!form.dateTime || !form.location.trim()) {
             snap("Date/time and location are required.", "error");
@@ -217,7 +193,6 @@ function DiscussionSlotsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
         }
     };
 
-    // ── Delete slot ────────────────────────────────────────────────────────────
     const handleDelete = async (slotId) => {
         try {
             await deleteSlot(slotId);
@@ -228,7 +203,6 @@ function DiscussionSlotsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
         }
     };
 
-    // ── Assign team → slot ─────────────────────────────────────────────────────
     const handleAssign = async () => {
         if (!selectedTeamId || !selectedSlot) return;
         const slotId = resolveSlotId(selectedSlot);
@@ -248,7 +222,6 @@ function DiscussionSlotsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
         }
     };
 
-    // ── Reassign team → new slot ───────────────────────────────────────────────
     const handleReassign = async () => {
         if (!reassignSlotId || !reassignTeam) return;
         const teamId = resolveTeamId(reassignTeam);
@@ -268,7 +241,6 @@ function DiscussionSlotsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
         }
     };
 
-    // ── Unassign team from slot ────────────────────────────────────────────────
     const handleUnassign = async (team) => {
         const tid = resolveTeamId(team);
         if (!tid) { snap("Could not resolve team ID.", "error"); return; }
@@ -284,10 +256,6 @@ function DiscussionSlotsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
         }
     };
 
-    /**
-     * Build the set of team IDs that are already assigned to ANY slot.
-     * We read from slots[].assignedTeams first, then fall back to teams[].slotId etc.
-     */
     const assignedTeamIds = new Set();
     slots.forEach(sl => {
         (sl.assignedTeams ?? []).forEach(at => {
@@ -302,7 +270,6 @@ function DiscussionSlotsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
         }
     });
 
-    /** Teams that are active AND do NOT have a slot yet */
     const unassignedActiveTeams = teams.filter(t => {
         const status = (t.status ?? t.teamStatus ?? "active").toLowerCase();
         if (status !== "active") return false;
@@ -310,7 +277,6 @@ function DiscussionSlotsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
         return id == null || !assignedTeamIds.has(id);
     });
 
-    /** Slots that have no assigned teams → available for reassignment */
     const freeSlots = slots.filter(sl => {
         const assigned = sl.assignedTeams ?? [];
         return assigned.length === 0;
@@ -318,7 +284,6 @@ function DiscussionSlotsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
 
     return (
         <Box sx={{ p: 2.5 }}>
-            {/* Header */}
             <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2.5}>
                 <Typography fontWeight={700} fontSize="0.88rem" sx={{ color: tSec, textTransform: "uppercase", letterSpacing: "0.07em" }}>
                     Final Discussion Slots ({slots.length})
@@ -340,7 +305,6 @@ function DiscussionSlotsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
                 </Stack>
             </Stack>
 
-            {/* Body */}
             {loading ? (
                 <Box display="flex" justifyContent="center" pt={6}><CircularProgress sx={{ color: accent }} /></Box>
             ) : slots.length === 0 ? (
@@ -355,7 +319,6 @@ function DiscussionSlotsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
                 <Stack gap={1.5}>
                     {slots.map((slot) => {
                         const slotId = resolveSlotId(slot);
-                        // Prefer assignedTeams from slot; fall back to cross-referencing teams array
                         const assignedTeams = (slot.assignedTeams && slot.assignedTeams.length > 0)
                             ? slot.assignedTeams
                             : teams.filter(t => {
@@ -368,7 +331,6 @@ function DiscussionSlotsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
                                 sx={{ p: 2, borderRadius: "14px", border: `1px solid ${brd}`, bgcolor: paperBg }}>
                                 <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={1}>
                                     <Stack gap={1} flex={1}>
-                                        {/* Slot header */}
                                         <Stack direction="row" alignItems="center" gap={1.5} flexWrap="wrap">
                                             <Stack direction="row" alignItems="center" gap={0.6}>
                                                 <EventOutlinedIcon sx={{ fontSize: 15, color: accent }} />
@@ -395,7 +357,6 @@ function DiscussionSlotsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
                                             </Stack>
                                         )}
 
-                                        {/* Assigned teams */}
                                         {assignedTeams.length > 0 ? (
                                             <Stack gap={0.6} mt={0.5}>
                                                 <Typography fontSize="0.7rem" fontWeight={700}
@@ -454,7 +415,6 @@ function DiscussionSlotsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
                                         )}
                                     </Stack>
 
-                                    {/* Slot actions */}
                                     <Stack direction="row" gap={0.5} flexShrink={0}>
                                         <Tooltip title={unassignedActiveTeams.length === 0 ? "No unassigned active teams" : "Assign a team to this slot"}>
                                             <span>
@@ -685,7 +645,6 @@ function DepartmentTeamsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
         setLoading(true);
         try {
             const d = await getDepartmentTeams();
-            // Show all teams except explicitly rejected or pending-only ones
             setTeams(d.filter(tm => {
                 const s = (tm.status ?? tm.teamStatus ?? "active").toLowerCase();
                 return s !== "rejected";
@@ -814,7 +773,6 @@ function DepartmentSupervisorsTab({ accent, brd, paperBg, isDark, tPri, tSec }) 
 
     useEffect(() => { load(); }, [load]);
 
-    /** Find a slot object for a given team by cross-referencing slots array */
     const resolveTeamSlotFromSlots = (team, allSlots) => {
         const direct = teamSlotDisplay(team);
         if (direct) return direct;
@@ -936,128 +894,7 @@ function DepartmentSupervisorsTab({ accent, brd, paperBg, isDark, tPri, tSec }) 
 }
 
 /* ════════════════════════════════════════════════════════════════
-   TAB 3 — STUDENT REQUESTS
-════════════════════════════════════════════════════════════════ */
-function StudentRequestsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
-    const [requests, setRequests] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [actionBusy, setActionBusy] = useState(null);
-    const [snack, setSnack] = useState({ open: false, msg: "", sev: "success" });
-    const snap = (msg, sev = "success") => setSnack({ open: true, msg, sev });
-
-    const load = useCallback(async () => {
-        setLoading(true);
-        try {
-            const d = await getStudentRequests();
-            setRequests(d);
-        } catch { }
-        finally { setLoading(false); }
-    }, []);
-
-    useEffect(() => { load(); }, [load]);
-
-    const handleReview = async (requestId, isApproved) => {
-        setActionBusy(requestId);
-        try {
-            await reviewStudentRequest({ requestId, isApproved });
-            snap(isApproved ? "Request approved!" : "Request rejected.");
-            // Remove from local list immediately without waiting for a reload
-            setRequests(prev => prev.filter(r => (r.requestId ?? r.id) !== requestId));
-        } catch (e) {
-            snap(extractErr(e, "Failed to process request."), "error");
-        } finally {
-            setActionBusy(null);
-        }
-    };
-
-    return (
-        <Box sx={{ p: 2.5 }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2.5}>
-                <Typography fontWeight={700} fontSize="0.88rem" sx={{ color: tSec, textTransform: "uppercase", letterSpacing: "0.07em" }}>
-                    Pending Student Requests ({requests.length})
-                </Typography>
-                <Tooltip title="Refresh">
-                    <IconButton size="small" onClick={load} sx={{ color: tSec, border: `1px solid ${brd}`, borderRadius: "9px" }}>
-                        {loading
-                            ? <CircularProgress size={14} sx={{ color: accent }} />
-                            : <RefreshOutlinedIcon sx={{ fontSize: 16 }} />}
-                    </IconButton>
-                </Tooltip>
-            </Stack>
-
-            {loading ? (
-                <Box display="flex" justifyContent="center" pt={6}><CircularProgress sx={{ color: accent }} /></Box>
-            ) : requests.length === 0 ? (
-                <Box sx={{ textAlign: "center", py: 7, border: `1px dashed ${ACCENT}30`, borderRadius: "14px", bgcolor: `${ACCENT}05` }}>
-                    <HowToRegOutlinedIcon sx={{ fontSize: 36, color: accent, opacity: 0.4, mb: 1 }} />
-                    <Typography fontSize="0.84rem" sx={{ color: tSec }}>No pending requests</Typography>
-                </Box>
-            ) : (
-                <Stack gap={1.5}>
-                    {requests.map((req) => {
-                        const rid = req.requestId ?? req.id;
-                        const name = req.fullName ?? req.name ?? req.studentName ?? "—";
-                        const email = req.universityEmail ?? req.email ?? "";
-                        const date = req.requestDate ?? req.createdAt ?? null;
-                        const busy = actionBusy === rid;
-                        return (
-                            <Paper key={rid} elevation={0}
-                                sx={{ p: 2, borderRadius: "14px", border: `1px solid ${brd}`, bgcolor: paperBg, opacity: busy ? 0.6 : 1, transition: "opacity 0.2s" }}>
-                                <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ sm: "center" }} justifyContent="space-between" gap={1.5}>
-                                    <Stack direction="row" alignItems="center" gap={1.4}>
-                                        <Avatar sx={{ width: 40, height: 40, borderRadius: "12px", bgcolor: `${ACCENT}12`, color: accent, fontWeight: 800, fontSize: "0.88rem" }}>
-                                            {initials(name)}
-                                        </Avatar>
-                                        <Box>
-                                            <Typography fontWeight={700} fontSize="0.88rem" sx={{ color: tPri }}>{name}</Typography>
-                                            <Typography fontSize="0.74rem" sx={{ color: tSec, fontFamily: "monospace" }}>{email}</Typography>
-                                            {date && (
-                                                <Stack direction="row" alignItems="center" gap={0.5} mt={0.2}>
-                                                    <AccessTimeOutlinedIcon sx={{ fontSize: 11, color: tSec }} />
-                                                    <Typography fontSize="0.68rem" sx={{ color: tSec }}>
-                                                        {new Date(date).toLocaleDateString("en-GB")}
-                                                    </Typography>
-                                                </Stack>
-                                            )}
-                                        </Box>
-                                    </Stack>
-                                    <Stack direction="row" gap={1}>
-                                        {busy ? (
-                                            <CircularProgress size={22} sx={{ color: accent }} />
-                                        ) : (
-                                            <>
-                                                <Button variant="contained" size="small"
-                                                    startIcon={<CheckCircleOutlineIcon sx={{ fontSize: 14 }} />}
-                                                    onClick={() => handleReview(rid, true)}
-                                                    sx={{ bgcolor: "#2e7d32", "&:hover": { bgcolor: "#1b5e20", boxShadow: "none" }, borderRadius: "9px", textTransform: "none", fontWeight: 700, fontSize: "0.75rem", boxShadow: "none" }}>
-                                                    Approve
-                                                </Button>
-                                                <Button variant="outlined" size="small"
-                                                    startIcon={<CancelOutlinedIcon sx={{ fontSize: 14 }} />}
-                                                    onClick={() => handleReview(rid, false)}
-                                                    sx={{ borderColor: `${RED}55`, color: RED, "&:hover": { bgcolor: `${RED}08`, borderColor: RED }, borderRadius: "9px", textTransform: "none", fontWeight: 700, fontSize: "0.75rem" }}>
-                                                    Reject
-                                                </Button>
-                                            </>
-                                        )}
-                                    </Stack>
-                                </Stack>
-                            </Paper>
-                        );
-                    })}
-                </Stack>
-            )}
-            <Snackbar open={snack.open} autoHideDuration={4000}
-                onClose={() => setSnack(s => ({ ...s, open: false }))}
-                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}>
-                <Alert severity={snack.sev} variant="filled" sx={{ borderRadius: "12px" }}>{snack.msg}</Alert>
-            </Snackbar>
-        </Box>
-    );
-}
-
-/* ════════════════════════════════════════════════════════════════
-   TAB 4 — DEPARTMENT STUDENTS
+   TAB 3 — DEPARTMENT STUDENTS
 ════════════════════════════════════════════════════════════════ */
 function DepartmentStudentsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
     const [students, setStudents] = useState([]);
@@ -1111,7 +948,6 @@ function DepartmentStudentsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
                             {students.map((s, i) => {
                                 const name = s.fullName ?? s.name ?? "—";
                                 const email = s.universityEmail ?? s.email ?? s.username ?? "—";
-                                // Support multiple field names the backend might use
                                 const inTeam = s.hasTeam ?? s.isInTeam ?? s.inTeam ?? (s.teamId != null) ?? false;
                                 return (
                                     <TableRow key={s.userId ?? s.id ?? i}
@@ -1168,7 +1004,7 @@ export default function HeadOfDepartmentPage() {
                     <Box>
                         <Typography variant="h2" sx={{ color: tPri }}>Head of Department</Typography>
                         <Typography sx={{ color: tSec, fontSize: "0.82rem" }}>
-                            Manage discussion slots, department teams, supervisors, and student requests
+                            Manage discussion slots, department teams, supervisors, and students
                         </Typography>
                     </Box>
                 </Stack>
@@ -1180,15 +1016,13 @@ export default function HeadOfDepartmentPage() {
                     <Tab label={<Stack direction="row" alignItems="center" gap={0.7}><EventOutlinedIcon sx={{ fontSize: 15 }} /><span>Discussion Slots</span></Stack>} />
                     <Tab label={<Stack direction="row" alignItems="center" gap={0.7}><GroupsOutlinedIcon sx={{ fontSize: 15 }} /><span>Department Teams</span></Stack>} />
                     <Tab label={<Stack direction="row" alignItems="center" gap={0.7}><SchoolOutlinedIcon sx={{ fontSize: 15 }} /><span>Supervisors</span></Stack>} />
-                    <Tab label={<Stack direction="row" alignItems="center" gap={0.7}><HowToRegOutlinedIcon sx={{ fontSize: 15 }} /><span>Student Requests</span></Stack>} />
                     <Tab label={<Stack direction="row" alignItems="center" gap={0.7}><PersonOutlineIcon sx={{ fontSize: 15 }} /><span>Department Students</span></Stack>} />
                 </Tabs>
                 <Box sx={{ flex: 1, overflowY: "auto" }}>
                     {tab === 0 && <DiscussionSlotsTab {...sharedProps} />}
                     {tab === 1 && <DepartmentTeamsTab {...sharedProps} />}
                     {tab === 2 && <DepartmentSupervisorsTab {...sharedProps} />}
-                    {tab === 3 && <StudentRequestsTab {...sharedProps} />}
-                    {tab === 4 && <DepartmentStudentsTab {...sharedProps} />}
+                    {tab === 3 && <DepartmentStudentsTab {...sharedProps} />}
                 </Box>
             </Paper>
         </Box>

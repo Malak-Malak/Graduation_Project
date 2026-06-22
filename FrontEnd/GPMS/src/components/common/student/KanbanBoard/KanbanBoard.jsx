@@ -21,8 +21,6 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import PersonOffOutlinedIcon from "@mui/icons-material/PersonOffOutlined";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
-import requirementApi from "../../../../api/handler/endpoints/requirementApi";
-import axiosInstance from "../../../../api/axiosInstance";
 import {
     DndContext, pointerWithin, PointerSensor,
     useSensor, useSensors, DragOverlay, useDroppable,
@@ -266,22 +264,11 @@ function OverlayCard({ task, colId }) {
 
 /* =================================================================
    COLUMN
-   currentVersion: null = loading, 0 = free, 1+ = need repo
 ================================================================= */
-function Column({ colId, tasks, onAdd, onCardClick, currentVersion, githubRepo }) {
+function Column({ colId, tasks, onAdd, onCardClick }) {
     const { surfaceCol, border, textPri, textSec, textMut, dark } = useTokens();
     const c = COL_META[colId];
     const { setNodeRef, isOver } = useDroppable({ id: colId });
-
-    // null = still loading → disable to avoid premature clicks
-    const canAdd = currentVersion !== null && (currentVersion === 0 || Boolean(githubRepo));
-
-    const getTooltipTitle = () => {
-        if (currentVersion === null) return "Loading...";
-        if (currentVersion === 0) return "Add task";
-        if (!githubRepo) return "Link a GitHub repository first to add tasks";
-        return "Add task";
-    };
 
     return (
         <Box sx={{ flex: 1, minWidth: 262, maxWidth: 330, display: "flex", flexDirection: "column", borderRadius: "10px", border: `1px solid ${isOver ? c.color + "60" : border}`, bgcolor: isOver ? c.color + "08" : surfaceCol, transition: "border-color 0.14s, background-color 0.14s", overflow: "hidden" }}>
@@ -294,22 +281,18 @@ function Column({ colId, tasks, onAdd, onCardClick, currentVersion, githubRepo }
                             <Typography sx={{ fontSize: "0.62rem", fontWeight: 700, color: textSec }}>{tasks.length}</Typography>
                         </Box>
                     </Stack>
-                    <Tooltip title={getTooltipTitle()}>
-                        <span>
-                            <IconButton
-                                size="small"
-                                onClick={onAdd}
-                                disabled={!canAdd}
-                                sx={{
-                                    width: 22, height: 22,
-                                    color: canAdd ? textMut : (dark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)"),
-                                    "&:hover": canAdd ? { color: c.color, bgcolor: c.color + "18" } : {},
-                                    "&.Mui-disabled": { opacity: 0.4 },
-                                }}
-                            >
-                                <AddIcon sx={{ fontSize: 14 }} />
-                            </IconButton>
-                        </span>
+                    <Tooltip title="Add task">
+                        <IconButton
+                            size="small"
+                            onClick={onAdd}
+                            sx={{
+                                width: 22, height: 22,
+                                color: textMut,
+                                "&:hover": { color: c.color, bgcolor: c.color + "18" },
+                            }}
+                        >
+                            <AddIcon sx={{ fontSize: 14 }} />
+                        </IconButton>
                     </Tooltip>
                 </Stack>
             </Box>
@@ -391,10 +374,6 @@ function TaskFormFields({ form, setForm, members, inputSx, accent }) {
 export default function KanbanBoard() {
     const { dark, border, textPri, textSec, textMut, dialogBg, surfaceInput } = useTokens();
 
-    const [githubRepo, setGithubRepo] = useState(null);
-    const [repoChecked, setRepoChecked] = useState(false);
-    const [currentVersion, setCurrentVersion] = useState(null); // null=loading, 0=free, 1+=need repo
-
     const [columns, setColumns] = useState({ todo: [], inProgress: [], done: [] });
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -443,21 +422,6 @@ export default function KanbanBoard() {
     const findColOf = (taskId, cols) => COL_ORDER.find(c => cols[c].some(t => t.id === taskId));
     const findTaskIn = (taskId, cols) => Object.values(cols).flat().find(t => t.id === taskId);
 
-    /* ── FETCH REPO + VERSION ── */
-    useEffect(() => {
-        requirementApi.getGithubRepo()
-            .then((data) => {
-                const repo = typeof data === "string" ? data : (data?.githubRepo ?? null);
-                setGithubRepo(repo || null);
-            })
-            .catch(() => setGithubRepo(null))
-            .finally(() => setRepoChecked(true));
-
-        axiosInstance.get("/Student/current-version")
-            .then((r) => setCurrentVersion(r.data?.currentVersion ?? null))
-            .catch(() => setCurrentVersion(null));
-    }, []);
-
     /* ── FETCH BOARD ── */
     const fetchBoard = useCallback(async () => {
         try {
@@ -487,7 +451,7 @@ export default function KanbanBoard() {
         });
     };
 
-    /* ── DRAG OVER — visual only, NO API ── */
+    /* ── DRAG OVER ── */
     const handleDragOver = ({ active, over }) => {
         if (!over) return;
         setColumns(prev => {
@@ -505,7 +469,7 @@ export default function KanbanBoard() {
         });
     };
 
-    /* ── DRAG END — ONE API call max ── */
+    /* ── DRAG END ── */
     const handleDragEnd = async ({ active, over }) => {
         const originCol = originColRef.current;
         const snapshot = colsSnapshotRef.current;
@@ -555,9 +519,6 @@ export default function KanbanBoard() {
 
     /* ── ADD TASK ── */
     const openAdd = (col) => {
-        // Guard: double-check before opening dialog
-        const canAdd = currentVersion !== null && (currentVersion === 0 || Boolean(githubRepo));
-        if (!canAdd) return;
         setAddCol(col);
         setAddForm(EMPTY_FORM);
         setAddOpen(true);
@@ -718,8 +679,6 @@ export default function KanbanBoard() {
                             tasks={columns[colId]}
                             onAdd={() => openAdd(colId)}
                             onCardClick={openDetail}
-                            currentVersion={currentVersion}
-                            githubRepo={githubRepo}
                         />
                     ))}
                 </Box>

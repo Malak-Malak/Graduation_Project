@@ -40,9 +40,8 @@ const NAV_ITEMS = {
         // { label: "Profile", icon: <AccountCircleOutlinedIcon />, path: "/admin/profile" },
         { label: "Pending Requests", icon: <HowToRegOutlinedIcon />, path: "/admin/pending-requests" },
         { label: "User Management", icon: <PeopleOutlineIcon />, path: "/admin/users" },
-        { label: "Reports", icon: <AssessmentOutlinedIcon />, path: "/admin/reports" },
+        { label: "Summary statistics", icon: <AssessmentOutlinedIcon />, path: "/admin/reports" },
         { label: "All Requests", icon: <AssessmentOutlinedIcon />, path: "/admin/all-requests" },
-        { label: "Configuration", icon: <SettingsOutlinedIcon />, path: "/admin/settings" },
         { label: "Manage Supervisors", icon: <SchoolOutlinedIcon />, path: "/admin/manage-supervisors" },
     ],
     supervisor: [
@@ -53,7 +52,7 @@ const NAV_ITEMS = {
         { label: "Files", icon: <FolderOutlinedIcon />, path: "/supervisor/files" },
         { label: "Meetings", icon: <CalendarMonthOutlinedIcon />, path: "/supervisor/meetings" },
         { label: "AI Reports", icon: <AutoAwesomeOutlinedIcon />, path: "/supervisor/ai-reports" },
-        { label: "Analytics", icon: <QueryStatsOutlinedIcon />, path: "/supervisor/analytics" },
+      
         { label: "Project Archive", icon: <SearchOutlinedIcon />, path: "/supervisor/archive" },
         // ↓ يظهر فقط لرئيس القسم — hodOnly: true
         {
@@ -69,7 +68,7 @@ const NAV_ITEMS = {
         { label: "Discovery Hub", icon: <SearchOutlinedIcon />, path: "/student/team-finder" },
         { label: "Kanban Board", icon: <ViewKanbanOutlinedIcon />, path: "/student/kanban" },
        
-        { label: "Requirements", icon: <AssignmentOutlinedIcon />, path: "/student/requirements", phase2Only: true },
+       
         { label: "Files", icon: <FolderOutlinedIcon />, path: "/student/files" },
         { label: "Meetings", icon: <CalendarMonthOutlinedIcon />, path: "/student/meetings" },
         { label: "Analytics", icon: <QueryStatsOutlinedIcon />, path: "/student/analytics" },

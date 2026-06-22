@@ -8,8 +8,8 @@ import GroupsList from "../../components/common/supervisor/Groups/GroupsList";
 import PendingRequests from "../../components/common/supervisor/Pendingrequests/Pendingrequests";
 import FileReview from "../../components/common/supervisor/FileReview/FileReview";
 import SupervisorMeetings from "../../components/common/supervisor/Meetings/SupervisorMeetings";
-import AIReports from "../../components/common/supervisor/AIReports/AIReports";
-import SupervisorAnalytics from "../../components/common/supervisor/Analytics/SupervisorAnalytics";
+import AIReports from "../../components/common/supervisor/AIReports/Reports";
+
 import ProfilePage from "../../components/common/student/Profile/ProfilePage";
 import SubmittedTeams from "../../components/common/supervisor/Archive/SubmittedTeams";
 import HeadOfDepartmentPage from "../../components/common/supervisor/HeadOfDepartment/HeadOfDepartmentPage";
@@ -39,7 +39,7 @@ export default function SupervisorPage() {
                 <Route path="files" element={<FileReview />} />
                 <Route path="meetings" element={<SupervisorMeetings />} />
                 <Route path="ai-reports" element={<AIReports />} />
-                <Route path="analytics" element={<SupervisorAnalytics />} />
+                
                 <Route path="profile" element={<ProfilePage />} />
                 <Route path="archive" element={<SubmittedTeams />} />
 

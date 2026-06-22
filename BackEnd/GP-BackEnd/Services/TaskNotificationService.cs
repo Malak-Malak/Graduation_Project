@@ -10,7 +10,7 @@ namespace GP_BackEnd.Services
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly HttpClient _httpClient;
-        private readonly string _openAiApiKey;
+        private readonly string? _openAiApiKey;
 
         public TaskNotificationService(IServiceScopeFactory scopeFactory, IConfiguration config)
         {
@@ -42,7 +42,7 @@ namespace GP_BackEnd.Services
                 .Include(t => t.Assignments)
                 .Where(t =>
                     t.Status != "Done" &&
-                    t.Deadline != null &&
+                    
                     (
                         (t.Deadline <= now.AddHours(24) && t.Deadline > now && !t.Notified24h) ||
                         (t.Deadline <= now.AddHours(48) && t.Deadline > now.AddHours(24) && !t.Notified48h)

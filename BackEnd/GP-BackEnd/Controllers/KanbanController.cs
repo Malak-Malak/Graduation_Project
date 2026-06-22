@@ -22,7 +22,7 @@ namespace GP_BackEnd.Controllers
         [HttpGet("board")]
         public async Task<IActionResult> GetBoard()
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var board = await _kanbanService.GetBoardAsync(userId);
 
             if (board == null)
@@ -35,7 +35,7 @@ namespace GP_BackEnd.Controllers
         [HttpGet("team-members")]
         public async Task<IActionResult> GetTeamMembers()
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var members = await _kanbanService.GetTeamMembersAsync(userId);
             return Ok(members);
         }
@@ -45,7 +45,7 @@ namespace GP_BackEnd.Controllers
         [Authorize(Roles = "Student")]
         public async Task<IActionResult> CreateTask([FromBody] CreateTaskDto dto)
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var result = await _kanbanService.CreateTaskAsync(userId, dto);
 
             if (!result)
@@ -59,7 +59,7 @@ namespace GP_BackEnd.Controllers
         [Authorize(Roles = "Student")]
         public async Task<IActionResult> UpdateTask(int taskId, [FromBody] UpdateTaskDto dto)
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var result = await _kanbanService.UpdateTaskAsync(userId, taskId, dto);
 
             if (!result)
@@ -73,7 +73,7 @@ namespace GP_BackEnd.Controllers
         [Authorize(Roles = "Student")]
         public async Task<IActionResult> UpdateTaskStatus([FromBody] UpdateTaskStatusDto dto)
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var result = await _kanbanService.UpdateTaskStatusAsync(userId, dto);
 
             if (!result)
@@ -87,13 +87,25 @@ namespace GP_BackEnd.Controllers
         [Authorize(Roles = "Student")]
         public async Task<IActionResult> DeleteTask(int taskId)
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var result = await _kanbanService.DeleteTaskAsync(userId, taskId);
 
             if (!result)
                 return BadRequest("Could not delete task.");
 
             return Ok("Task deleted successfully.");
+        }
+        // GET api/kanban/supervisor-board/{teamId}
+        // Read-only board view for the supervisor of that team
+        [HttpGet("supervisor-board/{teamId}")]
+        [Authorize(Roles = "Supervisor")]
+        public async Task<IActionResult> GetSupervisorTeamBoard(int teamId)
+        {
+            int supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var (success, message, board) = await _kanbanService.GetTeamBoardForSupervisorAsync(supervisorId, teamId);
+
+            if (!success) return BadRequest(message);
+            return Ok(board);
         }
     }
 }

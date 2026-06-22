@@ -255,5 +255,34 @@ namespace GP_BackEnd.Services
             await _context.SaveChangesAsync();
             return true;
         }
+        // Supervisor — read-only view of a specific team's board
+        public async Task<(bool success, string message, KanbanBoardDto? board)> GetTeamBoardForSupervisorAsync(int supervisorId, int teamId)
+        {
+            var team = await _context.Teams
+                .FirstOrDefaultAsync(t => t.Id == teamId && t.SupervisorId == supervisorId);
+
+            if (team == null)
+                return (false, "Team not found or does not belong to you.", null);
+
+            var version = await GetUserVersionAsync(supervisorId);
+
+            var tasks = await _context.TaskItems
+                .Include(t => t.CreatedBy)
+                    .ThenInclude(u => u.UserProfile)
+                .Include(t => t.Assignments)
+                    .ThenInclude(a => a.User)
+                        .ThenInclude(u => u.UserProfile)
+                .Where(t => t.TeamId == teamId && t.Version == version)
+                .ToListAsync();
+
+            var board = new KanbanBoardDto
+            {
+                ToDo = tasks.Where(t => t.Status == "To Do").Select(MapToDto).ToList(),
+                InProgress = tasks.Where(t => t.Status == "In Progress").Select(MapToDto).ToList(),
+                Done = tasks.Where(t => t.Status == "Done").Select(MapToDto).ToList()
+            };
+
+            return (true, "OK", board);
+        }
     }
 }

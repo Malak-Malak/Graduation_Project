@@ -55,8 +55,7 @@
               "ViewState": "AgIAAAIAAAAAAAAAAAAIwCIAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
               "WhenOpened": "2026-06-06T13:48:55.238Z",
-              "IsPinned": true,
-              "EditorCaption": ""
+              "IsPinned": true
             },
             {
               "$type": "Document",
@@ -69,8 +68,7 @@
               "ViewState": "AgIAAAwAAAAAAAAAAAAgwA0AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
               "WhenOpened": "2026-06-21T19:15:35.565Z",
-              "IsPinned": true,
-              "EditorCaption": ""
+              "IsPinned": true
             },
             {
               "$type": "Bookmark",
@@ -86,8 +84,7 @@
               "RelativeToolTip": "Services\\FileSystemService.cs",
               "ViewState": "AgIAABAAAAAAAAAAAAAQwBEAAAAsAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-06-20T20:49:56.062Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-06-20T20:49:56.062Z"
             },
             {
               "$type": "Document",

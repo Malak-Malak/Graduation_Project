@@ -23,6 +23,7 @@ namespace GP_BackEnd.Models
         public ICollection<TaskAssignment> Assignments { get; set; }
         public ICollection<Feedback> Feedbacks { get; set; }
         public bool Notified24h { get; set; } = false; 
-        public bool Notified48h { get; set; } = false;  
+        public bool Notified48h { get; set; } = false;
+        public string Priority { get; set; } = "Medium";
     }
 }

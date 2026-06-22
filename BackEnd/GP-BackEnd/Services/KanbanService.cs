@@ -38,10 +38,11 @@ namespace GP_BackEnd.Services
                 Title = task.Title,
                 Description = task.Description,
                 Status = task.Status,
+                Priority = task.Priority,
                 Deadline = task.Deadline,
                 CreatedBy = task.CreatedBy?.UserProfile != null
-                    ? task.CreatedBy.UserProfile.FullName
-                    : task.CreatedBy?.Username ?? "",
+            ? task.CreatedBy.UserProfile.FullName
+            : task.CreatedBy?.Username ?? "",
                 AssignedMembers = task.Assignments?.Select(a => new AssignedMemberDto
                 {
                     UserId = a.UserId,
@@ -85,16 +86,20 @@ namespace GP_BackEnd.Services
             if (teamId == null) return false;
 
             var version = await GetUserVersionAsync(userId);
-
             var validStatuses = new[] { "To Do", "In Progress", "Done" };
             if (!validStatuses.Contains(dto.Status))
                 dto.Status = "To Do";
+
+            var validPriorities = new[] { "Low", "Medium", "High" };
+            if (!validPriorities.Contains(dto.Priority))
+                dto.Priority = "Medium";
 
             var task = new TaskItem
             {
                 Title = dto.Title,
                 Description = dto.Description,
                 Status = dto.Status,
+                Priority = dto.Priority,
                 Deadline = dto.Deadline,
                 TeamId = teamId.Value,
                 CreatedByUserId = userId,
@@ -139,6 +144,10 @@ namespace GP_BackEnd.Services
                 .FirstOrDefaultAsync(t => t.Id == taskId && t.TeamId == teamId && t.Version == version);
 
             if (task == null) return false;
+
+            var validPriorities = new[] { "Low", "Medium", "High" };
+            if (!string.IsNullOrEmpty(dto.Priority) && validPriorities.Contains(dto.Priority))
+                task.Priority = dto.Priority;
 
             task.Title = dto.Title;
             task.Description = dto.Description;
@@ -284,5 +293,6 @@ namespace GP_BackEnd.Services
 
             return (true, "OK", board);
         }
+
     }
 }

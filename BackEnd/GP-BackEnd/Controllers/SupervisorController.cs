@@ -171,5 +171,13 @@ namespace GP_BackEnd.Controllers
                 return BadRequest("Appointment not found or already responded to.");
             return Ok(dto.IsApproved ? "Appointment approved." : "Appointment rejected.");
         }
+        // GET api/supervisor/teams-overview
+        [HttpGet("teams-overview")]
+        public async Task<IActionResult> GetAllTeamsOverview()
+        {
+            var supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var overview = await _supervisorService.GetAllTeamsOverviewAsync(supervisorId);
+            return Ok(overview);
+        }
     }
 }

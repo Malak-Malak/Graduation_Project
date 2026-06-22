@@ -240,5 +240,113 @@ namespace GP_BackEnd.Services
                 })
                 .ToListAsync();
         }
+        public async Task<List<TeamOverviewDto>> GetAllTeamsOverviewAsync(int supervisorId)
+        {
+            var teams = await _context.Teams
+                .Where(t => t.SupervisorId == supervisorId)
+                .ToListAsync();
+
+            var result = new List<TeamOverviewDto>();
+
+            foreach (var team in teams)
+            {
+                // Get all tasks for both phases
+                var tasks = await _context.TaskItems
+                    .Include(t => t.CreatedBy)
+                        .ThenInclude(u => u.UserProfile)
+                    .Include(t => t.Assignments)
+                        .ThenInclude(a => a.User)
+                            .ThenInclude(u => u.UserProfile)
+                    .Where(t => t.TeamId == team.Id)
+                    .ToListAsync();
+
+                // Get student files for this team
+                var studentFiles = await _context.ProjectFiles
+                    .Include(f => f.User)
+                        .ThenInclude(u => u.UserProfile)
+                    .Where(f => f.TeamId == team.Id && f.UserId != supervisorId)
+                    .ToListAsync();
+
+                // Get supervisor shared files (TeamId = null)
+                var supervisorFiles = await _context.ProjectFiles
+                    .Include(f => f.User)
+                        .ThenInclude(u => u.UserProfile)
+                    .Where(f => f.UserId == supervisorId && f.TeamId == null)
+                    .ToListAsync();
+
+                result.Add(new TeamOverviewDto
+                {
+                    TeamId = team.Id,
+                    TeamName = team.ProjectTitle,
+                    Status = team.Status,
+                    TasksPhase1 = tasks.Where(t => t.Version == 0).Select(t => new DTOs.Kanban.TaskDto
+                    {
+                        Id = t.Id,
+                        Title = t.Title,
+                        Description = t.Description,
+                        Status = t.Status,
+                        Priority = t.Priority,
+                        Deadline = t.Deadline,
+                        CreatedBy = t.CreatedBy?.UserProfile != null
+                            ? t.CreatedBy.UserProfile.FullName
+                            : t.CreatedBy?.Username ?? "",
+                        AssignedMembers = t.Assignments?.Select(a => new DTOs.Kanban.AssignedMemberDto
+                        {
+                            UserId = a.UserId,
+                            Username = a.User?.Username ?? "",
+                            FullName = a.User?.UserProfile != null
+                                ? a.User.UserProfile.FullName
+                                : a.User?.Username ?? ""
+                        }).ToList() ?? new List<DTOs.Kanban.AssignedMemberDto>()
+                    }).ToList(),
+                    TasksPhase2 = tasks.Where(t => t.Version == 1).Select(t => new DTOs.Kanban.TaskDto
+                    {
+                        Id = t.Id,
+                        Title = t.Title,
+                        Description = t.Description,
+                        Status = t.Status,
+                        Priority = t.Priority,
+                        Deadline = t.Deadline,
+                        CreatedBy = t.CreatedBy?.UserProfile != null
+                            ? t.CreatedBy.UserProfile.FullName
+                            : t.CreatedBy?.Username ?? "",
+                        AssignedMembers = t.Assignments?.Select(a => new DTOs.Kanban.AssignedMemberDto
+                        {
+                            UserId = a.UserId,
+                            Username = a.User?.Username ?? "",
+                            FullName = a.User?.UserProfile != null
+                                ? a.User.UserProfile.FullName
+                                : a.User?.Username ?? ""
+                        }).ToList() ?? new List<DTOs.Kanban.AssignedMemberDto>()
+                    }).ToList(),
+                    StudentFiles = studentFiles.Select(f => new DTOs.FileSystem.AttachmentDto
+                    {
+                        Id = f.Id,
+                        FileName = f.FileName,
+                        FilePath = f.FilePath,
+                        Description = f.Description,
+                        UploadedAt = f.UploadedAt,
+                        UploadedByUserId = f.UserId,
+                        UploadedByName = f.User.UserProfile != null
+                            ? f.User.UserProfile.FullName
+                            : f.User.Username
+                    }).ToList(),
+                    SupervisorFiles = supervisorFiles.Select(f => new DTOs.FileSystem.AttachmentDto
+                    {
+                        Id = f.Id,
+                        FileName = f.FileName,
+                        FilePath = f.FilePath,
+                        Description = f.Description,
+                        UploadedAt = f.UploadedAt,
+                        UploadedByUserId = f.UserId,
+                        UploadedByName = f.User.UserProfile != null
+                            ? f.User.UserProfile.FullName
+                            : f.User.Username
+                    }).ToList()
+                });
+            }
+
+            return result;
+        }
     }
 }

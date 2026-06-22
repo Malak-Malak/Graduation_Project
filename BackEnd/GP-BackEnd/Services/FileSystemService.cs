@@ -17,10 +17,28 @@ namespace GP_BackEnd.Services
         // Get files uploaded by the supervisor — shared across all his teams (TeamId = null)
         public async Task<List<AttachmentDto>> GetSupervisorFilesAsync(int userId)
         {
+            int supervisorId;
+
+            // Check if caller is a student — get their supervisor
+            var teamMember = await _context.TeamMembers
+                .Include(tm => tm.Team)
+                .FirstOrDefaultAsync(tm => tm.UserId == userId);
+
+            if (teamMember != null)
+            {
+                // Caller is a student — use their team's supervisor
+                supervisorId = teamMember.Team.SupervisorId;
+            }
+            else
+            {
+                // Caller is a supervisor — use their own ID
+                supervisorId = userId;
+            }
+
             return await _context.ProjectFiles
                 .Include(f => f.User)
                     .ThenInclude(u => u.UserProfile)
-                .Where(f => f.UserId == userId && f.TeamId == null)
+                .Where(f => f.UserId == supervisorId && f.TeamId == null)
                 .OrderByDescending(f => f.UploadedAt)
                 .Select(f => new AttachmentDto
                 {

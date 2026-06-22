@@ -8,5 +8,7 @@
         public string SupervisorName { get; set; }
         public List<string> MemberNames { get; set; }
         public DiscussionSlotDto? AssignedSlot { get; set; }
+        public string? Instructors { get; set; }
+
     }
 }

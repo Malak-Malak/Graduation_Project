@@ -7,5 +7,7 @@
         public string Location { get; set; }
         public string? Notes { get; set; }
         public string TeamName { get; set; }
+        public string? Instructors { get; set; }
+
     }
 }

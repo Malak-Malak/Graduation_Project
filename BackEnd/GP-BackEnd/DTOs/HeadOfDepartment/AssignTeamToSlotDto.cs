@@ -4,5 +4,7 @@
     {
         public int TeamId { get; set; }
         public int SlotId { get; set; }
+        public string? Instructors { get; set; }
+
     }
 }

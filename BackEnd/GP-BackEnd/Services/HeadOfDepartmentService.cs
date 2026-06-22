@@ -110,10 +110,11 @@ namespace GP_BackEnd.Services
                 {
                     TeamId = ts.TeamId,
                     ProjectName = ts.Team.ProjectTitle,
+                    Instructors = ts.Instructors,
                     MemberNames = ts.Team.TeamMembers
-                        .Select(tm => tm.User.UserProfile != null
-                            ? tm.User.UserProfile.FullName
-                            : tm.User.Username)
+                    .Select(tm => tm.User.UserProfile != null
+                        ? tm.User.UserProfile.FullName
+                        : tm.User.Username)
                         .ToList()
                 }).ToList()
             }).ToList();
@@ -165,9 +166,9 @@ namespace GP_BackEnd.Services
             _context.TeamDiscussionSlots.Add(new TeamDiscussionSlot
             {
                 TeamId = dto.TeamId,
-                DiscussionSlotId = dto.SlotId
+                DiscussionSlotId = dto.SlotId,
+                Instructors = dto.Instructors
             });
-
             // Notify team members
             foreach (var member in team.TeamMembers)
             {
@@ -238,9 +239,9 @@ namespace GP_BackEnd.Services
             _context.TeamDiscussionSlots.Add(new TeamDiscussionSlot
             {
                 TeamId = dto.TeamId,
-                DiscussionSlotId = dto.NewSlotId
+                DiscussionSlotId = dto.NewSlotId,
+                Instructors = dto.Instructors
             });
-
             // Notify team members
             foreach (var member in team.TeamMembers)
             {
@@ -357,13 +358,14 @@ namespace GP_BackEnd.Services
                     ProjectName = t.ProjectTitle,
                     Status = t.Status,
                     SupervisorName = t.Supervisor.UserProfile != null
-                        ? t.Supervisor.UserProfile.FullName
-                        : t.Supervisor.Username,
+         ? t.Supervisor.UserProfile.FullName
+         : t.Supervisor.Username,
                     MemberNames = t.TeamMembers
-                        .Select(tm => tm.User.UserProfile != null
-                            ? tm.User.UserProfile.FullName
-                            : tm.User.Username)
-                        .ToList(),
+         .Select(tm => tm.User.UserProfile != null
+             ? tm.User.UserProfile.FullName
+             : tm.User.Username)
+         .ToList(),
+                    Instructors = assignment?.Instructors,
                     AssignedSlot = assignment != null ? new DiscussionSlotDto
                     {
                         Id = assignment.DiscussionSlot.Id,
@@ -537,7 +539,8 @@ namespace GP_BackEnd.Services
                 DateTime = assignment.DiscussionSlot.DateTime,
                 Location = assignment.DiscussionSlot.Location,
                 Notes = assignment.DiscussionSlot.Notes,
-                TeamName = assignment.Team.ProjectTitle
+                TeamName = assignment.Team.ProjectTitle,
+                Instructors = assignment.Instructors
             };
         }
 
@@ -569,13 +572,14 @@ namespace GP_BackEnd.Services
                     ProjectName = t.ProjectTitle,
                     Status = t.Status,
                     SupervisorName = t.Supervisor.UserProfile != null
-                        ? t.Supervisor.UserProfile.FullName
-                        : t.Supervisor.Username,
+        ? t.Supervisor.UserProfile.FullName
+        : t.Supervisor.Username,
                     MemberNames = t.TeamMembers
-                        .Select(tm => tm.User.UserProfile != null
-                            ? tm.User.UserProfile.FullName
-                            : tm.User.Username)
-                        .ToList(),
+        .Select(tm => tm.User.UserProfile != null
+            ? tm.User.UserProfile.FullName
+            : tm.User.Username)
+        .ToList(),
+                    Instructors = assignment?.Instructors,
                     AssignedSlot = assignment != null ? new DiscussionSlotDto
                     {
                         Id = assignment.DiscussionSlot.Id,

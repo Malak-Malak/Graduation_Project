@@ -7,6 +7,7 @@ namespace GP_BackEnd.Models
         public int Id { get; set; }
         public int TeamId { get; set; }
         public int DiscussionSlotId { get; set; }
+        public string? Instructors { get; set; }
         public Team Team { get; set; }
         public DiscussionSlot DiscussionSlot { get; set; }
     }

@@ -5,5 +5,7 @@
         public int TeamId { get; set; }
         public string ProjectName { get; set; }
         public List<string> MemberNames { get; set; }
+        public string? Instructors { get; set; }
+
     }
 }

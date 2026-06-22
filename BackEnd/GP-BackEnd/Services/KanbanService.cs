@@ -265,15 +265,13 @@ namespace GP_BackEnd.Services
             return true;
         }
         // Supervisor — read-only view of a specific team's board
-        public async Task<(bool success, string message, KanbanBoardDto? board)> GetTeamBoardForSupervisorAsync(int supervisorId, int teamId)
+        public async Task<(bool success, string message, KanbanBoardDto? board)> GetTeamBoardForSupervisorAsync(int supervisorId, int teamId, int version)
         {
             var team = await _context.Teams
                 .FirstOrDefaultAsync(t => t.Id == teamId && t.SupervisorId == supervisorId);
 
             if (team == null)
                 return (false, "Team not found or does not belong to you.", null);
-
-            var version = await GetUserVersionAsync(supervisorId);
 
             var tasks = await _context.TaskItems
                 .Include(t => t.CreatedBy)

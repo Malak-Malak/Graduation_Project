@@ -95,14 +95,25 @@ namespace GP_BackEnd.Controllers
 
             return Ok("Task deleted successfully.");
         }
-        // GET api/kanban/supervisor-board/{teamId}
-        // Read-only board view for the supervisor of that team
-        [HttpGet("supervisor-board/{teamId}")]
+        // GET api/kanban/supervisor-board/{teamId}/phase1
+        [HttpGet("supervisor-board/{teamId}/phase1")]
         [Authorize(Roles = "Supervisor")]
-        public async Task<IActionResult> GetSupervisorTeamBoard(int teamId)
+        public async Task<IActionResult> GetSupervisorTeamBoardPhase1(int teamId)
         {
             int supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var (success, message, board) = await _kanbanService.GetTeamBoardForSupervisorAsync(supervisorId, teamId);
+            var (success, message, board) = await _kanbanService.GetTeamBoardForSupervisorAsync(supervisorId, teamId, 0);
+
+            if (!success) return BadRequest(message);
+            return Ok(board);
+        }
+
+        // GET api/kanban/supervisor-board/{teamId}/phase2
+        [HttpGet("supervisor-board/{teamId}/phase2")]
+        [Authorize(Roles = "Supervisor")]
+        public async Task<IActionResult> GetSupervisorTeamBoardPhase2(int teamId)
+        {
+            int supervisorId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var (success, message, board) = await _kanbanService.GetTeamBoardForSupervisorAsync(supervisorId, teamId, 1);
 
             if (!success) return BadRequest(message);
             return Ok(board);

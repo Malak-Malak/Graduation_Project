@@ -38,7 +38,7 @@ import {
     updateTask,
     updateTaskStatus,
     deleteTask,
-} from "../../../../api/handler/endpoints/KanbanApi";;
+} from "../../../../api/handler/endpoints/KanbanApi";
 
 /* =================================================================
    CONSTANTS
@@ -46,74 +46,70 @@ import {
 const COL_ORDER = ["todo", "inProgress", "done"];
 
 const COL_META = {
-    todo: { label: "To Do", color: "#5B8AF0" },
+    todo:       { label: "To Do",       color: "#5B8AF0" },
     inProgress: { label: "In Progress", color: "#E5973D" },
-    done: { label: "Done", color: "#3DB97A" },
+    done:       { label: "Done",        color: "#3DB97A" },
 };
 
 const COL_TO_STATUS = {
-    todo: "To Do",
+    todo:       "To Do",
     inProgress: "In Progress",
-    done: "Done",
+    done:       "Done",
 };
 
 const PRIORITY = {
-    high: { color: "#E05C5C", bg: "rgba(224,92,92,0.12)", Icon: KeyboardArrowUpIcon, label: "High" },
-    medium: { color: "#E5973D", bg: "rgba(229,151,61,0.12)", Icon: RemoveIcon, label: "Medium" },
-    low: { color: "#8A8F9E", bg: "rgba(138,143,158,0.12)", Icon: KeyboardArrowDownIcon, label: "Low" },
+    high:   { color: "#E05C5C", bg: "rgba(224,92,92,0.12)",   Icon: KeyboardArrowUpIcon,   label: "High"   },
+    medium: { color: "#E5973D", bg: "rgba(229,151,61,0.12)",  Icon: RemoveIcon,            label: "Medium" },
+    low:    { color: "#8A8F9E", bg: "rgba(138,143,158,0.12)", Icon: KeyboardArrowDownIcon, label: "Low"    },
 };
 
-const MBR_CLR = ["#5B8AF0", "#3DB97A", "#E5973D", "#9B6DE0", "#E05C5C", "#1ABCB0"];
+const MBR_CLR    = ["#5B8AF0", "#3DB97A", "#E5973D", "#9B6DE0", "#E05C5C", "#1ABCB0"];
 const EMPTY_FORM = { title: "", description: "", deadline: "", assignedUserIds: [], priority: "medium" };
-const isColId = (id) => COL_ORDER.includes(id);
+const isColId    = (id) => COL_ORDER.includes(id);
 
 /* =================================================================
    PRIORITY HELPERS
-   Priority now lives on the backend (task.priority) — normalise to
-   one of our known keys, defaulting to "medium" if missing/unknown.
-   Tolerant of casing differences and a couple of alternate field
-   names, in case the API responds with "Priority" or numeric levels.
+   Converts whatever the backend sends → one of our three keys.
+   Handles lowercase / PascalCase / numeric levels gracefully.
 ================================================================= */
 const normalisePriority = (val) => {
     const v = (val ?? "").toString().trim().toLowerCase();
-    if (PRIORITY[v]) return v;
-    // tolerate numeric priority levels e.g. 0=low/1=medium/2=high
+    if (PRIORITY[v]) return v;          // "high" | "medium" | "low"
     if (v === "0") return "low";
     if (v === "1") return "medium";
     if (v === "2") return "high";
-    return "medium";
+    return "medium";                    // safe default
 };
 
+// Checks all possible field names the .NET API might use
 const extractPriority = (task) =>
-    task?.priority ?? task?.Priority ?? task?.priorityLevel ?? task?.taskPriority ?? null;
+    task?.priority      ??
+    task?.Priority      ??
+    task?.priorityLevel ??
+    task?.taskPriority  ??
+    null;
 
-// Backend looks like a .NET API (PascalCase fields in the Swagger schema),
-// so send priority back as "High" / "Medium" / "Low" rather than lowercase —
-// many .NET string enums are case-sensitive and silently fall back to a
-// default value if the casing doesn't match.
-const toBackendPriority = (key) => {
-    const meta = PRIORITY[key] ?? PRIORITY.medium;
-    return meta.label; // "High" | "Medium" | "Low"
-};
+// Send back to .NET as PascalCase string — matches the enum values
+const toBackendPriority = (key) => (PRIORITY[key] ?? PRIORITY.medium).label; // "High" | "Medium" | "Low"
 
 /* =================================================================
    MEMBER HELPERS
 ================================================================= */
-const getMemberId = (u) => u.userId ?? u.id;
+const getMemberId   = (u) => u.userId ?? u.id;
 const getMemberName = (u) => (u.fullName ?? u.name ?? "?").trim();
-const getInitial = (u) => getMemberName(u).charAt(0).toUpperCase();
+const getInitial    = (u) => getMemberName(u).charAt(0).toUpperCase();
 
 /* =================================================================
    DATE
 ================================================================= */
 const formatDeadline = (iso) => {
     if (!iso) return null;
-    const d = new Date(iso);
+    const d    = new Date(iso);
     const diff = Math.ceil((d - new Date()) / 86400000);
-    if (diff === 0) return "Today";
-    if (diff === 1) return "Tomorrow";
-    if (diff < 0) return "Overdue";
-    if (diff <= 6) return `${diff}d`;
+    if (diff === 0)  return "Today";
+    if (diff === 1)  return "Tomorrow";
+    if (diff < 0)   return "Overdue";
+    if (diff <= 6)  return `${diff}d`;
     if (diff <= 13) return "1w";
     return d.toLocaleDateString();
 };
@@ -123,38 +119,34 @@ const formatDeadline = (iso) => {
 ================================================================= */
 const mapTask = (task) => {
     const members = task.assignedMembers ?? task.assignedUsers ?? [];
-    // TEMP DIAGNOSTIC — remove once we confirm the backend's priority field/casing.
-    // Open the browser console and look at one of these logs to see exactly
-    // what key holds the priority value (and what casing it uses).
-    if (typeof window !== "undefined") {
-        // eslint-disable-next-line no-console
-        console.log("[Kanban] raw task from API:", task);
-    }
     return {
-        id: String(task.id),
-        backendId: task.id,
-        title: task.title ?? "Untitled",
-        description: task.description ?? "",
-        priority: normalisePriority(extractPriority(task)),
-        due: task.deadline ? formatDeadline(task.deadline) : null,
-        deadline: task.deadline ?? null,
-        assignees: members.map(getInitial),
-        assignedUsers: members,
+        id:              String(task.id),
+        backendId:       task.id,
+        title:           task.title       ?? "Untitled",
+        description:     task.description ?? "",
+        // ── priority: read from backend, normalise to our key ──
+        priority:        normalisePriority(extractPriority(task)),
+        due:             task.deadline ? formatDeadline(task.deadline) : null,
+        deadline:        task.deadline ?? null,
+        assignees:       members.map(getInitial),
+        assignedUsers:   members,
         assignedUserIds: members.map(getMemberId),
-        isAssigned: members.length > 0,
-        comments: (task.comments ?? []).length,
-        files: (task.files ?? []).length,
+        isAssigned:      members.length > 0,
+        comments:        (task.comments ?? []).length,
+        files:           (task.files    ?? []).length,
     };
 };
 
 const normaliseBoardResponse = (data) => {
+    // Shape 1 — { toDo: [], inProgress: [], done: [] }
     if (data && (Array.isArray(data.toDo) || Array.isArray(data.inProgress) || Array.isArray(data.done))) {
         return {
-            todo: (data.toDo ?? []).map(mapTask),
+            todo:       (data.toDo       ?? []).map(mapTask),
             inProgress: (data.inProgress ?? []).map(mapTask),
-            done: (data.done ?? []).map(mapTask),
+            done:       (data.done       ?? []).map(mapTask),
         };
     }
+    // Shape 2 — flat array or { tasks: [] } with a status field
     const S2C = {
         "To Do": "todo", "Todo": "todo", "todo": "todo",
         "In Progress": "inProgress", "InProgress": "inProgress", "inProgress": "inProgress",
@@ -172,18 +164,18 @@ const normaliseBoardResponse = (data) => {
 ================================================================= */
 function useTokens() {
     const theme = useTheme();
-    const dark = theme.palette.mode === "dark";
+    const dark  = theme.palette.mode === "dark";
     return {
         theme, dark,
-        surfaceCard: dark ? "#22262b" : "#ffffff",
-        surfaceCol: dark ? "#1e2226" : "#f0f1f4",
+        surfaceCard:  dark ? "#22262b" : "#ffffff",
+        surfaceCol:   dark ? "#1e2226" : "#f0f1f4",
         surfaceInput: dark ? "#2a2f36" : "#ffffff",
         surfaceHover: dark ? "#2a2f36" : "#f7f8fa",
-        border: dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.09)",
-        textPri: dark ? "#e2e5eb" : "#172b4d",
-        textSec: dark ? "#8d9199" : "#5e6c84",
-        textMut: dark ? "#555b67" : "#aab0be",
-        dialogBg: dark ? "#252930" : "#ffffff",
+        border:       dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.09)",
+        textPri:      dark ? "#e2e5eb" : "#172b4d",
+        textSec:      dark ? "#8d9199" : "#5e6c84",
+        textMut:      dark ? "#555b67" : "#aab0be",
+        dialogBg:     dark ? "#252930" : "#ffffff",
     };
 }
 
@@ -192,8 +184,8 @@ function useTokens() {
 ================================================================= */
 function CardContent({ task, colId }) {
     const { textPri, textSec, textMut, surfaceCard } = useTokens();
-    const p = PRIORITY[task.priority] ?? PRIORITY.medium;
-    const c = COL_META[colId];
+    const p     = PRIORITY[task.priority] ?? PRIORITY.medium;
+    const c     = COL_META[colId];
     const PIcon = p.Icon;
     return (
         <>
@@ -309,15 +301,7 @@ function Column({ colId, tasks, onAdd, onCardClick }) {
                         </Box>
                     </Stack>
                     <Tooltip title="Add task">
-                        <IconButton
-                            size="small"
-                            onClick={onAdd}
-                            sx={{
-                                width: 22, height: 22,
-                                color: textMut,
-                                "&:hover": { color: c.color, bgcolor: c.color + "18" },
-                            }}
-                        >
+                        <IconButton size="small" onClick={onAdd} sx={{ width: 22, height: 22, color: textMut, "&:hover": { color: c.color, bgcolor: c.color + "18" } }}>
                             <AddIcon sx={{ fontSize: 14 }} />
                         </IconButton>
                     </Tooltip>
@@ -346,16 +330,42 @@ function Column({ colId, tasks, onAdd, onCardClick }) {
 ================================================================= */
 function TaskFormFields({ form, setForm, members, inputSx, accent }) {
     const { dark } = useTokens();
-    const dateSx = { ...inputSx, "& input[type='date']": { colorScheme: dark ? "dark" : "light" }, "& input[type='date']::-webkit-calendar-picker-indicator": { opacity: 0.5, cursor: "pointer", filter: dark ? "invert(1)" : "none" } };
+    const dateSx = {
+        ...inputSx,
+        "& input[type='date']": { colorScheme: dark ? "dark" : "light" },
+        "& input[type='date']::-webkit-calendar-picker-indicator": { opacity: 0.5, cursor: "pointer", filter: dark ? "invert(1)" : "none" },
+    };
     return (
         <Stack spacing={2}>
-            <TextField label="Title *" size="small" fullWidth autoFocus value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} sx={inputSx} />
-            <TextField label="Description" size="small" fullWidth multiline rows={2} placeholder="What needs to be done?" value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} sx={inputSx} />
+            <TextField
+                label="Title *" size="small" fullWidth autoFocus
+                value={form.title}
+                onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
+                sx={inputSx}
+            />
+            <TextField
+                label="Description" size="small" fullWidth multiline rows={2}
+                placeholder="What needs to be done?"
+                value={form.description}
+                onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+                sx={inputSx}
+            />
             <Stack direction="row" gap={1.5}>
-                <TextField label="Deadline" size="small" type="date" InputLabelProps={{ shrink: true }} inputProps={{ min: new Date().toISOString().split("T")[0] }} value={form.deadline} onChange={e => setForm(p => ({ ...p, deadline: e.target.value }))} sx={{ ...dateSx, flex: 1 }} />
+                <TextField
+                    label="Deadline" size="small" type="date"
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ min: new Date().toISOString().split("T")[0] }}
+                    value={form.deadline}
+                    onChange={e => setForm(p => ({ ...p, deadline: e.target.value }))}
+                    sx={{ ...dateSx, flex: 1 }}
+                />
                 <FormControl size="small" sx={{ ...inputSx, minWidth: 110 }}>
                     <InputLabel>Priority</InputLabel>
-                    <Select label="Priority" value={form.priority} onChange={e => setForm(p => ({ ...p, priority: e.target.value }))}>
+                    <Select
+                        label="Priority"
+                        value={form.priority}
+                        onChange={e => setForm(p => ({ ...p, priority: e.target.value }))}
+                    >
                         {Object.entries(PRIORITY).map(([key, meta]) => (
                             <MenuItem key={key} value={key}>
                                 <Stack direction="row" alignItems="center" gap={0.8}>
@@ -370,16 +380,27 @@ function TaskFormFields({ form, setForm, members, inputSx, accent }) {
             {members.length > 0 && (
                 <FormControl size="small" fullWidth sx={inputSx}>
                     <InputLabel>Assignees</InputLabel>
-                    <Select multiple label="Assignees" value={form.assignedUserIds}
+                    <Select
+                        multiple label="Assignees"
+                        value={form.assignedUserIds}
                         onChange={e => setForm(p => ({ ...p, assignedUserIds: e.target.value }))}
                         renderValue={sel => (
                             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                                 {sel.map((id, idx) => {
                                     const m = members.find(mb => getMemberId(mb) === id);
-                                    return <Chip key={id} avatar={<Avatar sx={{ bgcolor: MBR_CLR[idx % MBR_CLR.length], fontSize: "0.5rem !important" }}>{m ? getInitial(m) : "?"}</Avatar>} label={m ? getMemberName(m) : id} size="small" sx={{ fontSize: "0.68rem", height: 22 }} />;
+                                    return (
+                                        <Chip
+                                            key={id}
+                                            avatar={<Avatar sx={{ bgcolor: MBR_CLR[idx % MBR_CLR.length], fontSize: "0.5rem !important" }}>{m ? getInitial(m) : "?"}</Avatar>}
+                                            label={m ? getMemberName(m) : id}
+                                            size="small"
+                                            sx={{ fontSize: "0.68rem", height: 22 }}
+                                        />
+                                    );
                                 })}
                             </Box>
-                        )}>
+                        )}
+                    >
                         {members.map((m, i) => (
                             <MenuItem key={getMemberId(m)} value={getMemberId(m)}>
                                 <Stack direction="row" alignItems="center" gap={1}>
@@ -404,29 +425,29 @@ export default function KanbanBoard() {
     const [columns, setColumns] = useState({ todo: [], inProgress: [], done: [] });
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
+    const [saving,  setSaving]  = useState(false);
 
-    const originColRef = useRef(null);
+    const originColRef    = useRef(null);
     const colsSnapshotRef = useRef(null);
-    const apiCalledRef = useRef(false);
+    const apiCalledRef    = useRef(false);
 
     const [activeTask, setActiveTask] = useState(null);
-    const [activeCol, setActiveCol] = useState(null);
+    const [activeCol,  setActiveCol]  = useState(null);
 
-    const [selected, setSelected] = useState(null);
+    const [selected,    setSelected]    = useState(null);
     const [selectedCol, setSelectedCol] = useState(null);
-    const [detailOpen, setDetailOpen] = useState(false);
-    const [editMode, setEditMode] = useState(false);
-    const [editForm, setEditForm] = useState(EMPTY_FORM);
+    const [detailOpen,  setDetailOpen]  = useState(false);
+    const [editMode,    setEditMode]    = useState(false);
+    const [editForm,    setEditForm]    = useState(EMPTY_FORM);
 
     const [addOpen, setAddOpen] = useState(false);
-    const [addCol, setAddCol] = useState("todo");
+    const [addCol,  setAddCol]  = useState("todo");
     const [addForm, setAddForm] = useState(EMPTY_FORM);
 
     const [snack, setSnack] = useState({ open: false, msg: "", severity: "success" });
 
     const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
-    const accent = "#5B8AF0";
+    const accent  = "#5B8AF0";
 
     const inputSx = {
         "& .MuiOutlinedInput-root": {
@@ -439,15 +460,14 @@ export default function KanbanBoard() {
         "& .MuiInputLabel-root": { fontSize: "0.875rem" },
     };
 
-    const total = Object.values(columns).flat().length;
-    const doneN = columns.done.length;
-    const pct = total > 0 ? Math.round((doneN / total) * 100) : 0;
+    const total    = Object.values(columns).flat().length;
+    const doneN    = columns.done.length;
+    const pct      = total > 0 ? Math.round((doneN / total) * 100) : 0;
     const allTasks = Object.values(columns).flat();
 
-    const showSnack = (msg, severity = "success") => setSnack({ open: true, msg, severity });
-
-    const findColOf = (taskId, cols) => COL_ORDER.find(c => cols[c].some(t => t.id === taskId));
-    const findTaskIn = (taskId, cols) => Object.values(cols).flat().find(t => t.id === taskId);
+    const showSnack   = (msg, severity = "success") => setSnack({ open: true, msg, severity });
+    const findColOf   = (taskId, cols) => COL_ORDER.find(c => cols[c].some(t => t.id === taskId));
+    const findTaskIn  = (taskId, cols) => Object.values(cols).flat().find(t => t.id === taskId);
 
     /* ── FETCH BOARD ── */
     const fetchBoard = useCallback(async () => {
@@ -469,9 +489,9 @@ export default function KanbanBoard() {
     /* ── DRAG START ── */
     const handleDragStart = ({ active }) => {
         setColumns(prev => {
-            originColRef.current = findColOf(active.id, prev);
+            originColRef.current    = findColOf(active.id, prev);
             colsSnapshotRef.current = prev;
-            apiCalledRef.current = false;
+            apiCalledRef.current    = false;
             setActiveCol(originColRef.current);
             setActiveTask(findTaskIn(active.id, prev));
             return prev;
@@ -491,7 +511,7 @@ export default function KanbanBoard() {
             return {
                 ...prev,
                 [fromCol]: prev[fromCol].filter(t => t.id !== active.id),
-                [toCol]: [...prev[toCol], task],
+                [toCol]:   [...prev[toCol], task],
             };
         });
     };
@@ -499,8 +519,8 @@ export default function KanbanBoard() {
     /* ── DRAG END ── */
     const handleDragEnd = async ({ active, over }) => {
         const originCol = originColRef.current;
-        const snapshot = colsSnapshotRef.current;
-        originColRef.current = null;
+        const snapshot  = colsSnapshotRef.current;
+        originColRef.current    = null;
         colsSnapshotRef.current = null;
         setActiveTask(null);
         setActiveCol(null);
@@ -555,17 +575,17 @@ export default function KanbanBoard() {
         if (!addForm.title.trim()) return;
         try {
             setSaving(true);
+            // ── Build payload exactly matching POST /api/Kanban/create-task schema ──
             const payload = {
-                title: addForm.title.trim(),
-                description: addForm.description.trim(),
-                status: COL_TO_STATUS[addCol],
-                priority: toBackendPriority(addForm.priority),
+                title:           addForm.title.trim(),
+                description:     addForm.description.trim(),
+                status:          COL_TO_STATUS[addCol],
+                priority:        toBackendPriority(addForm.priority),   // "High" | "Medium" | "Low"
                 assignedUserIds: (addForm.assignedUserIds ?? []).map(Number).filter(n => n > 0),
             };
             if (addForm.deadline) payload.deadline = new Date(addForm.deadline).toISOString();
 
             await createTask(payload);
-
             setAddOpen(false);
             showSnack("Task created!");
             fetchBoard();
@@ -580,11 +600,11 @@ export default function KanbanBoard() {
         setSelected(task);
         setSelectedCol(colId);
         setEditForm({
-            title: task.title,
-            description: task.description,
-            deadline: task.deadline ? task.deadline.substring(0, 10) : "",
+            title:           task.title,
+            description:     task.description,
+            deadline:        task.deadline ? task.deadline.substring(0, 10) : "",
             assignedUserIds: task.assignedUserIds ?? [],
-            priority: task.priority ?? "medium",
+            priority:        task.priority ?? "medium",   // already normalised key
         });
         setEditMode(false);
         setDetailOpen(true);
@@ -595,19 +615,42 @@ export default function KanbanBoard() {
         if (!editForm.title.trim()) return;
         try {
             setSaving(true);
+            // ── Build payload exactly matching PUT /api/Kanban/update-task/{taskId} schema ──
             const payload = {
-                title: editForm.title.trim(),
-                description: editForm.description.trim(),
-                priority: toBackendPriority(editForm.priority),
+                title:           editForm.title.trim(),
+                description:     editForm.description.trim(),
+                priority:        toBackendPriority(editForm.priority),   // "High" | "Medium" | "Low"
                 assignedUserIds: (editForm.assignedUserIds ?? []).map(Number).filter(n => n > 0),
             };
             if (editForm.deadline) payload.deadline = new Date(editForm.deadline).toISOString();
 
             await updateTask(selected.backendId, payload);
 
+            // ── Optimistic local update so the card reflects the new priority immediately ──
+            const updatedTask = {
+                ...selected,
+                title:           payload.title,
+                description:     payload.description,
+                priority:        editForm.priority,         // normalised key for UI
+                deadline:        editForm.deadline ? new Date(editForm.deadline).toISOString() : null,
+                due:             editForm.deadline ? formatDeadline(new Date(editForm.deadline).toISOString()) : null,
+                assignedUserIds: payload.assignedUserIds,
+                assignees:       payload.assignedUserIds.map(id => {
+                    const m = members.find(mb => getMemberId(mb) === id);
+                    return m ? getInitial(m) : "?";
+                }),
+                assignedUsers:   payload.assignedUserIds.map(id => members.find(mb => getMemberId(mb) === id)).filter(Boolean),
+                isAssigned:      payload.assignedUserIds.length > 0,
+            };
+
+            setColumns(prev => ({
+                ...prev,
+                [selectedCol]: prev[selectedCol].map(t => t.id === selected.id ? updatedTask : t),
+            }));
+
             setDetailOpen(false);
             showSnack("Task updated!");
-            fetchBoard();
+            fetchBoard(); // sync with backend to confirm
         } catch (err) {
             console.error("Update task error:", err?.response?.data ?? err);
             showSnack("Failed to update task.", "error");
@@ -620,12 +663,11 @@ export default function KanbanBoard() {
         setColumns(prev => ({
             ...prev,
             [selectedCol]: prev[selectedCol].filter(tk => tk.id !== selected.id),
-            [toCol]: [...prev[toCol], { ...selected }],
+            [toCol]:       [...prev[toCol], { ...selected }],
         }));
         setDetailOpen(false);
         try {
-            const status = COL_TO_STATUS[toCol];
-            await updateTaskStatus({ taskId: selected.backendId, status });
+            await updateTaskStatus({ taskId: selected.backendId, status: COL_TO_STATUS[toCol] });
             showSnack(`Moved to ${COL_META[toCol].label}`);
             fetchBoard();
         } catch (err) {
@@ -650,6 +692,7 @@ export default function KanbanBoard() {
         } finally { setSaving(false); }
     };
 
+    /* ── LOADING ── */
     if (loading) return (
         <Box sx={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Stack alignItems="center" gap={2}>
@@ -659,9 +702,9 @@ export default function KanbanBoard() {
         </Box>
     );
 
-    const dlgPaper = { sx: { borderRadius: "12px", border: `1px solid ${border}`, bgcolor: dialogBg, backgroundImage: "none" } };
+    const dlgPaper  = { sx: { borderRadius: "12px", border: `1px solid ${border}`, bgcolor: dialogBg, backgroundImage: "none" } };
     const BtnPrimary = { bgcolor: accent, borderRadius: "7px", px: 3, textTransform: "none", fontWeight: 700, boxShadow: "none", "&:hover": { bgcolor: "#4878e8", boxShadow: "none" }, "&.Mui-disabled": { opacity: 0.4 } };
-    const BtnCancel = { color: textSec, textTransform: "none", fontWeight: 500, borderRadius: "7px", px: 2 };
+    const BtnCancel  = { color: textSec, textTransform: "none", fontWeight: 500, borderRadius: "7px", px: 2 };
 
     return (
         <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
@@ -717,7 +760,7 @@ export default function KanbanBoard() {
                     <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", px: 3, py: 2, borderBottom: `1px solid ${border}` }}>
                         <Stack direction="row" alignItems="center" gap={1.2}>
                             {(() => {
-                                const p = PRIORITY[selected.priority] ?? PRIORITY.medium;
+                                const p     = PRIORITY[selected.priority] ?? PRIORITY.medium;
                                 const PIcon = p.Icon;
                                 return (
                                     <Box sx={{ display: "flex", alignItems: "center", gap: 0.3, px: 0.7, py: 0.25, borderRadius: "4px", bgcolor: p.bg }}>

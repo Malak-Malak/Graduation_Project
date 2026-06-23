@@ -49,6 +49,16 @@ export const getAllArchivedProjects = () =>
 export const getArchivedProjectById = (teamId) =>
     axiosInstance.get(`/Archive/${teamId}`);
 
+// ══════════════════════════════════════════════════════════════════════════════
+// POST /api/Archive/search
+// Body: "string" — raw search query string (not wrapped in an object)
+// Role: Public — no token required
+// ══════════════════════════════════════════════════════════════════════════════
+export const searchArchive = (query) =>
+    axiosInstance.post("/Archive/search", query, {
+        headers: { "Content-Type": "application/json" },
+    });
+
 const archiveApi = {
     submitProject,
     getSubmittedTeams,
@@ -56,6 +66,7 @@ const archiveApi = {
     sendToArchive,
     getAllArchivedProjects,
     getArchivedProjectById,
+    searchArchive,
 };
 
 export default archiveApi;

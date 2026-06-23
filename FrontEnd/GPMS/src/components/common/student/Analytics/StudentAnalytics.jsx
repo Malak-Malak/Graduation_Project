@@ -16,7 +16,7 @@ import GroupsOutlinedIcon        from "@mui/icons-material/GroupsOutlined";
 
 import studentApi    from "../../../../api/handler/endpoints/studentApi";
 import fileSystemApi from "../../../../api/handler/endpoints/fileSystemApi";
-import { getKanbanBoard } from "../../../../api/handler/endpoints/Kanbanapi";
+import { getKanbanBoard } from "../../../../api/handler/endpoints/KanbanApi";
 
 const PRIMARY = "#d0895b";
 const SAGE    = "#6D8A7D";

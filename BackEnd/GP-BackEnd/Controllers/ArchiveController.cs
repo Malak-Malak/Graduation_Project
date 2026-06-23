@@ -20,10 +20,17 @@ namespace GP_BackEnd.Controllers
         // GET api/archive
         [HttpGet]
         [AllowAnonymous]
-        public async Task<IActionResult> GetArchivedProjects()
+        public async Task<IActionResult> GetArchivedProjects([FromQuery] string? query = null)
         {
-            var projects = await _archiveService.GetArchivedProjectsAsync();
-            return Ok(projects);
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                var all = await _archiveService.GetArchivedProjectsAsync();
+                return Ok(all);
+            }
+
+            
+            var results = await _archiveService.SearchArchivedProjectsAsync(query);
+            return Ok(results);
         }
 
         // GET api/archive/{teamId}

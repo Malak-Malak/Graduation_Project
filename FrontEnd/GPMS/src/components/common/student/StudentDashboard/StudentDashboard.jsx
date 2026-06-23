@@ -22,7 +22,7 @@ import PeopleOutlinedIcon         from "@mui/icons-material/PeopleOutlined";
 import NotesOutlinedIcon          from "@mui/icons-material/NotesOutlined";
 
 import { useAuth }               from "../../../../contexts/AuthContext";
-import { getKanbanBoard }        from "../../../../api/handler/endpoints/Kanbanapi";
+import { getKanbanBoard }        from "../../../../api/handler/endpoints/KanbanApi";
 import { notificationApi }       from "../../../../api/handler/endpoints/notificationApi";
 import { getMyDiscussionSlot }   from "../../../../api/handler/endpoints/headOfDepartmentApi";
 import studentApi                from "../../../../api/handler/endpoints/studentApi";

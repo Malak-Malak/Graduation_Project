@@ -8,13 +8,13 @@ import {
     Snackbar, Alert, TextField,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import TuneOutlinedIcon         from "@mui/icons-material/TuneOutlined";
 import CheckCircleOutlineIcon   from "@mui/icons-material/CheckCircleOutline";
 import CancelOutlinedIcon       from "@mui/icons-material/CancelOutlined";
 import RefreshOutlinedIcon      from "@mui/icons-material/RefreshOutlined";
 import HowToRegOutlinedIcon     from "@mui/icons-material/HowToRegOutlined";
 import ExitToAppOutlinedIcon    from "@mui/icons-material/ExitToAppOutlined";
 import SchoolOutlinedIcon       from "@mui/icons-material/SchoolOutlined";
+import GroupsOutlinedIcon       from "@mui/icons-material/GroupsOutlined";
 import Dialog                   from "@mui/material/Dialog";
 
 import {
@@ -22,9 +22,7 @@ import {
     getPendingLeaveRequests,
     respondToTeamRequest,
     respondToLeaveRequest,
-    setMaxTeams,
     getSupervisorTeams,
-    getSupervisorTotalTeams,
 } from "../../../../api/handler/endpoints/supervisorApi";
 
 import GroupCard             from "./GroupCard";
@@ -34,6 +32,9 @@ import DiscussionSlotModal   from "./DiscussionSlotModal";
 /* ─── constants ──────────────────────────────────────────────── */
 const MBR_COLORS = ["#B46F4C", "#6D8A7D", "#C49A6C", "#7E9FC4", "#9B7EC8"];
 const PRIMARY    = "#d0895b";
+
+// Hard cap on total supervised students across all groups (project rule, not server-configurable).
+const MAX_SUPERVISED_STUDENTS = 18;
 
 const initials = (name = "") =>
     (name ?? "?").split(" ").map((w) => w[0] ?? "").join("").toUpperCase().slice(0, 2) || "?";
@@ -174,7 +175,6 @@ export default function GroupsList({ onNavigateToFiles }) {
     /* ── data ── */
     const [groups,   setGroups]        = useState([]);
     const [requests, setRequests]      = useState([]);
-    const [maxTeams, setMaxTeamsState] = useState(6);
 
     /* ── loading ── */
     const [loadingGroups,   setLoadingGroups]   = useState(true);
@@ -189,10 +189,6 @@ export default function GroupsList({ onNavigateToFiles }) {
     /* ── Discussion slot modal ── */
     const [slotOpen, setSlotOpen] = useState(false);
     const [slotTeam, setSlotTeam] = useState(null);
-
-    /* ── limit dialog ── */
-    const [limitOpen,  setLimitOpen]  = useState(false);
-    const [limitInput, setLimitInput] = useState(6);
 
     /* ── snackbar ── */
     const [snack, setSnack] = useState({ open: false, msg: "", sev: "success" });
@@ -229,19 +225,10 @@ export default function GroupsList({ onNavigateToFiles }) {
         }
     }, []);
 
-    /* ─── fetch totals ───────────────────────────────────────── */
-    const fetchTotals = useCallback(async () => {
-        try {
-            const data = await getSupervisorTotalTeams();
-            if (data?.maxTeams != null) setMaxTeamsState(data.maxTeams);
-        } catch { /* silent */ }
-    }, []);
-
     useEffect(() => {
         fetchRequests();
         fetchGroups();
-        fetchTotals();
-    }, [fetchRequests, fetchGroups, fetchTotals]);
+    }, [fetchRequests, fetchGroups]);
 
     /* ─── open Kanban modal — now receives phase ─────────────── */
     const openKanban = (g, phase) => {          // ← phase param
@@ -282,7 +269,6 @@ export default function GroupsList({ onNavigateToFiles }) {
                 if (isApproved) {
                     snap(`"${req.projectTitle}" approved! ✓`);
                     fetchGroups();
-                    fetchTotals();
                 } else {
                     snap(`"${req.projectTitle}" rejected.`);
                 }
@@ -295,38 +281,18 @@ export default function GroupsList({ onNavigateToFiles }) {
         }
     };
 
-    /* ─── limit ──────────────────────────────────────────────── */
-    const handleSaveLimit = async () => {
-        try {
-            setActionBusy(true);
-            await setMaxTeams({ maxTeams: limitInput });
-            setMaxTeamsState(limitInput);
-            setLimitOpen(false);
-            snap("Supervision limit updated.");
-        } catch (e) {
-            snap(e?.response?.data?.message ?? "Failed to update limit.", "error");
-        } finally {
-            setActionBusy(false);
-        }
-    };
-
     /* ─── style helpers ──────────────────────────────────────── */
     const border  = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)";
     const paperBg = theme.palette.background.paper;
     const tPri    = theme.palette.text.primary;
     const tSec    = theme.palette.text.secondary;
 
-    const inputSx = {
-        "& .MuiOutlinedInput-root": {
-            borderRadius: 2, fontSize: "0.875rem",
-            "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: PRIMARY },
-        },
-        "& .MuiInputLabel-root.Mui-focused": { color: PRIMARY },
-        "& .MuiInputLabel-root": { fontSize: "0.875rem" },
-    };
-
     const pendingCount = requests.filter((r) => r.type !== "leave").length;
     const leaveCount   = requests.filter((r) => r.type === "leave").length;
+
+    // Total students currently supervised = sum of members across all groups.
+    const totalStudents = groups.reduce((sum, g) => sum + (g.members?.length ?? 0), 0);
+    const atOrOverCapacity = totalStudents >= MAX_SUPERVISED_STUDENTS;
 
     /* ═══════════════════════════════════════════════════════════
        RENDER
@@ -340,56 +306,48 @@ export default function GroupsList({ onNavigateToFiles }) {
                     <Box>
                         <Typography variant="h2" sx={{ color: tPri, mb: 0.4 }}>My Groups</Typography>
                         <Typography sx={{ color: tSec, fontSize: "0.85rem" }}>
-                            {groups.length} / {maxTeams} supervised teams
+                            {groups.length} group{groups.length !== 1 ? "s" : ""} · {totalStudents} / {MAX_SUPERVISED_STUDENTS} students supervised
                         </Typography>
                     </Box>
-                    <Stack direction="row" gap={1}>
-                        <Tooltip title="Refresh">
-                            <IconButton size="small"
-                                onClick={() => { fetchGroups(); fetchRequests(); fetchTotals(); }}
-                                sx={{ color: tSec, border: `1px solid ${border}`, borderRadius: 2, "&:hover": { color: PRIMARY } }}>
-                                <RefreshOutlinedIcon sx={{ fontSize: 17 }} />
-                            </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Set max groups you can supervise">
-                            <Button variant="outlined" size="small"
-                                startIcon={<TuneOutlinedIcon sx={{ fontSize: 15 }} />}
-                                onClick={() => { setLimitInput(maxTeams); setLimitOpen(true); }}
-                                sx={{
-                                    borderColor: border, color: tSec, fontSize: "0.78rem",
-                                    borderRadius: 2, textTransform: "none", fontWeight: 600,
-                                    "&:hover": { borderColor: PRIMARY, color: PRIMARY, bgcolor: `${PRIMARY}08` },
-                                }}>
-                                Limit: {maxTeams}
-                            </Button>
-                        </Tooltip>
-                    </Stack>
+                    <Tooltip title="Refresh">
+                        <IconButton size="small"
+                            onClick={() => { fetchGroups(); fetchRequests(); }}
+                            sx={{ color: tSec, border: `1px solid ${border}`, borderRadius: 2, "&:hover": { color: PRIMARY } }}>
+                            <RefreshOutlinedIcon sx={{ fontSize: 17 }} />
+                        </IconButton>
+                    </Tooltip>
                 </Stack>
 
-                {/* CAPACITY BAR */}
+                {/* CAPACITY BAR — total students across all groups vs. the fixed 18-student cap */}
                 <Paper elevation={0} sx={{ p: 2.2, borderRadius: 2.5, border: `1px solid ${border}`, bgcolor: paperBg }}>
-                    <Stack direction="row" justifyContent="space-between" mb={0.8}>
-                        <Typography fontSize="0.75rem" fontWeight={700} sx={{ color: tSec }}>
-                            Supervision Capacity
-                        </Typography>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.8}>
+                        <Stack direction="row" alignItems="center" gap={0.8}>
+                            <GroupsOutlinedIcon sx={{ fontSize: 16, color: tSec }} />
+                            <Typography fontSize="0.75rem" fontWeight={700} sx={{ color: tSec }}>
+                                Supervision Capacity
+                            </Typography>
+                        </Stack>
                         <Typography fontSize="0.75rem" fontWeight={700}
-                            sx={{ color: groups.length >= maxTeams ? "#C47E7E" : "#3DB97A" }}>
-                            {groups.length} / {maxTeams} groups
+                            sx={{ color: atOrOverCapacity ? "#C47E7E" : "#3DB97A" }}>
+                            {totalStudents} / {MAX_SUPERVISED_STUDENTS} students
                         </Typography>
                     </Stack>
                     <LinearProgress variant="determinate"
-                        value={Math.min((groups.length / maxTeams) * 100, 100)}
+                        value={Math.min((totalStudents / MAX_SUPERVISED_STUDENTS) * 100, 100)}
                         sx={{
                             height: 6, borderRadius: 3,
                             bgcolor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)",
                             "& .MuiLinearProgress-bar": {
-                                bgcolor: groups.length >= maxTeams ? "#C47E7E" : PRIMARY, borderRadius: 3,
+                                bgcolor: atOrOverCapacity ? "#C47E7E" : PRIMARY, borderRadius: 3,
                             },
                         }}
                     />
-                    {groups.length >= maxTeams && (
+                    <Typography fontSize="0.72rem" sx={{ color: tSec, mt: 0.7 }}>
+                        Across {groups.length} group{groups.length !== 1 ? "s" : ""}, capped at {MAX_SUPERVISED_STUDENTS} students total.
+                    </Typography>
+                    {atOrOverCapacity && (
                         <Typography fontSize="0.72rem" sx={{ color: "#C47E7E", mt: 0.6 }}>
-                            ⚠ You have reached your maximum supervision limit.
+                            ⚠ You've reached the maximum of {MAX_SUPERVISED_STUDENTS} supervised students. You won't appear as available to new teams until this changes.
                         </Typography>
                     )}
                 </Paper>
@@ -493,37 +451,6 @@ export default function GroupsList({ onNavigateToFiles }) {
                 team={slotTeam}
                 onClose={() => { setSlotOpen(false); setSlotTeam(null); }}
             />
-
-            {/* ══ SUPERVISION LIMIT DIALOG ═══════════════════════════ */}
-            <Dialog open={limitOpen} onClose={() => setLimitOpen(false)} maxWidth="xs" fullWidth
-                PaperProps={{ sx: { borderRadius: 3, border: `1px solid ${border}`, bgcolor: paperBg } }}>
-                <Box sx={{ px: 3, py: 2.5, borderBottom: `1px solid ${border}` }}>
-                    <Typography fontWeight={700} fontSize="0.95rem" sx={{ color: tPri }}>Supervision Limit</Typography>
-                </Box>
-                <Box sx={{ px: 3, py: 2.5 }}>
-                    <Typography fontSize="0.84rem" sx={{ color: tSec, mb: 2 }}>
-                        Set the maximum number of groups you are willing to supervise this semester.
-                    </Typography>
-                    <TextField label="Max Groups" type="number" size="small" fullWidth
-                        value={limitInput} onChange={(e) => setLimitInput(Number(e.target.value))}
-                        inputProps={{ min: groups.length, max: 20 }} sx={inputSx} />
-                    <Typography fontSize="0.73rem" sx={{ color: tSec, mt: 1 }}>
-                        You currently supervise {groups.length} group(s). Min cannot be below current count.
-                    </Typography>
-                </Box>
-                <Box sx={{ px: 3, pb: 3, display: "flex", justifyContent: "flex-end", gap: 1 }}>
-                    <Button onClick={() => setLimitOpen(false)}
-                        sx={{ color: tSec, textTransform: "none", fontWeight: 500, borderRadius: 2 }}>
-                        Cancel
-                    </Button>
-                    <Button variant="contained" disabled={actionBusy} onClick={handleSaveLimit} sx={{
-                        bgcolor: PRIMARY, "&:hover": { bgcolor: "#b06f47", boxShadow: "none" },
-                        textTransform: "none", fontWeight: 700, borderRadius: 2, boxShadow: "none",
-                    }}>
-                        {actionBusy ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : "Save"}
-                    </Button>
-                </Box>
-            </Dialog>
 
             {/* SNACKBAR */}
             <Snackbar open={snack.open} autoHideDuration={3500}

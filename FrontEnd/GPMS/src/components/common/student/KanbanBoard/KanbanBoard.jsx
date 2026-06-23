@@ -38,7 +38,7 @@ import {
     updateTask,
     updateTaskStatus,
     deleteTask,
-} from "../../../../api/handler/endpoints/Kanbanapi";
+} from "../../../../api/handler/endpoints/kanbanApi";
 
 /* =================================================================
    CONSTANTS
@@ -68,13 +68,33 @@ const EMPTY_FORM = { title: "", description: "", deadline: "", assignedUserIds: 
 const isColId = (id) => COL_ORDER.includes(id);
 
 /* =================================================================
-   PRIORITY localStorage
+   PRIORITY HELPERS
+   Priority now lives on the backend (task.priority) — normalise to
+   one of our known keys, defaulting to "medium" if missing/unknown.
+   Tolerant of casing differences and a couple of alternate field
+   names, in case the API responds with "Priority" or numeric levels.
 ================================================================= */
-const PSTORE = "kanban_priorities_v1";
-const pLoad = () => { try { return JSON.parse(localStorage.getItem(PSTORE) ?? "{}"); } catch { return {}; } };
-const pSave = (taskId, val) => { const s = pLoad(); s[String(taskId)] = val; localStorage.setItem(PSTORE, JSON.stringify(s)); };
-const pGet = (taskId) => pLoad()[String(taskId)] ?? "medium";
-const pDel = (taskId) => { const s = pLoad(); delete s[String(taskId)]; localStorage.setItem(PSTORE, JSON.stringify(s)); };
+const normalisePriority = (val) => {
+    const v = (val ?? "").toString().trim().toLowerCase();
+    if (PRIORITY[v]) return v;
+    // tolerate numeric priority levels e.g. 0=low/1=medium/2=high
+    if (v === "0") return "low";
+    if (v === "1") return "medium";
+    if (v === "2") return "high";
+    return "medium";
+};
+
+const extractPriority = (task) =>
+    task?.priority ?? task?.Priority ?? task?.priorityLevel ?? task?.taskPriority ?? null;
+
+// Backend looks like a .NET API (PascalCase fields in the Swagger schema),
+// so send priority back as "High" / "Medium" / "Low" rather than lowercase —
+// many .NET string enums are case-sensitive and silently fall back to a
+// default value if the casing doesn't match.
+const toBackendPriority = (key) => {
+    const meta = PRIORITY[key] ?? PRIORITY.medium;
+    return meta.label; // "High" | "Medium" | "Low"
+};
 
 /* =================================================================
    MEMBER HELPERS
@@ -103,12 +123,19 @@ const formatDeadline = (iso) => {
 ================================================================= */
 const mapTask = (task) => {
     const members = task.assignedMembers ?? task.assignedUsers ?? [];
+    // TEMP DIAGNOSTIC — remove once we confirm the backend's priority field/casing.
+    // Open the browser console and look at one of these logs to see exactly
+    // what key holds the priority value (and what casing it uses).
+    if (typeof window !== "undefined") {
+        // eslint-disable-next-line no-console
+        console.log("[Kanban] raw task from API:", task);
+    }
     return {
         id: String(task.id),
         backendId: task.id,
         title: task.title ?? "Untitled",
         description: task.description ?? "",
-        priority: pGet(task.id),
+        priority: normalisePriority(extractPriority(task)),
         due: task.deadline ? formatDeadline(task.deadline) : null,
         deadline: task.deadline ?? null,
         assignees: members.map(getInitial),
@@ -532,14 +559,12 @@ export default function KanbanBoard() {
                 title: addForm.title.trim(),
                 description: addForm.description.trim(),
                 status: COL_TO_STATUS[addCol],
+                priority: toBackendPriority(addForm.priority),
                 assignedUserIds: (addForm.assignedUserIds ?? []).map(Number).filter(n => n > 0),
             };
             if (addForm.deadline) payload.deadline = new Date(addForm.deadline).toISOString();
 
-            const res = await createTask(payload);
-
-            const newId = res?.data?.id ?? res?.data?.taskId ?? res?.data;
-            if (newId) pSave(newId, addForm.priority);
+            await createTask(payload);
 
             setAddOpen(false);
             showSnack("Task created!");
@@ -573,12 +598,12 @@ export default function KanbanBoard() {
             const payload = {
                 title: editForm.title.trim(),
                 description: editForm.description.trim(),
+                priority: toBackendPriority(editForm.priority),
                 assignedUserIds: (editForm.assignedUserIds ?? []).map(Number).filter(n => n > 0),
             };
             if (editForm.deadline) payload.deadline = new Date(editForm.deadline).toISOString();
 
             await updateTask(selected.backendId, payload);
-            pSave(selected.backendId, editForm.priority);
 
             setDetailOpen(false);
             showSnack("Task updated!");
@@ -616,7 +641,6 @@ export default function KanbanBoard() {
         try {
             setSaving(true);
             await deleteTask(selected.backendId);
-            pDel(selected.backendId);
             setDetailOpen(false);
             showSnack("Task deleted.");
             fetchBoard();

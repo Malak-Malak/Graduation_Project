@@ -13,7 +13,7 @@
 //
 // Endpoints:
 //   GET    /api/FileSystem/supervisor-files      → supervisor's own files
-//   GET    /api/FileSystem/student-files         → student files
+//   GET    /api/FileSystem/student-files?teamId=  → student files for a given team
 //   POST   /api/FileSystem/add                   → { filePath, fileName, description }
 //   PUT    /api/FileSystem/edit/{id}             → { filePath, fileName, description }
 //   DELETE /api/FileSystem/delete/{id}
@@ -26,9 +26,16 @@ const fileSystemApi = {
     getSupervisorFiles: () =>
         axiosInstance.get("/FileSystem/supervisor-files").then((r) => r.data),
 
-    /** GET /api/FileSystem/student-files */
-    getStudentFiles: () =>
-        axiosInstance.get("/FileSystem/student-files").then((r) => r.data),
+    /**
+     * GET /api/FileSystem/student-files?teamId={teamId}
+     * @param {number|string} [teamId] — when provided, filters files to that team only
+     */
+    getStudentFiles: (teamId) =>
+        axiosInstance
+            .get("/FileSystem/student-files", {
+                params: teamId != null && teamId !== "" ? { teamId } : undefined,
+            })
+            .then((r) => r.data),
 
     /**
      * POST /api/FileSystem/add

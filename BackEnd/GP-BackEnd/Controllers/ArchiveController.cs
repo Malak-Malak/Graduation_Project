@@ -84,5 +84,19 @@ namespace GP_BackEnd.Controllers
             if (!success) return BadRequest(message);
             return Ok(message);
         }
+
+        // POST api/archive/search
+        // Student describes their project idea and gets similar archived projects
+        [HttpPost("search")]
+        [AllowAnonymous]
+        public async Task<IActionResult> SearchArchive([FromBody] string description)
+        {
+            if (string.IsNullOrWhiteSpace(description))
+                return BadRequest("Please provide a description to search.");
+
+            var results = await _archiveService.SearchArchivedProjectsAsync(description);
+            return Ok(results);
+        }
+
     }
 }

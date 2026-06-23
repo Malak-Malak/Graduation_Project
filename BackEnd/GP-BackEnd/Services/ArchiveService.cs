@@ -3,17 +3,31 @@ using GP_BackEnd.DTOs.Archive;
 using GP_BackEnd.DTOs.Requirement;
 using GP_BackEnd.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
+using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace GP_BackEnd.Services
 {
     public class ArchiveService
     {
         private readonly ApplicationDbContext _context;
+        private readonly HttpClient _httpClient;
+        private readonly string _openAiApiKey;
 
         public ArchiveService(ApplicationDbContext context)
         {
             _context = context;
         }
+        
+        public ArchiveService(ApplicationDbContext context, IConfiguration config)
+        {
+            _context = context;
+            _httpClient = new HttpClient();
+            _openAiApiKey = config["OpenAI:ApiKey"];
+        }
+
+        
 
         // ── Student submits project ───────────────────────────────────────────
         public async Task<(bool success, string message)> SubmitProjectAsync(int studentId, int version)
@@ -242,6 +256,86 @@ namespace GP_BackEnd.Services
 
             await _context.SaveChangesAsync();
             return (true, $"Phase {dto.Version + 1} archived successfully.");
+        }
+
+        // Smart AI-powered search through archived projects
+        public async Task<List<ArchiveCardDto>> SearchArchivedProjectsAsync(string userDescription)
+        {
+            // Get all archived projects
+            var allProjects = await GetArchivedProjectsAsync();
+
+            if (!allProjects.Any())
+                return new List<ArchiveCardDto>();
+
+            // Build a summary of all projects to send to OpenAI
+            var projectSummaries = allProjects.Select((p, index) =>
+                $"[{index}] Title: {p.ProjectName} | Description: {p.ProjectDescription}");
+
+            var projectList = string.Join("\n", projectSummaries);
+
+            var prompt = $@"A student described their project idea as follows:
+""{userDescription}""
+
+Below is a list of archived projects. Return ONLY the indices (numbers in brackets) of projects that are similar to the student's idea, ranked from most similar to least similar. Consider semantic similarity, not just keyword matching. If no projects are similar, return an empty list.
+
+Archived projects:
+{projectList}
+
+Respond ONLY with a JSON array of indices, e.g: [2, 5, 0] or [] if none match. No explanation, no text, just the JSON array.";
+
+            try
+            {
+                var requestBody = new
+                {
+                    model = "gpt-3.5-turbo",
+                    messages = new[]
+                    {
+                new { role = "user", content = prompt }
+            },
+                    max_tokens = 100
+                };
+
+                var request = new HttpRequestMessage(
+                    HttpMethod.Post,
+                    "https://api.openai.com/v1/chat/completions");
+
+                request.Headers.Add("Authorization", $"Bearer {_openAiApiKey}");
+                request.Content = JsonContent.Create(requestBody);
+
+                var response = await _httpClient.SendAsync(request);
+
+                if (!response.IsSuccessStatusCode)
+                    return new List<ArchiveCardDto>();
+
+                var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+                var rawText = json
+                    .GetProperty("choices")[0]
+                    .GetProperty("message")
+                    .GetProperty("content")
+                    .GetString() ?? "[]";
+
+                // Parse the indices array
+                var indices = JsonSerializer.Deserialize<List<int>>(rawText.Trim());
+
+                if (indices == null || !indices.Any())
+                    return new List<ArchiveCardDto>();
+
+                // Return matched projects in ranked order
+                return indices
+                    .Where(i => i >= 0 && i < allProjects.Count)
+                    .Select(i => allProjects[i])
+                    .ToList();
+            }
+            catch
+            {
+                // Fallback: basic keyword search if OpenAI fails
+                return allProjects
+                    .Where(p =>
+                        p.ProjectName.Contains(userDescription, StringComparison.OrdinalIgnoreCase) ||
+                        (p.ProjectDescription != null &&
+                         p.ProjectDescription.Contains(userDescription, StringComparison.OrdinalIgnoreCase)))
+                    .ToList();
+            }
         }
 
         // ── Get all archived projects ─────────────────────────────────────────

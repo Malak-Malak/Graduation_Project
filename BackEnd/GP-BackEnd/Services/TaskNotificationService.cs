@@ -25,7 +25,7 @@ namespace GP_BackEnd.Services
             {
                 await CheckAndNotifyAsync();
 
-                // Run every 30s
+                // Run every 30
                 await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
             }
         }

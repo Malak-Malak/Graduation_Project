@@ -38,7 +38,7 @@ import {
     updateTask,
     updateTaskStatus,
     deleteTask,
-} from "../../../../api/handler/endpoints/KanbanApi";
+} from "../../../../api/handler/endpoints/kanbanApi";
 
 /* =================================================================
    CONSTANTS

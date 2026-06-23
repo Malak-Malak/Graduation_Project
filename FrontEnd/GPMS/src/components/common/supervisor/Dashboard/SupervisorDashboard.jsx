@@ -477,7 +477,7 @@ export default function SupervisorDashboard() {
                                 {[
                                     { label: "Pending Requests", path: "/supervisor/requests",  color: t.accentPrimary },
                                     { label: "Review Files",     path: "/supervisor/files",     color: t.accentSecondary ?? "#6D8A7D" },
-                                    { label: "AI Reports",       path: "/supervisor/ai-reports",color: "#9B7EC8" },
+                                    { label: "Reports",       path: "/supervisor/ai-reports",color: "#9B7EC8" },
                                     { label: "My Availability",  path: "/supervisor/meetings",  color: t.accentTertiary  ?? "#7E9FC4" },
                                 ].map((a) => (
                                     <Button key={a.label} variant="outlined" fullWidth

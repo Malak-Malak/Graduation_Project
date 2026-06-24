@@ -18,9 +18,9 @@ import PersonSearchOutlinedIcon from "@mui/icons-material/PersonSearchOutlined";
 import EditProfileModal from "./EditProfileModal";
 import ProfileSetupModal from "./ProfileSetupModal";
 import { useAuth } from "../../../../contexts/AuthContext";
-import studentApi, { decodeField } from "../../../../api/handler/endpoints/studentApi";
+import studentApi, { decodeField, getSkillsForDepartment } from "../../../../api/handler/endpoints/studentApi";
 
-// ── ثوابت خارج الـ component ─────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────────────────────
 const SKILL_COLORS = ["#B46F4C", "#6D8A7D", "#C49A6C", "#7E9FC4", "#9B7EC8", "#C47E7E"];
 
 const getAccent = (role) => {
@@ -32,17 +32,16 @@ const getAccent = (role) => {
 // ── normalizeProfile: backend → UI ───────────────────────────────────────────
 const normalizeProfile = (raw) => {
     if (!raw) return null;
-    // decodeField handles both short codes (supervisor) and plain text (student)
     const skillsFromField = decodeField(raw.field ?? "");
     return {
-        fullName:    raw.fullName    ?? "",
-        phoneNumber: raw.phoneNumber ?? "",
-        department:  raw.department  ?? "",
+        fullName:    raw.fullName     ?? "",
+        phoneNumber: raw.phoneNumber  ?? "",
+        department:  raw.department   ?? "",
         skills:      skillsFromField,
-        github:      raw.gitHubLink  ?? raw.github   ?? "",
-        linkedin:    raw.linkedinLink ?? raw.linkedin ?? "",
-        email:       raw.personalEmail ?? raw.email  ?? "",
-        bio:         raw.bio         ?? "",
+        github:      raw.gitHubLink   ?? raw.github   ?? "",
+        linkedin:    raw.linkedinLink ?? raw.linkedin  ?? "",
+        email:       raw.personalEmail ?? raw.email   ?? "",
+        bio:         raw.bio          ?? "",
     };
 };
 
@@ -55,19 +54,29 @@ export default function ProfilePage() {
     const isDark = theme.palette.mode === "dark";
     const { user } = useAuth();
 
-    const role           = (user?.role ?? user?.Role ?? "Student").toLowerCase();
-    const isAdmin        = role === "admin";
-    const isSupervisor   = role === "supervisor";
-    const isStudent      = role === "student";
+    const role         = (user?.role ?? user?.Role ?? "Student").toLowerCase();
+    const isAdmin      = role === "admin";
+    const isSupervisor = role === "supervisor";
+    const isStudent    = role === "student";
 
-    const [profile,     setProfile]     = useState(null);
-    const [loading,     setLoading]     = useState(true);
-    const [editOpen,    setEditOpen]    = useState(false);
-    const [setupOpen,   setSetupOpen]   = useState(false);
-    const [myTeam,      setMyTeam]      = useState(null);
-    const [teamLoading, setTeamLoading] = useState(true);
+    const [profile,       setProfile]       = useState(null);
+    const [loading,       setLoading]       = useState(true);
+    const [editOpen,      setEditOpen]      = useState(false);
+    const [setupOpen,     setSetupOpen]     = useState(false);
+    const [myTeam,        setMyTeam]        = useState(null);
+    const [teamLoading,   setTeamLoading]   = useState(true);
+    // University info (department locked from backend)
+    const [uniDepartment, setUniDepartment] = useState("");
 
-    // ── جلب البروفايل ──────────────────────────────────────────────────────
+    // ── Fetch university info once (students only) ──────────────────────────
+    useEffect(() => {
+        if (!isStudent) return;
+        studentApi.getUniversityInfo()
+            .then((d) => setUniDepartment(d?.department ?? ""))
+            .catch(() => setUniDepartment(""));
+    }, [isStudent]);
+
+    // ── Fetch profile ───────────────────────────────────────────────────────
     useEffect(() => {
         const profileDone = sessionStorage.getItem("gpms_profile_done");
 
@@ -75,7 +84,6 @@ export default function ProfilePage() {
             .then((d) => {
                 const normalized = normalizeProfile(d);
                 setProfile(normalized);
-                // ✅ Admins never see the setup modal
                 if (!isAdmin && isProfileEmpty(normalized) && !profileDone) {
                     setSetupOpen(true);
                 }
@@ -90,7 +98,7 @@ export default function ProfilePage() {
             .finally(() => setLoading(false));
     }, [isAdmin]);
 
-    // ── جلب My Team (للطالب فقط) ───────────────────────────────────────────
+    // ── Fetch my team (students only) ───────────────────────────────────────
     useEffect(() => {
         if (!isStudent) { setTeamLoading(false); return; }
         studentApi.getMyTeam()
@@ -99,29 +107,33 @@ export default function ProfilePage() {
             .finally(() => setTeamLoading(false));
     }, [isStudent]);
 
-    // ── حفظ التعديلات ──────────────────────────────────────────────────────
+    // ── Save edits ──────────────────────────────────────────────────────────
     const handleSave = async (updated) => {
+        // Always use university-locked department for students
+        const department = isStudent ? uniDepartment : updated.department;
+        const payload = { ...updated, department };
         try {
-            await studentApi.updateProfile(updated);
+            await studentApi.updateProfile(payload);
             setProfile(normalizeProfile({
-                fullName:      updated.fullName,
-                phoneNumber:   updated.phoneNumber,
-                department:    updated.department,
-                field:         (updated.skills ?? []).join(","),
-                gitHubLink:    updated.github,
-                linkedinLink:  updated.linkedin,
-                personalEmail: updated.email,
-                bio:           updated.bio,
+                fullName:      payload.fullName,
+                phoneNumber:   payload.phoneNumber,
+                department:    payload.department,
+                field:         (payload.skills ?? []).join(","),
+                gitHubLink:    payload.github,
+                linkedinLink:  payload.linkedin,
+                personalEmail: payload.email,
+                bio:           payload.bio,
             }));
-        } catch { /* keep UI as is */ }
+        } catch { /* keep UI as-is */ }
         setEditOpen(false);
     };
 
     const handleSetupDone = (data) => {
+        const department = isStudent ? uniDepartment : data.department;
         setProfile(normalizeProfile({
             fullName:      data.fullName,
             phoneNumber:   data.phoneNumber,
-            department:    data.department,
+            department,
             field:         (data.skills ?? []).join(","),
             gitHubLink:    data.github,
             linkedinLink:  data.linkedin,
@@ -134,18 +146,23 @@ export default function ProfilePage() {
     const displayName  = profile?.fullName || user?.name || user?.username || "User";
     const avatarLetter = displayName.charAt(0).toUpperCase();
 
+    // Department shown in the UI: prefer uni info for students
+    const displayDepartment = isStudent
+        ? (uniDepartment || profile?.department || "")
+        : (profile?.department || "");
+
     if (loading) return (
         <Box display="flex" justifyContent="center" alignItems="center" minHeight={300}>
             <CircularProgress size={26} sx={{ color: getAccent(role) }} />
         </Box>
     );
 
-    // ── Design tokens ───────────────────────────────────────────────────────
-    const accent = getAccent(role);
-    const a10    = isDark ? `${accent}1a` : `${accent}12`;
-    const a22    = `${accent}38`;
-    const border = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)";
-    const cardBg = theme.palette.background.paper;
+    // ── Design tokens ────────────────────────────────────────────────────────
+    const accent  = getAccent(role);
+    const a10     = isDark ? `${accent}1a` : `${accent}12`;
+    const a22     = `${accent}38`;
+    const border  = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)";
+    const cardBg  = theme.palette.background.paper;
     const textPri = theme.palette.text.primary;
     const textSec = theme.palette.text.secondary;
 
@@ -166,7 +183,6 @@ export default function ProfilePage() {
                 ? "linear-gradient(135deg, #fdf0f0 0%, #f5d4d4 100%)"
                 : "linear-gradient(135deg, #fdf0e8 0%, #f5e0cc 100%)";
 
-    // Skills section label adapts to role
     const skillsSectionTitle = isSupervisor ? "Research Areas" : "Skills";
 
     const renderSectionCard = ({ icon: Icon, title, count, onEdit, children }) => (
@@ -312,11 +328,13 @@ export default function ProfilePage() {
                         )}
                     </Stack>
 
-                    {profile?.department && (
-                        <Box sx={{ mt: 1.5 }}>
+                    {/* Department: read-only badge for students, editable chip for others */}
+                    {displayDepartment && (
+                        <Box sx={{ mt: 1.5, display: "flex", alignItems: "center", gap: 1 }}>
                             <Chip
                                 icon={<SchoolOutlinedIcon sx={{ fontSize: "13px !important", color: `${accent} !important` }} />}
-                                label={profile.department} size="small"
+                                label={displayDepartment}
+                                size="small"
                                 sx={{
                                     height: 26, borderRadius: 1.5,
                                     bgcolor: a10, color: accent,
@@ -324,12 +342,18 @@ export default function ProfilePage() {
                                     border: `1px solid ${a22}`,
                                 }}
                             />
+                            {/* Lock icon hint for students */}
+                            {isStudent && (
+                                <Typography fontSize="0.68rem" sx={{ color: textSec, opacity: 0.6 }}>
+                                    from university
+                                </Typography>
+                            )}
                         </Box>
                     )}
                 </Box>
             </Paper>
 
-            {/* ══ MY TEAM — للطالب فقط ═══════════════════════════════════════ */}
+            {/* ══ MY TEAM ════════════════════════════════════════════════════ */}
             {isStudent && (
                 <Box mb={2}>
                     {renderSectionCard({
@@ -491,22 +515,24 @@ export default function ProfilePage() {
                 </Paper>
             )}
 
-            {/* Setup Modal — students & supervisors only */}
+            {/* Setup Modal */}
             {!isAdmin && (
                 <ProfileSetupModal
                     open={setupOpen}
                     onDone={handleSetupDone}
                     role={role}
+                    uniDepartment={uniDepartment}
                 />
             )}
 
             {/* Edit Modal */}
             <EditProfileModal
                 open={editOpen}
-                profile={profile}
+                profile={{ ...profile, department: displayDepartment }}
                 onSave={handleSave}
                 onClose={() => setEditOpen(false)}
                 role={role}
+                uniDepartment={uniDepartment}
             />
         </Box>
     );

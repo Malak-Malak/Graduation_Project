@@ -12,8 +12,6 @@
 import axiosInstance from "./../../axiosInstance";
 
 // ── Supervisor Research-Area short codes ──────────────────────────────────────
-// key   = what gets stored in backend `field` (short, ≤4 chars each)
-// value = full display label shown in the UI
 export const SUPERVISOR_AREA_MAP = {
     "AI":   "Artificial Intelligence",
     "ML":   "Machine Learning",
@@ -30,41 +28,98 @@ export const SUPERVISOR_AREA_MAP = {
     "DSB":  "Distributed Systems & Blockchain",
 };
 
-// reverse: full label → short code
 const LABEL_TO_CODE = Object.fromEntries(
     Object.entries(SUPERVISOR_AREA_MAP).map(([k, v]) => [v, k])
 );
 
-/**
- * Encode skills array → comma-separated string for backend.
- * Supervisor area labels are replaced with their short codes.
- * Student free-text skills are stored as-is (they're already short).
- * Truncated to 100 chars as a safety net.
- */
-function encodeField(skills = []) {
-    const encoded = skills
-        .map((s) => LABEL_TO_CODE[s] ?? s)   // replace known labels with codes
-        .join(",");
-    return encoded.slice(0, 100);             // hard cap at 100
-}
+// ── Department → Student Skill Suggestions ────────────────────────────────────
+// Keyed by the exact department strings the backend returns.
+// Falls back to FALLBACK_STUDENT_SKILLS if no match found.
+export const DEPARTMENT_SKILL_MAP = {
+    "Computer System Engineering": [
+        "Frontend", "Backend", "AI / ML", "Data Analysis",
+        "UI/UX", "DevOps", "Mobile", "Security",
+        "Database", "Testing / QA", "Embedded", "Networks",
+    ],
+    "Computer Engineering": [
+        "Frontend", "Backend", "AI / ML", "Data Analysis",
+        "UI/UX", "DevOps", "Mobile", "Security",
+        "Database", "Testing / QA", "Embedded", "Networks",
+    ],
+    "Electrical Engineering": [
+        "Embedded", "Networks", "Signal Processing",
+        "Control Systems", "FPGA / VHDL", "PCB Design",
+        "Power Electronics", "Microcontrollers", "Automation",
+    ],
+    "Mechanical Engineering": [
+        "CAD / Simulation", "Finite Element Analysis", "3D Printing",
+        "Robotics", "Thermodynamics", "Manufacturing",
+        "Automation", "Control Systems", "Fluid Mechanics",
+    ],
+    "Mechatronics Engineering": [
+        "Embedded", "Robotics", "Control Systems",
+        "Automation", "Microcontrollers", "FPGA / VHDL",
+        "CAD / Simulation", "Networks", "Signal Processing",
+        "Machine Learning",
+    ],
+    "Telecommunications Engineering": [
+        "Networks", "Signal Processing", "Wireless Communications",
+        "Antenna Design", "Embedded", "FPGA / VHDL",
+        "Cybersecurity", "Protocols", "RF Engineering",
+    ],
+    "Power & Energy Engineering": [
+        "Power Electronics", "Renewable Energy", "Smart Grid",
+        "Control Systems", "Electrical Machines", "CAD / Simulation",
+        "Automation", "Energy Storage", "Power Systems",
+    ],
+};
+
+// Generic fallback if the backend returns an unexpected department
+export const FALLBACK_STUDENT_SKILLS = [
+    "Frontend", "Backend", "AI / ML", "Data Analysis",
+    "UI/UX", "DevOps", "Mobile", "Security",
+    "Database", "Testing / QA", "Embedded", "Networks",
+];
 
 /**
- * Decode field string → skills array.
- * Short codes are expanded back to full labels.
- * Unknown tokens (student free-text) are kept as-is.
+ * Returns the suggested skills array for a given department string.
+ * Safe to call with null / undefined — returns fallback.
  */
+export function getSkillsForDepartment(department) {
+    if (!department) return FALLBACK_STUDENT_SKILLS;
+    return DEPARTMENT_SKILL_MAP[department] ?? FALLBACK_STUDENT_SKILLS;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+function encodeField(skills = []) {
+    const encoded = skills
+        .map((s) => LABEL_TO_CODE[s] ?? s)
+        .join(",");
+    return encoded.slice(0, 100);
+}
+
 export function decodeField(field = "") {
     if (!field) return [];
     return field
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean)
-        .map((s) => SUPERVISOR_AREA_MAP[s] ?? s);  // expand code → label if known
+        .map((s) => SUPERVISOR_AREA_MAP[s] ?? s);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 const studentApi = {
+
+    // ── University Info ───────────────────────────────────────────────────────
+
+    /**
+     * Returns { username, universityEmail, department }
+     * Call once on mount; the department field drives skill suggestions.
+     */
+    getUniversityInfo: () =>
+        axiosInstance.get("/User/my-university-info").then((r) => r.data),
 
     // ── Team Queries ──────────────────────────────────────────────────────────
 
@@ -150,7 +205,7 @@ const studentApi = {
             department:    data.department    ?? "",
             gitHubLink:    data.github        ?? "",
             linkedinLink:  data.linkedin      ?? "",
-            field:         encodeField(data.skills),   // ← encoded, ≤100 chars
+            field:         encodeField(data.skills),
             personalEmail: data.email         ?? "",
             bio:           data.bio           ?? "",
         }).then((r) => r.data),
@@ -162,7 +217,7 @@ const studentApi = {
             department:           data.department  ?? "",
             gitHubLink:           data.github      ?? "",
             linkedinLink:         data.linkedin    ?? "",
-            field:                encodeField(data.skills),   // ← encoded, ≤100 chars
+            field:                encodeField(data.skills),
             totalNumOfCreditCards: 0,
             personalEmail:        data.email       ?? "",
             bio:                  data.bio         ?? "",

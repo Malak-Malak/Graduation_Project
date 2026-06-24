@@ -16,10 +16,9 @@ import CodeOutlinedIcon from "@mui/icons-material/CodeOutlined";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import AddIcon from "@mui/icons-material/Add";
 import IconButton from "@mui/material/IconButton";
-import CheckIcon from "@mui/icons-material/Check";
-import studentApi from "../../../../api/handler/endpoints/studentApi";
+import studentApi, { getSkillsForDepartment } from "../../../../api/handler/endpoints/studentApi";
 
-// ── Departments (shared) ──────────────────────────────────────────────────────
+// ── Departments (supervisors only) ───────────────────────────────────────────
 const ALL_DEPARTMENTS = [
     "Computer Engineering",
     "Electrical Engineering",
@@ -29,13 +28,7 @@ const ALL_DEPARTMENTS = [
     "Power & Energy Engineering",
 ];
 
-// ── Skills per role ───────────────────────────────────────────────────────────
-const STUDENT_SKILLS = [
-    "Frontend", "Backend", "AI / ML", "Data Analysis",
-    "UI/UX", "DevOps", "Mobile", "Security",
-    "Database", "Testing / QA", "Embedded", "Networks",
-];
-
+// ── Supervisor research areas ─────────────────────────────────────────────────
 const SUPERVISOR_SKILLS = [
     "Artificial Intelligence",
     "Machine Learning",
@@ -52,11 +45,18 @@ const SUPERVISOR_SKILLS = [
     "Distributed Systems & Blockchain",
 ];
 
-const STEPS = [
+// ── Steps: students skip department, supervisors keep it ──────────────────────
+const STUDENT_STEPS = [
+    { id: "skills",  label: "Skills",       icon: CodeOutlinedIcon,  desc: "Pick your skills — teammates will find you based on these" },
+    { id: "contact", label: "Contact Info", icon: BadgeOutlinedIcon, desc: "Let teammates know how to reach you" },
+    { id: "bio",     label: "About You",    icon: PersonOutlineIcon, desc: "Write a short bio about yourself" },
+];
+
+const SUPERVISOR_STEPS = [
     { id: "department", label: "Department",   icon: SchoolOutlinedIcon, desc: "Select your engineering department" },
-    { id: "skills",     label: "Skills",        icon: CodeOutlinedIcon,   desc: "Pick your skills — teammates will find you based on these" },
-    { id: "contact",    label: "Contact Info",  icon: BadgeOutlinedIcon,  desc: "Let teammates know how to reach you" },
-    { id: "bio",        label: "About You",     icon: PersonOutlineIcon,  desc: "Write a short bio about yourself" },
+    { id: "skills",     label: "Research Areas", icon: CodeOutlinedIcon,   desc: "Select your academic research specializations" },
+    { id: "contact",    label: "Contact Info",   icon: BadgeOutlinedIcon,  desc: "Let students know how to reach you" },
+    { id: "bio",        label: "About You",      icon: PersonOutlineIcon,  desc: "Write a short bio about yourself" },
 ];
 
 const INPUT_SX = {
@@ -92,30 +92,29 @@ function InnerCard({ icon: Icon, title, count, action, children, border, cardAlt
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-export default function ProfileSetupModal({ open, onDone, role = "student" }) {
+export default function ProfileSetupModal({ open, onDone, role = "student", uniDepartment = "" }) {
     const theme  = useTheme();
     const isDark = theme.palette.mode === "dark";
 
     const normalizedRole = (role ?? "student").toLowerCase();
     const isSupervisor   = normalizedRole === "supervisor";
     const isAdmin        = normalizedRole === "admin";
+    const isStudent      = normalizedRole === "student";
 
-    // ── Admins don't use this modal ──────────────────────────────────────────
     if (isAdmin || !open) return null;
 
-    const suggestedSkills  = isSupervisor ? SUPERVISOR_SKILLS : STUDENT_SKILLS;
-    const skillsStepLabel  = isSupervisor ? "Research Areas" : "Skills";
-    const skillsStepDesc   = isSupervisor
-        ? "Select your academic research specializations"
-        : "Pick your skills — teammates will find you based on these";
+    // Steps depend on role — students skip department picker
+    const steps = isSupervisor ? SUPERVISOR_STEPS : STUDENT_STEPS;
 
-    // patch step desc dynamically
-    const steps = STEPS.map(s =>
-        s.id === "skills" ? { ...s, label: skillsStepLabel, desc: skillsStepDesc } : s
-    );
+    // Skills suggestions: supervisors use fixed list, students use department-based list
+    const suggestedSkills = isSupervisor
+        ? SUPERVISOR_SKILLS
+        : getSkillsForDepartment(uniDepartment);
+
+    const skillsStepLabel = isSupervisor ? "Research Areas" : "Skills";
 
     const [step,             setStep]             = useState(0);
-    const [department,       setDepartment]       = useState("");
+    const [department,       setDepartment]       = useState("");   // supervisors only
     const [skills,           setSkills]           = useState([]);
     const [customSkillInput, setCustomSkillInput] = useState("");
     const [fullName,         setFullName]         = useState("");
@@ -167,7 +166,9 @@ export default function ProfileSetupModal({ open, onDone, role = "student" }) {
     const handleNext = async () => {
         if (step < steps.length - 1) { setStep((s) => s + 1); return; }
 
-        const data = { department, skills, fullName, email, phoneNumber, linkedin, github, bio };
+        // Students use uniDepartment; supervisors use their chosen department
+        const resolvedDepartment = isStudent ? uniDepartment : department;
+        const data = { department: resolvedDepartment, skills, fullName, email, phoneNumber, linkedin, github, bio };
         setSaving(true);
         setError("");
 
@@ -199,10 +200,12 @@ export default function ProfileSetupModal({ open, onDone, role = "student" }) {
         }
     };
 
+    // Validate current step before allowing Next
+    const currentStepId = steps[step]?.id;
     const canNext =
-        step === 0 ? Boolean(department) :
-            step === 2 ? Boolean(fullName.trim()) && Boolean(email.trim()) :
-                true;
+        currentStepId === "department" ? Boolean(department) :
+        currentStepId === "contact"    ? Boolean(fullName.trim()) && Boolean(email.trim()) :
+        true;
 
     const CurrentIcon = steps[step].icon;
 
@@ -276,7 +279,7 @@ export default function ProfileSetupModal({ open, onDone, role = "student" }) {
                                         transition: "all 0.25s ease",
                                     }}>
                                         {done
-                                            ? <CheckIcon sx={{ fontSize: 11, color: "#fff" }} />
+                                            ? <Box component="span" sx={{ fontSize: 11, color: "#fff", fontWeight: 700, lineHeight: 1 }}>✓</Box>
                                             : <Typography fontSize="0.6rem" fontWeight={700}
                                                 sx={{ color: current ? "#fff" : textSec }}>{i + 1}</Typography>
                                         }
@@ -302,8 +305,8 @@ export default function ProfileSetupModal({ open, onDone, role = "student" }) {
             {/* Content */}
             <DialogContent sx={{ px: 3.5, py: 3, overflowY: "auto" }}>
 
-                {/* STEP 0: Department */}
-                {step === 0 && (
+                {/* DEPARTMENT — supervisors only */}
+                {currentStepId === "department" && isSupervisor && (
                     <Stack spacing={2}>
                         <InnerCard {...cardProps} icon={SchoolOutlinedIcon} title="Selected">
                             {department ? (
@@ -313,7 +316,7 @@ export default function ProfileSetupModal({ open, onDone, role = "student" }) {
                                         bgcolor: accent, flexShrink: 0,
                                         display: "flex", alignItems: "center", justifyContent: "center",
                                     }}>
-                                        <CheckIcon sx={{ fontSize: 16, color: "#fff" }} />
+                                        <Box component="span" sx={{ fontSize: 14, color: "#fff", fontWeight: 700 }}>✓</Box>
                                     </Box>
                                     <Box>
                                         <Typography fontWeight={700} fontSize="0.88rem" sx={{ color: textPri }}>{department}</Typography>
@@ -335,9 +338,25 @@ export default function ProfileSetupModal({ open, onDone, role = "student" }) {
                     </Stack>
                 )}
 
-                {/* STEP 1: Skills / Research Areas */}
-                {step === 1 && (
+                {/* SKILLS / RESEARCH AREAS */}
+                {currentStepId === "skills" && (
                     <Stack spacing={2}>
+                        {/* University department badge — students only */}
+                        {isStudent && uniDepartment && (
+                            <Box sx={{
+                                display: "flex", alignItems: "center", gap: 1, px: 2, py: 1.2,
+                                borderRadius: 2, bgcolor: a10, border: `1px solid ${a22}`,
+                            }}>
+                                <SchoolOutlinedIcon sx={{ fontSize: 14, color: accent }} />
+                                <Typography fontSize="0.78rem" fontWeight={600} sx={{ color: textPri }}>
+                                    {uniDepartment}
+                                </Typography>
+                                <Typography fontSize="0.72rem" sx={{ color: textSec, opacity: 0.7 }}>
+                                    · skills tailored to your department
+                                </Typography>
+                            </Box>
+                        )}
+
                         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                             {/* Custom input — students only */}
                             {!isSupervisor && (
@@ -408,8 +427,8 @@ export default function ProfileSetupModal({ open, onDone, role = "student" }) {
                     </Stack>
                 )}
 
-                {/* STEP 2: Contact */}
-                {step === 2 && (
+                {/* CONTACT */}
+                {currentStepId === "contact" && (
                     <Stack spacing={2}>
                         <InnerCard {...cardProps} icon={BadgeOutlinedIcon} title="Identity">
                             <Stack spacing={2}>
@@ -448,8 +467,8 @@ export default function ProfileSetupModal({ open, onDone, role = "student" }) {
                     </Stack>
                 )}
 
-                {/* STEP 3: Bio */}
-                {step === 3 && (
+                {/* BIO */}
+                {currentStepId === "bio" && (
                     <Stack spacing={2}>
                         <Box sx={{ display: "flex", gap: 1.5, p: 2, borderRadius: 2.5, bgcolor: a10, border: `1px solid ${a22}` }}>
                             <Box sx={{

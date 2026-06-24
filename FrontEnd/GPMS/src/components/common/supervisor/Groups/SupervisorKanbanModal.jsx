@@ -58,7 +58,7 @@ const fetchPhaseBoard = (teamId, phase) =>
 
 /* ── normalise ── */
 const S2C = {
-    "To Do": "todo", "Todo": "todo", "todo": "todo",
+    "To Do": "todo", "Todo": "todo", "todo": "todo", "toDo": "todo",
     "In Progress": "inProgress", "InProgress": "inProgress", "inProgress": "inProgress",
     "Done": "done", "done": "done",
 };
@@ -74,13 +74,23 @@ const mapTask = (task) => {
         isAssigned:    members.length > 0,
         comments:      (task.comments ?? []).length,
         files:         (task.files    ?? []).length,
-        priority:      task.priority  ?? "medium",
+        // ✅ lowercase so PRIORITY lookup always works
+        priority:      (task.priority ?? "medium").toLowerCase(),
     };
 };
 
 const normaliseBoard = (data) => {
     const board = { todo: [], inProgress: [], done: [] };
     if (!data) return board;
+
+    // ✅ handles toDo (camelCase from backend) as well as todo
+    if (data.toDo !== undefined || data.todo !== undefined || data.inProgress !== undefined || data.done !== undefined) {
+        board.todo       = (data.toDo       ?? data.todo ?? []).map(mapTask);
+        board.inProgress = (data.inProgress ?? []).map(mapTask);
+        board.done       = (data.done       ?? []).map(mapTask);
+        return board;
+    }
+
     if (Array.isArray(data.columns)) {
         data.columns.forEach((col) => {
             const key = S2C[col.name] ?? S2C[col.name?.replace(/\s/g, "")];
@@ -88,12 +98,7 @@ const normaliseBoard = (data) => {
         });
         return board;
     }
-    if (data.toDo !== undefined || data.inProgress !== undefined || data.done !== undefined) {
-        board.todo       = (data.toDo       ?? []).map(mapTask);
-        board.inProgress = (data.inProgress ?? []).map(mapTask);
-        board.done       = (data.done       ?? []).map(mapTask);
-        return board;
-    }
+
     (Array.isArray(data) ? data : data?.tasks ?? []).forEach((t) => {
         const col = S2C[t.status] ?? "todo";
         board[col].push(mapTask(t));

@@ -16,7 +16,6 @@ import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
 import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
 import PersonSearchOutlinedIcon from "@mui/icons-material/PersonSearchOutlined";
 import EditProfileModal from "./EditProfileModal";
-import ProfileSetupModal from "./ProfileSetupModal";
 import { useAuth } from "../../../../contexts/AuthContext";
 import studentApi, { decodeField } from "../../../../api/handler/endpoints/studentApi";
 
@@ -71,7 +70,7 @@ export default function ProfilePage() {
     const [profile,       setProfile]       = useState(null);
     const [loading,       setLoading]       = useState(true);
     const [editOpen,      setEditOpen]      = useState(false);
-    const [setupOpen,     setSetupOpen]     = useState(false);
+  
     const [myTeam,        setMyTeam]        = useState(null);
     const [teamLoading,   setTeamLoading]   = useState(true);
     const [uniDepartment, setUniDepartment] = useState("");

@@ -27,9 +27,11 @@ import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutl
 import LinkOutlinedIcon from "@mui/icons-material/LinkOutlined";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
+import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 
 import studentApi from "../../../../api/handler/endpoints/studentApi";
 import archiveApi from "../../../../api/handler/endpoints/archiveApi";
+import AIProjectSuggester from "../AIResearchSuggester/AIResearchSuggester";
 
 /* ─── inject global keyframes once ───────────────────────────── */
 if (typeof document !== "undefined" && !document.getElementById("spin-border-kf")) {
@@ -65,11 +67,6 @@ const ini = (n = "") => (n ?? "").split(" ").map(w => w[0] ?? "").join("").toUpp
 const palette = i => PALETTE[i % PALETTE.length];
 const skClr = i => SK_CLR[i % SK_CLR.length];
 
-/**
- * Safe data extractor — handles both:
- *   axiosInstance that returns response.data automatically  → d is already the array
- *   axiosInstance that returns the full response object     → d.data is the array
- */
 const extractArray = (d) => {
     if (Array.isArray(d)) return d;
     if (Array.isArray(d?.data)) return d.data;
@@ -171,7 +168,6 @@ function SpinCard({ color, children }) {
 
 /* ═══════════════════════════════════════════════════════════════
    ARCHIVED PROJECT CARD
-   — fixed height stays at CARD_H using SpinCard
 ═══════════════════════════════════════════════════════════════ */
 function ArchivedProjectCard({ project, onView }) {
     const theme = useTheme();
@@ -182,7 +178,6 @@ function ArchivedProjectCard({ project, onView }) {
     const colorIdx = Math.abs((project.teamId ?? 0) + (project.projectName ?? "").charCodeAt(0)) % PALETTE.length;
     const aClr = palette(colorIdx);
 
-    // Phase badges
     const hasP1 = project.hasPhase1 ?? (project.version === 0);
     const hasP2 = project.hasPhase2 ?? (project.version === 1);
 
@@ -192,8 +187,6 @@ function ArchivedProjectCard({ project, onView }) {
         <SpinCard color={aClr}>
             <Box sx={{ height: 3, flexShrink: 0, background: `linear-gradient(90deg,${aClr} 0%,${aClr}55 100%)` }} />
             <Box sx={{ p: "14px 16px", flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-
-                {/* Header row */}
                 <Stack direction="row" alignItems="center" gap={1.5} mb={1.2} sx={{ flexShrink: 0 }}>
                     <Box sx={{
                         width: 44, height: 44, borderRadius: "13px", flexShrink: 0,
@@ -216,7 +209,6 @@ function ArchivedProjectCard({ project, onView }) {
                     </Box>
                 </Stack>
 
-                {/* Description */}
                 <Box sx={{ height: 38, overflow: "hidden", flexShrink: 0, mb: .8 }}>
                     {project.projectDescription
                         ? <Typography fontSize=".72rem" sx={{ color: tSec, lineHeight: 1.55, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
@@ -226,7 +218,6 @@ function ArchivedProjectCard({ project, onView }) {
                     }
                 </Box>
 
-                {/* Chips row — Phase 1 / Phase 2 / dept / date */}
                 <Stack direction="row" gap={.6} mb={.8} flexWrap="wrap" sx={{ flexShrink: 0 }}>
                     <Chip
                         icon={hasP1
@@ -284,7 +275,6 @@ function ArchivedProjectCard({ project, onView }) {
 
 /* ═══════════════════════════════════════════════════════════════
    ARCHIVED PROJECT DETAIL DIALOG
-   — shows full info: phases, members, files with links, github
 ═══════════════════════════════════════════════════════════════ */
 function ArchiveDetailDialog({ open, onClose, project }) {
     const theme = useTheme();
@@ -304,7 +294,6 @@ function ArchiveDetailDialog({ open, onClose, project }) {
     const archivedP1 = formatDate(project.archivedAtV0, { year: "numeric", month: "long", day: "numeric" });
     const archivedP2 = formatDate(project.archivedAtV1, { year: "numeric", month: "long", day: "numeric" });
 
-    // Separate files by phase
     const filesP1 = (project.files ?? []).filter(f => f.version === 0);
     const filesP2 = (project.files ?? []).filter(f => f.version === 1);
 
@@ -373,7 +362,6 @@ function ArchiveDetailDialog({ open, onClose, project }) {
                     boxShadow: isDark ? "0 40px 100px rgba(0,0,0,.7)" : "0 40px 100px rgba(0,0,0,.15)",
                 }
             }}>
-            {/* Banner */}
             <Box sx={{
                 height: 100, position: "relative", overflow: "hidden",
                 background: isDark
@@ -391,7 +379,6 @@ function ArchiveDetailDialog({ open, onClose, project }) {
                 </IconButton>
             </Box>
 
-            {/* Avatar */}
             <Box sx={{ px: 3, mt: "-28px", mb: 0, position: "relative", zIndex: 1 }}>
                 <Box sx={{
                     width: 56, height: 56, borderRadius: "16px",
@@ -405,7 +392,6 @@ function ArchiveDetailDialog({ open, onClose, project }) {
                 </Box>
             </Box>
 
-            {/* Title + chips */}
             <Box sx={{ px: 3, pt: 1.5, pb: 1 }}>
                 <Typography fontWeight={800} fontSize="1.1rem" sx={{ color: tPri, mb: .8 }}>
                     {project.projectName}
@@ -424,7 +410,6 @@ function ArchiveDetailDialog({ open, onClose, project }) {
                         />
                     )}
                 </Stack>
-                {/* Phase status row */}
                 <Stack direction="row" gap={1} flexWrap="wrap">
                     <PhaseBadge label="Phase 1" active={hasP1} date={archivedP1} />
                     <PhaseBadge label="Phase 2" active={hasP2} date={archivedP2} />
@@ -435,16 +420,12 @@ function ArchiveDetailDialog({ open, onClose, project }) {
 
             <DialogContent sx={{ px: 3, py: 2.5, overflowY: "auto", maxHeight: 420 }}>
                 <Stack spacing={2.5}>
-
-                    {/* Description */}
                     {project.projectDescription && (
                         <Box>
                             <Typography sx={{ fontSize: ".66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".8px", color: tSec, mb: .8 }}>Description</Typography>
                             <Typography fontSize=".83rem" sx={{ color: tPri, lineHeight: 1.7 }}>{project.projectDescription}</Typography>
                         </Box>
                     )}
-
-                    {/* GitHub */}
                     {project.githubRepo && (
                         <Box>
                             <Typography sx={{ fontSize: ".66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".8px", color: tSec, mb: .8 }}>Repository</Typography>
@@ -465,8 +446,6 @@ function ArchiveDetailDialog({ open, onClose, project }) {
                             </Stack>
                         </Box>
                     )}
-
-                    {/* Members */}
                     {project.memberNames?.length > 0 && (
                         <Box>
                             <Typography sx={{ fontSize: ".66rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".8px", color: tSec, mb: 1 }}>
@@ -494,8 +473,6 @@ function ArchiveDetailDialog({ open, onClose, project }) {
                             </Stack>
                         </Box>
                     )}
-
-                    {/* Files — Phase 1 */}
                     {filesP1.length > 0 && (
                         <Box>
                             <Stack direction="row" alignItems="center" gap={.6} mb={1}>
@@ -509,8 +486,6 @@ function ArchiveDetailDialog({ open, onClose, project }) {
                             </Stack>
                         </Box>
                     )}
-
-                    {/* Files — Phase 2 */}
                     {filesP2.length > 0 && (
                         <Box>
                             <Stack direction="row" alignItems="center" gap={.6} mb={1}>
@@ -524,7 +499,6 @@ function ArchiveDetailDialog({ open, onClose, project }) {
                             </Stack>
                         </Box>
                     )}
-
                 </Stack>
             </DialogContent>
 
@@ -540,7 +514,7 @@ function ArchiveDetailDialog({ open, onClose, project }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   STUDENT PROFILE DIALOG  (unchanged)
+   STUDENT PROFILE DIALOG
 ═══════════════════════════════════════════════════════════════ */
 function StudentProfileDialog({ open, onClose, student }) {
     const theme = useTheme();
@@ -718,7 +692,7 @@ function StudentProfileDialog({ open, onClose, student }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   TEAM DETAIL DIALOG  (unchanged)
+   TEAM DETAIL DIALOG
 ═══════════════════════════════════════════════════════════════ */
 function TeamDetailDialog({ open, onClose, team }) {
     const theme = useTheme();
@@ -801,7 +775,7 @@ function TeamDetailDialog({ open, onClose, team }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   STUDENT CARD  (unchanged)
+   STUDENT CARD
 ═══════════════════════════════════════════════════════════════ */
 function StudentCard({ student, onViewProfile }) {
     const theme = useTheme();
@@ -859,7 +833,7 @@ function StudentCard({ student, onViewProfile }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   TEAM CARD  (unchanged)
+   TEAM CARD
 ═══════════════════════════════════════════════════════════════ */
 function TeamCard({ team, onView }) {
     const theme = useTheme();
@@ -922,7 +896,6 @@ function TeamCard({ team, onView }) {
 
 /* ═══════════════════════════════════════════════════════════════
    ARCHIVE SEARCH BANNER
-   — shown above the grid only when a server-side search is active
 ═══════════════════════════════════════════════════════════════ */
 function ArchiveSearchBanner({ query, resultCount, onClear }) {
     const theme = useTheme();
@@ -995,18 +968,21 @@ export default function DiscoveryHub() {
     const [snack, setSnack] = useState({ open: false, msg: "", sev: "success" });
     const snap = (msg, sev = "success") => setSnack({ open: true, msg, sev });
 
+    // ── AI Suggester state ──────────────────────────────────────────
+    const [aiOpen, setAiOpen] = useState(false);
+    // ↓ NOW holds the actual team project data fetched from API
+    const [aiProject, setAiProject] = useState(null);
+    const [aiLoading, setAiLoading] = useState(false);
+
     // ── Server-side archive search state ──────────────────────────
-    // activeQuery = the query that was actually submitted (Enter / icon click).
-    // It can differ from `searchArchive` (the live input value) while typing.
-    const [archiveSearchResults, setArchiveSearchResults] = useState(null); // null = no active search
+    const [archiveSearchResults, setArchiveSearchResults] = useState(null);
     const [activeArchiveQuery, setActiveArchiveQuery] = useState("");
     const [searchingArchive, setSearchingArchive] = useState(false);
-    const archiveSearchSeq = useRef(0); // guards against stale responses
+    const archiveSearchSeq = useRef(0);
 
     const runArchiveSearch = useCallback(async (rawQuery) => {
         const q = (rawQuery ?? "").trim();
         if (!q) {
-            // empty query → fall back to the original full list, no request
             setArchiveSearchResults(null);
             setActiveArchiveQuery("");
             setArchivePage(1);
@@ -1016,7 +992,7 @@ export default function DiscoveryHub() {
         setSearchingArchive(true);
         try {
             const d = await archiveApi.searchArchive(q);
-            if (seq !== archiveSearchSeq.current) return; // a newer search superseded this one
+            if (seq !== archiveSearchSeq.current) return;
             setArchiveSearchResults(extractArray(d));
             setActiveArchiveQuery(q);
             setArchivePage(1);
@@ -1031,12 +1007,41 @@ export default function DiscoveryHub() {
     }, []);
 
     const clearArchiveSearch = useCallback(() => {
-        archiveSearchSeq.current++; // invalidate any in-flight request
+        archiveSearchSeq.current++;
         setSearchArchive("");
         setArchiveSearchResults(null);
         setActiveArchiveQuery("");
         setSearchingArchive(false);
         setArchivePage(1);
+    }, []);
+
+    // ── Open AI Suggester: fetch my team first, then open dialog ───
+    const handleOpenAI = useCallback(async () => {
+        setAiLoading(true);
+        try {
+            const raw = await studentApi.getMyTeam();
+            // getMyTeam() returns the object directly (already .data from axiosInstance)
+            // Shape: { id, projectTitle, projectDescription, supervisorName, members, ... }
+            const team = Array.isArray(raw) ? raw[0] : raw;
+            if (team?.projectTitle || team?.projectDescription) {
+                setAiProject({
+                    title: team.projectTitle ?? "",
+                    description: team.projectDescription ?? "",
+                    department: team.department ?? "",
+                    teamMembers: team.members ?? [],
+                });
+            } else {
+                // Student has no team or no project info yet — open with empty state
+                // so they can still use the AI with a manual topic
+                setAiProject(null);
+            }
+        } catch {
+            // API error (e.g. student has no team) — still open dialog, just no pre-fill
+            setAiProject(null);
+        } finally {
+            setAiLoading(false);
+            setAiOpen(true);
+        }
     }, []);
 
     // Swipe handlers
@@ -1084,7 +1089,7 @@ export default function DiscoveryHub() {
         setLoadingArchive(true);
         try {
             const d = await archiveApi.getAllArchivedProjects();
-            setArchivedProjects(extractArray(d));   // ← fixed: handles both response shapes
+            setArchivedProjects(extractArray(d));
         } catch {
             snap("Failed to load archived projects", "error");
         } finally {
@@ -1113,8 +1118,6 @@ export default function DiscoveryHub() {
         return (t.projectTitle ?? "").toLowerCase().includes(q) || (t.projectDescription ?? "").toLowerCase().includes(q) || (t.supervisorName ?? "").toLowerCase().includes(q);
     });
 
-    // Archive tab: server-driven search results take over when active,
-    // otherwise fall back to the originally loaded full list.
     const isArchiveSearchActive = archiveSearchResults !== null;
     const archiveSource = isArchiveSearchActive ? archiveSearchResults : archivedProjects;
 
@@ -1223,43 +1226,68 @@ export default function DiscoveryHub() {
                 {/* ── Archive tab ── */}
                 {tab === 2 && (
                     <Box>
-                        <TextField
-                            fullWidth size="small"
-                            placeholder="Search by project, supervisor or department… (press Enter)"
-                            value={searchArchive}
-                            onChange={e => {
-                                const v = e.target.value;
-                                setSearchArchive(v);
-                                // typing alone never triggers a request — only Enter / icon click do.
-                                // if the user clears the box completely, drop back to the full list right away.
-                                if (!v.trim() && isArchiveSearchActive) clearArchiveSearch();
-                            }}
-                            onKeyDown={e => { if (e.key === "Enter") runArchiveSearch(searchArchive); }}
-                            sx={{ mb: 2.5, ...searchSx }}
-                            InputProps={{
-                                startAdornment: (
-                                    <InputAdornment position="start">
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => runArchiveSearch(searchArchive)}
-                                            disabled={searchingArchive}
-                                            sx={{ width: 26, height: 26, "&:hover": { bgcolor: `${ACCENT}14` } }}
-                                        >
-                                            {searchingArchive
-                                                ? <CircularProgress size={15} sx={{ color: ACCENT }} />
-                                                : <SearchIcon sx={{ fontSize: 17, color: tSec }} />}
-                                        </IconButton>
-                                    </InputAdornment>
-                                ),
-                                endAdornment: searchArchive && (
-                                    <InputAdornment position="end">
-                                        <IconButton size="small" onClick={clearArchiveSearch} sx={{ width: 24, height: 24 }}>
-                                            <CloseIcon sx={{ fontSize: 14, color: tSec }} />
-                                        </IconButton>
-                                    </InputAdornment>
-                                ),
-                            }}
-                        />
+                        <Stack direction="row" gap={1.5} mb={2.5}>
+                            <TextField
+                                fullWidth size="small"
+                                placeholder="Search by project, supervisor or department… (press Enter)"
+                                value={searchArchive}
+                                onChange={e => {
+                                    const v = e.target.value;
+                                    setSearchArchive(v);
+                                    if (!v.trim() && isArchiveSearchActive) clearArchiveSearch();
+                                }}
+                                onKeyDown={e => { if (e.key === "Enter") runArchiveSearch(searchArchive); }}
+                                sx={{ ...searchSx }}
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => runArchiveSearch(searchArchive)}
+                                                disabled={searchingArchive}
+                                                sx={{ width: 26, height: 26, "&:hover": { bgcolor: `${ACCENT}14` } }}
+                                            >
+                                                {searchingArchive
+                                                    ? <CircularProgress size={15} sx={{ color: ACCENT }} />
+                                                    : <SearchIcon sx={{ fontSize: 17, color: tSec }} />}
+                                            </IconButton>
+                                        </InputAdornment>
+                                    ),
+                                    endAdornment: searchArchive && (
+                                        <InputAdornment position="end">
+                                            <IconButton size="small" onClick={clearArchiveSearch} sx={{ width: 24, height: 24 }}>
+                                                <CloseIcon sx={{ fontSize: 14, color: tSec }} />
+                                            </IconButton>
+                                        </InputAdornment>
+                                    ),
+                                }}
+                            />
+
+                            {/* ↓ AI Suggest button — now fetches team data before opening */}
+                            <Tooltip title={aiLoading ? "Loading your project…" : "Get AI suggestions based on your project"}>
+                                <span>
+                                    <Button
+                                        variant="contained"
+                                        startIcon={
+                                            aiLoading
+                                                ? <CircularProgress size={14} color="inherit" />
+                                                : <AutoAwesomeOutlinedIcon sx={{ fontSize: 16 }} />
+                                        }
+                                        onClick={handleOpenAI}
+                                        disabled={aiLoading}
+                                        sx={{
+                                            bgcolor: ACCENT, borderRadius: "12px", whiteSpace: "nowrap",
+                                            textTransform: "none", fontWeight: 700, fontSize: ".82rem",
+                                            boxShadow: "none", flexShrink: 0,
+                                            "&:hover": { bgcolor: ACCENT, filter: "brightness(.9)", boxShadow: "none" },
+                                            "&.Mui-disabled": { bgcolor: `${ACCENT}55`, color: "#fff" },
+                                        }}
+                                    >
+                                        {aiLoading ? "Loading…" : "AI Suggest"}
+                                    </Button>
+                                </span>
+                            </Tooltip>
+                        </Stack>
 
                         {isArchiveSearchActive && (
                             <ArchiveSearchBanner
@@ -1301,6 +1329,13 @@ export default function DiscoveryHub() {
             <StudentProfileDialog open={profileOpen} onClose={() => { setProfileOpen(false); setSelectedStudent(null); }} student={selectedStudent} />
             <TeamDetailDialog open={teamOpen} onClose={() => { setTeamOpen(false); setSelectedTeam(null); }} team={selectedTeam} />
             <ArchiveDetailDialog open={archiveDetailOpen} onClose={() => { setArchiveDetailOpen(false); setSelectedArchive(null); }} project={selectedArchive} />
+
+            {/* AI Suggester Dialog — receives real project data */}
+            <AIProjectSuggester
+                open={aiOpen}
+                onClose={() => { setAiOpen(false); setAiProject(null); }}
+                project={aiProject}
+            />
 
             <Snackbar open={snack.open} autoHideDuration={3500} onClose={() => setSnack(s => ({ ...s, open: false }))} anchorOrigin={{ vertical: "bottom", horizontal: "right" }}>
                 <Alert severity={snack.sev} variant="filled" sx={{ borderRadius: "12px" }}>{snack.msg}</Alert>

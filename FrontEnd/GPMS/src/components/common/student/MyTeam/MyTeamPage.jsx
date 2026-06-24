@@ -35,7 +35,6 @@ import AutoStoriesOutlinedIcon from "@mui/icons-material/AutoStoriesOutlined";
 import HourglassEmptyOutlinedIcon from "@mui/icons-material/HourglassEmptyOutlined";
 import MarkEmailReadOutlinedIcon from "@mui/icons-material/MarkEmailReadOutlined";
 import BlockOutlinedIcon from "@mui/icons-material/BlockOutlined";
-import AutoFixHighOutlinedIcon from "@mui/icons-material/AutoFixHighOutlined";
 import ArchiveOutlinedIcon from "@mui/icons-material/ArchiveOutlined";
 
 import studentApi from "../../../../api/handler/endpoints/studentApi";
@@ -43,7 +42,6 @@ import archiveApi from "../../../../api/handler/endpoints/archiveApi";
 import JoinOrCreateModal from "../Onboarding/JoinOrCreateModal";
 import CreateTeamFlow from "../Onboarding/CreateTeamFlow";
 import JoinTeamFlow from "../Onboarding/JoinTeamFlow";
-import AIProjectSuggester from "../AIResearchSuggester/AIResearchSuggester.jsx";
 
 /* ════════════════════════════════════════════════════════════════
    DESIGN TOKENS
@@ -892,9 +890,6 @@ export default function MyTeamPage() {
 
     const [archiveBusy, setArchiveBusy] = useState(false);
 
-    /* ── AI Project Suggester ── */
-    const [suggesterOpen, setSuggesterOpen] = useState(false);
-
     /* ── snack ── */
     const [snack, setSnack] = useState({ open: false, msg: "", sev: "success" });
     const snap = (msg, sev = "success") => setSnack({ open: true, msg, sev });
@@ -1281,15 +1276,6 @@ export default function MyTeamPage() {
     const teamName = myTeam.teamName ?? myTeam.name ?? null;
     const isTeamFull = members.length >= MAX_TEAM_SIZE;
 
-    /* ── build project context for suggester ── */
-    const suggesterProject = {
-        title: myTeam.projectTitle ?? myTeam.project ?? "",
-        description: myTeam.projectDescription ?? myTeam.description ?? "",
-        field: members.map(m => m.field ?? m.skills).filter(Boolean).join(", "),
-        department: typeof supervisor === "object" ? supervisor?.department ?? "" : "",
-        teamMembers: members,
-    };
-
     return (
         <>
             <Box sx={{ height: "100%", display: "flex", flexDirection: "column", gap: 2.5 }}>
@@ -1310,26 +1296,6 @@ export default function MyTeamPage() {
                                 sx={{ color: tSec, border: `1px solid ${brd}`, borderRadius: "10px", "&:hover": { color: accent } }}>
                                 <RefreshOutlinedIcon sx={{ fontSize: 17 }} />
                             </IconButton>
-                        </Tooltip>
-
-                        <Tooltip title="Find similar projects & get AI-powered ideas">
-                            <span>
-                                <Button
-                                    size="small"
-                                    variant="outlined"
-                                    startIcon={<AutoFixHighOutlinedIcon sx={{ fontSize: 15 }} />}
-                                    onClick={() => setSuggesterOpen(true)}
-                                    disabled={!suggesterProject.title && !suggesterProject.description}
-                                    sx={{
-                                        borderColor: `${accent}50`, color: accent, borderRadius: "10px",
-                                        textTransform: "none", fontWeight: 600, fontSize: "0.78rem",
-                                        "&:hover": { bgcolor: `${accent}08`, borderColor: accent, boxShadow: `0 2px 12px ${accent}20` },
-                                        "&.Mui-disabled": { borderColor: `${accent}25`, color: `${accent}50` },
-                                    }}
-                                >
-                                    AI Suggest
-                                </Button>
-                            </span>
                         </Tooltip>
 
                         {leaveRequestPending ? (
@@ -1703,13 +1669,6 @@ export default function MyTeamPage() {
                     )}
                 </Paper>
             </Box>
-
-            {/* ══ AI PROJECT SUGGESTER DIALOG ══ */}
-            <AIProjectSuggester
-                open={suggesterOpen}
-                onClose={() => setSuggesterOpen(false)}
-                project={suggesterProject}
-            />
 
             {/* ══ PROFILE MODAL ══ */}
             <StudentProfileModal open={profileOpen}

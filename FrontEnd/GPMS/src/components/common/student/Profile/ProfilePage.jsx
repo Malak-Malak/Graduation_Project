@@ -101,11 +101,7 @@ export default function ProfilePage() {
             .then((d) => {
                 const normalized = normalizeProfile(d);
                 setProfile(normalized);
-                // Only open setup modal if the profile is genuinely empty
-              if (!isAdmin && isProfileEmpty(normalized) && !profileDone) {
-    // لا تفتح إلا لو الـ profile فعلاً null أو فارغة من الباكند
-    setSetupOpen(true);
-}
+             
             })
             .catch((err) => {
                 setProfile(null);
@@ -537,7 +533,7 @@ export default function ProfilePage() {
                 </Paper>
             )}
 
-            {/* Setup Modal */}
+            {/* Setup Modal
             {!isAdmin && (
                 <ProfileSetupModal
                     open={setupOpen}
@@ -545,7 +541,7 @@ export default function ProfilePage() {
                     role={role}
                     uniDepartment={uniDepartment}
                 />
-            )}
+            )} */}
 
             {/* Edit Modal */}
             <EditProfileModal

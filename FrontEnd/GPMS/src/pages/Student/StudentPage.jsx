@@ -16,7 +16,6 @@ import OnboardingGate from "../../components/common/student/Onboarding/Onboardin
 import JoinOrCreateModal from "../../components/common/student/Onboarding/JoinOrCreateModal";
 import CreateTeamFlow from "../../components/common/student/Onboarding/CreateTeamFlow";
 import JoinTeamFlow from "../../components/common/student/Onboarding/JoinTeamFlow";
-import ProfileSetupModal from "../../components/common/student/Profile/ProfileSetupModal";
 import MyTeamPage from "../../components/common/student/MyTeam/MyTeamPage";
 import DiscoveryHub from "../../components/common/student/DiscoveryHub/DiscoveryHub";
 import Feedback from "../../components/common/student/Feedback/Feedback";
@@ -185,10 +184,10 @@ export default function StudentPage() {
                 )}
 
                 {/* Onboarding modals */}
-                <ProfileSetupModal
+                {/* <ProfileSetupModal
                     open={!checkingTeam && showProfile}
                     onDone={handleProfileDone}
-                />
+                /> */}
                 <OnboardingGate
                     open={!checkingTeam && !showProfile && showGate}
                     onCreateOrJoin={handleCreateOrJoin}

@@ -148,20 +148,20 @@ export default function ProfilePage() {
         setEditOpen(false);
     };
 
-    const handleSetupDone = (data) => {
-        const department = uniDepartment || data.department;
-        setProfile(normalizeProfile({
-            fullName:      data.fullName,
-            phoneNumber:   data.phoneNumber,
-            department,
-            field:         (data.skills ?? []).join(","),
-            gitHubLink:    data.github,
-            linkedinLink:  data.linkedin,
-            personalEmail: data.email,
-            bio:           data.bio,
-        }));
-        setSetupOpen(false);
-    };
+    // const handleSetupDone = (data) => {
+    //     const department = uniDepartment || data.department;
+    //     setProfile(normalizeProfile({
+    //         fullName:      data.fullName,
+    //         phoneNumber:   data.phoneNumber,
+    //         department,
+    //         field:         (data.skills ?? []).join(","),
+    //         gitHubLink:    data.github,
+    //         linkedinLink:  data.linkedin,
+    //         personalEmail: data.email,
+    //         bio:           data.bio,
+    //     }));
+    //     setSetupOpen(false);
+    // };
 
     const displayName  = profile?.fullName || user?.name || user?.username || "User";
     const avatarLetter = displayName.charAt(0).toUpperCase();

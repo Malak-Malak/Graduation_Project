@@ -44,11 +44,6 @@ const normalizeProfile = (raw) => {
     };
 };
 
-// ── Profile is considered empty only if core fields are missing ──────────────
-// Department excluded because it always comes from university, not the profile itself
-const isProfileEmpty = (p) =>
-    !p || (!p.fullName && !p.email && !p.skills?.length && !p.bio);
-
 // Safely extract a string error message from any API error
 const extractErrorMessage = (e) => {
     const raw = e?.response?.data?.message ?? e?.response?.data ?? e?.message ?? "";
@@ -70,49 +65,32 @@ export default function ProfilePage() {
     const [profile,       setProfile]       = useState(null);
     const [loading,       setLoading]       = useState(true);
     const [editOpen,      setEditOpen]      = useState(false);
-  
+    const [saveError,     setSaveError]     = useState("");
+
     const [myTeam,        setMyTeam]        = useState(null);
     const [teamLoading,   setTeamLoading]   = useState(true);
     const [uniDepartment, setUniDepartment] = useState("");
+    const [uniLoaded,     setUniLoaded]     = useState(isAdmin);
 
-    // ── Track when university info has finished loading ──────────────────────
-    // Admins don't need it, so we mark it as already loaded for them
-    const [uniLoaded, setUniLoaded] = useState(isAdmin);
-
-    // ── Fetch university info for ALL non-admin roles ────────────────────────
+    // ── Fetch university info ────────────────────────────────────────────────
     useEffect(() => {
         if (isAdmin) return;
         studentApi.getUniversityInfo()
             .then((d) => setUniDepartment(d?.department ?? ""))
             .catch(() => setUniDepartment(""))
-            .finally(() => setUniLoaded(true)); // ← signal that uni info is ready
+            .finally(() => setUniLoaded(true));
     }, [isAdmin]);
 
-    // ── Fetch profile — wait for uniLoaded first to avoid race condition ─────
+    // ── Fetch profile ────────────────────────────────────────────────────────
     useEffect(() => {
-        // Don't run until university info is ready (prevents blank department flicker
-        // and ensures the setup modal only opens after we know the full context)
         if (!isAdmin && !uniLoaded) return;
-
-       const profileDone = localStorage.getItem("gpms_profile_done");
-
         studentApi.getProfile()
-            .then((d) => {
-                const normalized = normalizeProfile(d);
-                setProfile(normalized);
-             
-            })
-            .catch((err) => {
-                setProfile(null);
-                const status = err?.response?.status;
-            //    if (!isAdmin && (status === 404 || status === 400) && !profileDone) {
-            //         setSetupOpen(true);
-            //     }
-            })
+            .then((d) => setProfile(normalizeProfile(d)))
+            .catch(() => setProfile(null))
             .finally(() => setLoading(false));
-    }, [isAdmin, uniLoaded]); // ← uniLoaded as dependency ensures correct order
+    }, [isAdmin, uniLoaded]);
 
-    // ── Fetch my team (students only) ───────────────────────────────────────
+    // ── Fetch my team (students only) ────────────────────────────────────────
     useEffect(() => {
         if (!isStudent) { setTeamLoading(false); return; }
         studentApi.getMyTeam()
@@ -121,54 +99,80 @@ export default function ProfilePage() {
             .finally(() => setTeamLoading(false));
     }, [isStudent]);
 
-    // ── Save edits ──────────────────────────────────────────────────────────
+    // ── Save / Create profile ────────────────────────────────────────────────
+    // Strategy: try updateProfile first; if 404 (profile doesn't exist yet) → createProfile
     const handleSave = async (updated) => {
+        setSaveError("");
         const department = uniDepartment || updated.department;
-        const payload = { ...updated, department };
+        const payload    = { ...updated, department };
+
+        const applyLocally = () => {
+            setProfile(normalizeProfile({
+                fullName:      payload.fullName,
+                phoneNumber:   payload.phoneNumber,
+                department:    payload.department,
+                field:         (payload.skills ?? []).join(","),
+                gitHubLink:    payload.github,
+                linkedinLink:  payload.linkedin,
+                personalEmail: payload.email,
+                bio:           payload.bio,
+            }));
+        };
+
         try {
+            // ── Try update first ─────────────────────────────────────────────
             await studentApi.updateProfile(payload);
-            const fresh = await studentApi.getProfile().catch(() => null);
-            if (fresh) {
-                setProfile(normalizeProfile(fresh));
+        } catch (updateErr) {
+            const status = updateErr?.response?.status;
+            const msg    = extractErrorMessage(updateErr).toLowerCase();
+
+            // If profile doesn't exist yet → create it
+            const notFound = status === 404 || (status === 400 && msg.includes("not found"));
+
+            if (notFound) {
+                try {
+                    await studentApi.createProfile(payload);
+                } catch (createErr) {
+                    const alreadyExists =
+                        createErr?.response?.status === 409 ||
+                        extractErrorMessage(createErr).toLowerCase().includes("exist");
+
+                    if (alreadyExists) {
+                        // Race condition: profile was just created — retry update
+                        try {
+                            await studentApi.updateProfile(payload);
+                        } catch (retryErr) {
+                            setSaveError(extractErrorMessage(retryErr) || "Failed to save profile.");
+                            return;
+                        }
+                    } else {
+                        setSaveError(extractErrorMessage(createErr) || "Failed to create profile.");
+                        return;
+                    }
+                }
             } else {
-                setProfile(normalizeProfile({
-                    fullName:      payload.fullName,
-                    phoneNumber:   payload.phoneNumber,
-                    department:    payload.department,
-                    field:         (payload.skills ?? []).join(","),
-                    gitHubLink:    payload.github,
-                    linkedinLink:  payload.linkedin,
-                    personalEmail: payload.email,
-                    bio:           payload.bio,
-                }));
+                setSaveError(extractErrorMessage(updateErr) || "Failed to save profile.");
+                return;
             }
-        } catch (e) {
-            console.error("Profile update failed:", extractErrorMessage(e));
         }
+
+        // ── Refresh from server; fall back to local state ────────────────────
+        try {
+            const fresh = await studentApi.getProfile();
+            if (fresh) setProfile(normalizeProfile(fresh));
+            else       applyLocally();
+        } catch {
+            applyLocally();
+        }
+
         setEditOpen(false);
     };
 
-    // const handleSetupDone = (data) => {
-    //     const department = uniDepartment || data.department;
-    //     setProfile(normalizeProfile({
-    //         fullName:      data.fullName,
-    //         phoneNumber:   data.phoneNumber,
-    //         department,
-    //         field:         (data.skills ?? []).join(","),
-    //         gitHubLink:    data.github,
-    //         linkedinLink:  data.linkedin,
-    //         personalEmail: data.email,
-    //         bio:           data.bio,
-    //     }));
-    //     setSetupOpen(false);
-    // };
-
-    const displayName  = profile?.fullName || user?.name || user?.username || "User";
-    const avatarLetter = displayName.charAt(0).toUpperCase();
-
+    const displayName       = profile?.fullName || user?.name || user?.username || "User";
+    const avatarLetter      = displayName.charAt(0).toUpperCase();
     const displayDepartment = uniDepartment || profile?.department || "";
 
-    // ── Show loader until BOTH university info and profile are ready ─────────
+    // ── Loading spinner ──────────────────────────────────────────────────────
     if (loading || (!isAdmin && !uniLoaded)) return (
         <Box display="flex" justifyContent="center" alignItems="center" minHeight={300}>
             <CircularProgress size={26} sx={{ color: getAccent(role) }} />
@@ -346,7 +350,6 @@ export default function ProfilePage() {
                         )}
                     </Stack>
 
-                    {/* Department badge */}
                     {displayDepartment && (
                         <Box sx={{ mt: 1.5, display: "flex", alignItems: "center", gap: 1 }}>
                             <Chip
@@ -532,22 +535,22 @@ export default function ProfilePage() {
                 </Paper>
             )}
 
-            {/* Setup Modal
-            {!isAdmin && (
-                <ProfileSetupModal
-                    open={setupOpen}
-                    onDone={handleSetupDone}
-                    role={role}
-                    uniDepartment={uniDepartment}
-                />
-            )} */}
+            {/* ── Save error banner ── */}
+            {saveError && (
+                <Box sx={{
+                    mt: 2, px: 2.5, py: 1.5, borderRadius: 2,
+                    bgcolor: "rgba(211,47,47,0.08)", border: "1px solid rgba(211,47,47,0.25)",
+                }}>
+                    <Typography fontSize="0.78rem" sx={{ color: "error.main" }}>{saveError}</Typography>
+                </Box>
+            )}
 
             {/* Edit Modal */}
             <EditProfileModal
                 open={editOpen}
                 profile={{ ...profile, department: displayDepartment }}
                 onSave={handleSave}
-                onClose={() => setEditOpen(false)}
+                onClose={() => { setEditOpen(false); setSaveError(""); }}
                 role={role}
                 uniDepartment={uniDepartment}
             />

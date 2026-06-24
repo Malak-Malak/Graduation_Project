@@ -156,6 +156,46 @@ function CommitteeChips({ instructors, accent, tSec }) {
     );
 }
 
+// ── Reusable dialog shell: fixed header + footer, independently scrolling body ─
+// This is what keeps every modal "wide & short" instead of tall & narrow:
+// the Paper itself is capped at 85vh and laid out as a column, so only the
+// middle (body) section scrolls while the action buttons stay visible.
+function DialogShell({ open, onClose, maxWidth = "sm", accent, brd, paperBg, header, body, footer }) {
+    return (
+        <Dialog
+            open={open}
+            onClose={onClose}
+            maxWidth={maxWidth}
+            fullWidth
+            PaperProps={{
+                sx: {
+                    borderRadius: "18px",
+                    border: `1px solid ${brd}`,
+                    bgcolor: paperBg,
+                    overflow: "hidden",
+                    maxHeight: "85vh",
+                    display: "flex",
+                    flexDirection: "column",
+                },
+            }}
+        >
+            <Box sx={{ height: 3, bgcolor: accent, flexShrink: 0 }} />
+            <Box sx={{ px: 3, py: 2.2, borderBottom: `1px solid ${brd}`, flexShrink: 0 }}>
+                {header}
+            </Box>
+            <Box sx={{ px: 3, py: 2.5, overflowY: "auto", flex: 1 }}>
+                {body}
+            </Box>
+            <Box sx={{
+                px: 3, py: 2, borderTop: `1px solid ${brd}`,
+                display: "flex", justifyContent: "flex-end", gap: 1, flexShrink: 0,
+            }}>
+                {footer}
+            </Box>
+        </Dialog>
+    );
+}
+
 /* ════════════════════════════════════════════════════════════════
    TAB 0 — DISCUSSION SLOTS
 ════════════════════════════════════════════════════════════════ */
@@ -617,53 +657,65 @@ function DiscussionSlotsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
                 </Stack>
             )}
 
-            {/* ══ Create Slot Dialog ══════════════════════════════════════════ */}
-            <Dialog open={createOpen} onClose={() => !createBusy && setCreateOpen(false)}
-                maxWidth="xs" fullWidth
-                PaperProps={{ sx: { borderRadius: "18px", border: `1px solid ${brd}`, bgcolor: paperBg, overflow: "hidden" } }}>
-                <Box sx={{ height: 3, bgcolor: accent }} />
-                <Box sx={{ px: 3, py: 2.5, borderBottom: `1px solid ${brd}` }}>
-                    <Stack direction="row" alignItems="center" gap={1}>
-                        <EventOutlinedIcon sx={{ fontSize: 18, color: accent }} />
-                        <Typography fontWeight={700} fontSize="0.95rem" sx={{ color: tPri }}>
-                            Create Discussion Slot
-                        </Typography>
-                    </Stack>
-                </Box>
-                <Box sx={{ px: 3, py: 2.5 }}>
-                    <Stack gap={2}>
-                        <TextField label="Date & Time" type="datetime-local" size="small" fullWidth required
-                            value={form.dateTime}
-                            onChange={e => setForm(f => ({ ...f, dateTime: e.target.value }))}
-                            InputLabelProps={{ shrink: true }} sx={inputSx} />
-                        <TextField label="Location" size="small" fullWidth required
-                            placeholder="e.g. Room 201, Engineering Building"
-                            value={form.location}
-                            onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
-                            sx={inputSx} />
-                        <TextField label="Notes (Optional)" size="small" fullWidth multiline rows={2}
-                            value={form.notes}
-                            onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-                            sx={inputSx} />
-
-                        <Divider sx={{ my: 0.5 }}>
-                            <Typography fontSize="0.72rem" sx={{ color: tSec, px: 1 }}>
-                                Team & Committee (optional)
+            {/* ══ Create Slot Dialog — wide layout: form on the left, team picker on the right ══ */}
+            <DialogShell
+                open={createOpen}
+                onClose={() => !createBusy && setCreateOpen(false)}
+                maxWidth="md"
+                accent={accent} brd={brd} paperBg={paperBg}
+                header={
+                    <Stack direction="row" alignItems="center" justifyContent="space-between">
+                        <Stack direction="row" alignItems="center" gap={1}>
+                            <EventOutlinedIcon sx={{ fontSize: 18, color: accent }} />
+                            <Typography fontWeight={700} fontSize="0.95rem" sx={{ color: tPri }}>
+                                Create Discussion Slot
                             </Typography>
-                        </Divider>
-
-                        {/* Team selector */}
-                        <Box>
+                        </Stack>
+                        <IconButton size="small" onClick={() => setCreateOpen(false)}
+                            sx={{ color: tSec, borderRadius: "8px" }}>
+                            <CloseIcon sx={{ fontSize: 16 }} />
+                        </IconButton>
+                    </Stack>
+                }
+                body={
+                    <Box sx={{
+                        display: "grid",
+                        gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+                        gap: { xs: 2.5, sm: 3.5 },
+                    }}>
+                        {/* Left column — slot basics */}
+                        <Stack gap={2}>
                             <Typography fontSize="0.75rem" fontWeight={700}
-                                sx={{ color: tSec, mb: 1, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                                Assign Team
+                                sx={{ color: tSec, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                Slot Details
+                            </Typography>
+                            <TextField label="Date & Time" type="datetime-local" size="small" fullWidth required
+                                value={form.dateTime}
+                                onChange={e => setForm(f => ({ ...f, dateTime: e.target.value }))}
+                                InputLabelProps={{ shrink: true }} sx={inputSx} />
+                            <TextField label="Location" size="small" fullWidth required
+                                placeholder="e.g. Room 201, Engineering Building"
+                                value={form.location}
+                                onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
+                                sx={inputSx} />
+                            <TextField label="Notes (Optional)" size="small" fullWidth multiline rows={3}
+                                value={form.notes}
+                                onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+                                sx={inputSx} />
+                        </Stack>
+
+                        {/* Right column — optional team + committee */}
+                        <Stack gap={1.5}>
+                            <Typography fontSize="0.75rem" fontWeight={700}
+                                sx={{ color: tSec, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                Assign Team (Optional)
                             </Typography>
                             {unassignedActiveTeams.length === 0 ? (
                                 <Typography fontSize="0.78rem" sx={{ color: tSec, fontStyle: "italic" }}>
                                     All active teams already have a slot assigned.
                                 </Typography>
                             ) : (
-                                <Stack gap={0.7} maxHeight={180} sx={{ overflowY: "auto", pr: 0.5 }}>
+                                <Stack gap={0.7} maxHeight={220} sx={{ overflowY: "auto", pr: 0.5 }}>
                                     <Paper elevation={0} onClick={() => setForm(f => ({ ...f, teamId: "" }))}
                                         sx={{
                                             p: 1, borderRadius: "10px", cursor: "pointer",
@@ -706,41 +758,44 @@ function DiscussionSlotsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
                                     })}
                                 </Stack>
                             )}
-                        </Box>
 
-                        {form.teamId && (
-                            <TextField label="Discussion Committee" size="small" fullWidth
-                                placeholder="Dr. Ahmed, Dr. Sara, Dr. Khaled"
-                                helperText="Comma-separated names"
-                                value={form.instructors}
-                                onChange={e => setForm(f => ({ ...f, instructors: e.target.value }))}
-                                InputProps={{ startAdornment: <PeopleOutlinedIcon sx={{ fontSize: 16, color: tSec, mr: 0.8 }} /> }}
-                                sx={inputSx} />
-                        )}
-                    </Stack>
-                </Box>
-                <Box sx={{ px: 3, pb: 3, display: "flex", justifyContent: "flex-end", gap: 1 }}>
-                    <Button disabled={createBusy} onClick={() => setCreateOpen(false)}
-                        sx={{ color: tSec, textTransform: "none", fontWeight: 500, borderRadius: "10px" }}>
-                        Cancel
-                    </Button>
-                    <Button variant="contained" disabled={createBusy} onClick={handleCreate}
-                        sx={{
-                            bgcolor: accent, borderRadius: "10px", boxShadow: "none",
-                            textTransform: "none", fontWeight: 700,
-                            "&:hover": { bgcolor: isDark ? ACCENT : "#a8622e", boxShadow: "none" },
-                        }}>
-                        {createBusy ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : "Create Slot"}
-                    </Button>
-                </Box>
-            </Dialog>
+                            {form.teamId && (
+                                <TextField label="Discussion Committee" size="small" fullWidth
+                                    placeholder="Dr. Ahmed, Dr. Sara, Dr. Khaled"
+                                    helperText="Comma-separated names"
+                                    value={form.instructors}
+                                    onChange={e => setForm(f => ({ ...f, instructors: e.target.value }))}
+                                    InputProps={{ startAdornment: <PeopleOutlinedIcon sx={{ fontSize: 16, color: tSec, mr: 0.8 }} /> }}
+                                    sx={inputSx} />
+                            )}
+                        </Stack>
+                    </Box>
+                }
+                footer={
+                    <>
+                        <Button disabled={createBusy} onClick={() => setCreateOpen(false)}
+                            sx={{ color: tSec, textTransform: "none", fontWeight: 500, borderRadius: "10px" }}>
+                            Cancel
+                        </Button>
+                        <Button variant="contained" disabled={createBusy} onClick={handleCreate}
+                            sx={{
+                                bgcolor: accent, borderRadius: "10px", boxShadow: "none",
+                                textTransform: "none", fontWeight: 700, px: 3,
+                                "&:hover": { bgcolor: isDark ? ACCENT : "#a8622e", boxShadow: "none" },
+                            }}>
+                            {createBusy ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : "Create Slot"}
+                        </Button>
+                    </>
+                }
+            />
 
-            {/* ══ Assign Team Dialog ══════════════════════════════════════════ */}
-            <Dialog open={assignOpen} onClose={() => !assignBusy && setAssignOpen(false)}
-                maxWidth="xs" fullWidth
-                PaperProps={{ sx: { borderRadius: "18px", border: `1px solid ${brd}`, bgcolor: paperBg, overflow: "hidden" } }}>
-                <Box sx={{ height: 3, bgcolor: accent }} />
-                <Box sx={{ px: 3, py: 2.5, borderBottom: `1px solid ${brd}` }}>
+            {/* ══ Assign Team Dialog — wide grid of team cards instead of a tall list ══ */}
+            <DialogShell
+                open={assignOpen}
+                onClose={() => !assignBusy && setAssignOpen(false)}
+                maxWidth="sm"
+                accent={accent} brd={brd} paperBg={paperBg}
+                header={
                     <Stack direction="row" alignItems="center" justifyContent="space-between">
                         <Stack direction="row" alignItems="center" gap={1}>
                             <AssignmentOutlinedIcon sx={{ fontSize: 18, color: accent }} />
@@ -760,97 +815,106 @@ function DiscussionSlotsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
                             <CloseIcon sx={{ fontSize: 16 }} />
                         </IconButton>
                     </Stack>
-                </Box>
-                <Box sx={{ px: 3, py: 2 }}>
-                    <Typography fontSize="0.78rem" fontWeight={700}
-                        sx={{ color: tSec, mb: 1.2, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                        Select Team
-                    </Typography>
-                    {unassignedActiveTeams.length === 0 ? (
-                        <Typography fontSize="0.8rem" sx={{ color: tSec, fontStyle: "italic" }}>
-                            All active teams already have a slot assigned.
+                }
+                body={
+                    <>
+                        <Typography fontSize="0.78rem" fontWeight={700}
+                            sx={{ color: tSec, mb: 1.2, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                            Select Team
                         </Typography>
-                    ) : (
-                        <Stack gap={1}>
-                            {unassignedActiveTeams.map(t => {
-                                const tid        = String(resolveTeamId(t));
-                                const isSelected = selectedTeamId === tid;
-                                return (
-                                    <Paper key={tid} elevation={0} onClick={() => setSelectedTeamId(tid)}
-                                        sx={{
-                                            p: 1.4, borderRadius: "12px", cursor: "pointer",
-                                            border: `1.5px solid ${isSelected ? accent : brd}`,
-                                            bgcolor: isSelected ? `${accent}08` : "transparent",
-                                            transition: "all 0.15s",
-                                            "&:hover": { borderColor: `${accent}70` },
-                                        }}>
-                                        <Stack direction="row" alignItems="center" gap={1.2}>
-                                            <Box sx={{
-                                                width: 32, height: 32, borderRadius: "9px",
-                                                bgcolor: `${ACCENT}12`, border: `1px solid ${ACCENT}28`,
-                                                display: "flex", alignItems: "center", justifyContent: "center",
-                                                fontSize: "0.72rem", fontWeight: 800, color: accent,
+                        {unassignedActiveTeams.length === 0 ? (
+                            <Typography fontSize="0.8rem" sx={{ color: tSec, fontStyle: "italic" }}>
+                                All active teams already have a slot assigned.
+                            </Typography>
+                        ) : (
+                            <Box sx={{
+                                display: "grid",
+                                gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+                                gap: 1,
+                            }}>
+                                {unassignedActiveTeams.map(t => {
+                                    const tid        = String(resolveTeamId(t));
+                                    const isSelected = selectedTeamId === tid;
+                                    return (
+                                        <Paper key={tid} elevation={0} onClick={() => setSelectedTeamId(tid)}
+                                            sx={{
+                                                p: 1.4, borderRadius: "12px", cursor: "pointer",
+                                                border: `1.5px solid ${isSelected ? accent : brd}`,
+                                                bgcolor: isSelected ? `${accent}08` : "transparent",
+                                                transition: "all 0.15s",
+                                                "&:hover": { borderColor: `${accent}70` },
                                             }}>
-                                                {initials(resolveTeamName(t))}
-                                            </Box>
-                                            <Box>
-                                                <Typography fontWeight={700} fontSize="0.84rem" sx={{ color: tPri }}>
-                                                    {resolveTeamName(t)}
-                                                </Typography>
-                                                {(t.projectName ?? t.projectTitle) &&
-                                                    resolveTeamName(t) !== (t.projectName ?? t.projectTitle) && (
-                                                        <Typography fontSize="0.7rem" sx={{ color: tSec }}>
-                                                            {t.projectName ?? t.projectTitle}
-                                                        </Typography>
-                                                    )}
-                                            </Box>
-                                        </Stack>
-                                    </Paper>
-                                );
-                            })}
-                        </Stack>
-                    )}
+                                            <Stack direction="row" alignItems="center" gap={1.2}>
+                                                <Box sx={{
+                                                    width: 32, height: 32, borderRadius: "9px",
+                                                    bgcolor: `${ACCENT}12`, border: `1px solid ${ACCENT}28`,
+                                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                                    fontSize: "0.72rem", fontWeight: 800, color: accent, flexShrink: 0,
+                                                }}>
+                                                    {initials(resolveTeamName(t))}
+                                                </Box>
+                                                <Box minWidth={0}>
+                                                    <Typography fontWeight={700} fontSize="0.84rem" sx={{ color: tPri }} noWrap>
+                                                        {resolveTeamName(t)}
+                                                    </Typography>
+                                                    {(t.projectName ?? t.projectTitle) &&
+                                                        resolveTeamName(t) !== (t.projectName ?? t.projectTitle) && (
+                                                            <Typography fontSize="0.7rem" sx={{ color: tSec }} noWrap>
+                                                                {t.projectName ?? t.projectTitle}
+                                                            </Typography>
+                                                        )}
+                                                </Box>
+                                            </Stack>
+                                        </Paper>
+                                    );
+                                })}
+                            </Box>
+                        )}
 
-                    {selectedTeamId && (
-                        <Box mt={2}>
-                            <Divider sx={{ mb: 1.5 }}>
-                                <Typography fontSize="0.72rem" sx={{ color: tSec, px: 1 }}>Committee</Typography>
-                            </Divider>
-                            <TextField label="Discussion Committee" size="small" fullWidth
-                                placeholder="Dr. Ahmed, Dr. Sara, Dr. Khaled"
-                                helperText="Comma-separated names"
-                                value={assignInstructors}
-                                onChange={e => setAssignInstructors(e.target.value)}
-                                InputProps={{ startAdornment: <PeopleOutlinedIcon sx={{ fontSize: 16, color: tSec, mr: 0.8 }} /> }}
-                                sx={inputSx} />
-                        </Box>
-                    )}
-                </Box>
-                <Box sx={{ px: 3, pb: 3, display: "flex", justifyContent: "flex-end", gap: 1 }}>
-                    <Button disabled={assignBusy} onClick={() => setAssignOpen(false)}
-                        sx={{ color: tSec, textTransform: "none", fontWeight: 500, borderRadius: "10px" }}>
-                        Cancel
-                    </Button>
-                    <Button variant="contained"
-                        disabled={assignBusy || !selectedTeamId}
-                        onClick={handleAssign}
-                        sx={{
-                            bgcolor: accent, borderRadius: "10px", boxShadow: "none",
-                            textTransform: "none", fontWeight: 700,
-                            "&:hover": { bgcolor: isDark ? ACCENT : "#a8622e", boxShadow: "none" },
-                            "&.Mui-disabled": { opacity: 0.5 },
-                        }}>
-                        {assignBusy ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : "Assign"}
-                    </Button>
-                </Box>
-            </Dialog>
+                        {selectedTeamId && (
+                            <Box mt={2}>
+                                <Divider sx={{ mb: 1.5 }}>
+                                    <Typography fontSize="0.72rem" sx={{ color: tSec, px: 1 }}>Committee</Typography>
+                                </Divider>
+                                <TextField label="Discussion Committee" size="small" fullWidth
+                                    placeholder="Dr. Ahmed, Dr. Sara, Dr. Khaled"
+                                    helperText="Comma-separated names"
+                                    value={assignInstructors}
+                                    onChange={e => setAssignInstructors(e.target.value)}
+                                    InputProps={{ startAdornment: <PeopleOutlinedIcon sx={{ fontSize: 16, color: tSec, mr: 0.8 }} /> }}
+                                    sx={inputSx} />
+                            </Box>
+                        )}
+                    </>
+                }
+                footer={
+                    <>
+                        <Button disabled={assignBusy} onClick={() => setAssignOpen(false)}
+                            sx={{ color: tSec, textTransform: "none", fontWeight: 500, borderRadius: "10px" }}>
+                            Cancel
+                        </Button>
+                        <Button variant="contained"
+                            disabled={assignBusy || !selectedTeamId}
+                            onClick={handleAssign}
+                            sx={{
+                                bgcolor: accent, borderRadius: "10px", boxShadow: "none",
+                                textTransform: "none", fontWeight: 700, px: 3,
+                                "&:hover": { bgcolor: isDark ? ACCENT : "#a8622e", boxShadow: "none" },
+                                "&.Mui-disabled": { opacity: 0.5 },
+                            }}>
+                            {assignBusy ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : "Assign"}
+                        </Button>
+                    </>
+                }
+            />
 
-            {/* ══ Reassign Team Dialog ════════════════════════════════════════ */}
-            <Dialog open={reassignOpen} onClose={() => !reassignBusy && setReassignOpen(false)}
-                maxWidth="xs" fullWidth
-                PaperProps={{ sx: { borderRadius: "18px", border: `1px solid ${brd}`, bgcolor: paperBg, overflow: "hidden" } }}>
-                <Box sx={{ height: 3, bgcolor: accent }} />
-                <Box sx={{ px: 3, py: 2.5, borderBottom: `1px solid ${brd}` }}>
+            {/* ══ Reassign Team Dialog — wide grid of available slots ══ */}
+            <DialogShell
+                open={reassignOpen}
+                onClose={() => !reassignBusy && setReassignOpen(false)}
+                maxWidth="sm"
+                accent={accent} brd={brd} paperBg={paperBg}
+                header={
                     <Stack direction="row" alignItems="center" justifyContent="space-between">
                         <Stack direction="row" alignItems="center" gap={1}>
                             <SwapHorizOutlinedIcon sx={{ fontSize: 18, color: accent }} />
@@ -870,82 +934,90 @@ function DiscussionSlotsTab({ accent, brd, paperBg, isDark, tPri, tSec }) {
                             <CloseIcon sx={{ fontSize: 16 }} />
                         </IconButton>
                     </Stack>
-                </Box>
-                <Box sx={{ px: 3, py: 2 }}>
-                    <Typography fontSize="0.78rem" fontWeight={700}
-                        sx={{ color: tSec, mb: 1.2, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                        Select New Slot
-                    </Typography>
-                    {freeSlots.filter(s => resolveSlotId(s) !== resolveSlotId(
-                        slots.find(sl => (sl.assignedTeams ?? []).some(at => resolveTeamId(at) === resolveTeamId(reassignTeam)))
-                    )).length === 0 ? (
-                        <Typography fontSize="0.8rem" sx={{ color: tSec, fontStyle: "italic" }}>
-                            No other free slots available. Create a new slot first.
+                }
+                body={
+                    <>
+                        <Typography fontSize="0.78rem" fontWeight={700}
+                            sx={{ color: tSec, mb: 1.2, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                            Select New Slot
                         </Typography>
-                    ) : (
-                        <Stack gap={1}>
-                            {freeSlots.map(sl => {
-                                const sid        = String(resolveSlotId(sl));
-                                const isSelected = reassignSlotId === sid;
-                                return (
-                                    <Paper key={sid} elevation={0} onClick={() => setReassignSlotId(sid)}
-                                        sx={{
-                                            p: 1.4, borderRadius: "12px", cursor: "pointer",
-                                            border: `1.5px solid ${isSelected ? accent : brd}`,
-                                            bgcolor: isSelected ? `${accent}08` : "transparent",
-                                            transition: "all 0.15s",
-                                            "&:hover": { borderColor: `${accent}70` },
-                                        }}>
-                                        <Stack direction="row" alignItems="center" gap={1}>
-                                            <EventOutlinedIcon sx={{ fontSize: 14, color: accent }} />
-                                            <Box>
-                                                <Typography fontWeight={600} fontSize="0.82rem" sx={{ color: tPri }}>
-                                                    {fmtDateTime(sl.dateTime ?? sl.date)}
-                                                </Typography>
-                                                <Typography fontSize="0.72rem" sx={{ color: tSec }}>
-                                                    {sl.location}
-                                                </Typography>
-                                            </Box>
-                                        </Stack>
-                                    </Paper>
-                                );
-                            })}
-                        </Stack>
-                    )}
+                        {freeSlots.filter(s => resolveSlotId(s) !== resolveSlotId(
+                            slots.find(sl => (sl.assignedTeams ?? []).some(at => resolveTeamId(at) === resolveTeamId(reassignTeam)))
+                        )).length === 0 ? (
+                            <Typography fontSize="0.8rem" sx={{ color: tSec, fontStyle: "italic" }}>
+                                No other free slots available. Create a new slot first.
+                            </Typography>
+                        ) : (
+                            <Box sx={{
+                                display: "grid",
+                                gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+                                gap: 1,
+                            }}>
+                                {freeSlots.map(sl => {
+                                    const sid        = String(resolveSlotId(sl));
+                                    const isSelected = reassignSlotId === sid;
+                                    return (
+                                        <Paper key={sid} elevation={0} onClick={() => setReassignSlotId(sid)}
+                                            sx={{
+                                                p: 1.4, borderRadius: "12px", cursor: "pointer",
+                                                border: `1.5px solid ${isSelected ? accent : brd}`,
+                                                bgcolor: isSelected ? `${accent}08` : "transparent",
+                                                transition: "all 0.15s",
+                                                "&:hover": { borderColor: `${accent}70` },
+                                            }}>
+                                            <Stack direction="row" alignItems="center" gap={1}>
+                                                <EventOutlinedIcon sx={{ fontSize: 14, color: accent, flexShrink: 0 }} />
+                                                <Box minWidth={0}>
+                                                    <Typography fontWeight={600} fontSize="0.82rem" sx={{ color: tPri }} noWrap>
+                                                        {fmtDateTime(sl.dateTime ?? sl.date)}
+                                                    </Typography>
+                                                    <Typography fontSize="0.72rem" sx={{ color: tSec }} noWrap>
+                                                        {sl.location}
+                                                    </Typography>
+                                                </Box>
+                                            </Stack>
+                                        </Paper>
+                                    );
+                                })}
+                            </Box>
+                        )}
 
-                    {reassignSlotId && (
-                        <Box mt={2}>
-                            <Divider sx={{ mb: 1.5 }}>
-                                <Typography fontSize="0.72rem" sx={{ color: tSec, px: 1 }}>Committee</Typography>
-                            </Divider>
-                            <TextField label="Discussion Committee" size="small" fullWidth
-                                placeholder="Dr. Ahmed, Dr. Sara, Dr. Khaled"
-                                helperText="Comma-separated names (leave blank to keep existing)"
-                                value={reassignInstructors}
-                                onChange={e => setReassignInstructors(e.target.value)}
-                                InputProps={{ startAdornment: <PeopleOutlinedIcon sx={{ fontSize: 16, color: tSec, mr: 0.8 }} /> }}
-                                sx={inputSx} />
-                        </Box>
-                    )}
-                </Box>
-                <Box sx={{ px: 3, pb: 3, display: "flex", justifyContent: "flex-end", gap: 1 }}>
-                    <Button disabled={reassignBusy} onClick={() => setReassignOpen(false)}
-                        sx={{ color: tSec, textTransform: "none", fontWeight: 500, borderRadius: "10px" }}>
-                        Cancel
-                    </Button>
-                    <Button variant="contained"
-                        disabled={reassignBusy || !reassignSlotId}
-                        onClick={handleReassign}
-                        sx={{
-                            bgcolor: accent, borderRadius: "10px", boxShadow: "none",
-                            textTransform: "none", fontWeight: 700,
-                            "&:hover": { bgcolor: isDark ? ACCENT : "#a8622e", boxShadow: "none" },
-                            "&.Mui-disabled": { opacity: 0.5 },
-                        }}>
-                        {reassignBusy ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : "Move Team"}
-                    </Button>
-                </Box>
-            </Dialog>
+                        {reassignSlotId && (
+                            <Box mt={2}>
+                                <Divider sx={{ mb: 1.5 }}>
+                                    <Typography fontSize="0.72rem" sx={{ color: tSec, px: 1 }}>Committee</Typography>
+                                </Divider>
+                                <TextField label="Discussion Committee" size="small" fullWidth
+                                    placeholder="Dr. Ahmed, Dr. Sara, Dr. Khaled"
+                                    helperText="Comma-separated names (leave blank to keep existing)"
+                                    value={reassignInstructors}
+                                    onChange={e => setReassignInstructors(e.target.value)}
+                                    InputProps={{ startAdornment: <PeopleOutlinedIcon sx={{ fontSize: 16, color: tSec, mr: 0.8 }} /> }}
+                                    sx={inputSx} />
+                            </Box>
+                        )}
+                    </>
+                }
+                footer={
+                    <>
+                        <Button disabled={reassignBusy} onClick={() => setReassignOpen(false)}
+                            sx={{ color: tSec, textTransform: "none", fontWeight: 500, borderRadius: "10px" }}>
+                            Cancel
+                        </Button>
+                        <Button variant="contained"
+                            disabled={reassignBusy || !reassignSlotId}
+                            onClick={handleReassign}
+                            sx={{
+                                bgcolor: accent, borderRadius: "10px", boxShadow: "none",
+                                textTransform: "none", fontWeight: 700, px: 3,
+                                "&:hover": { bgcolor: isDark ? ACCENT : "#a8622e", boxShadow: "none" },
+                                "&.Mui-disabled": { opacity: 0.5 },
+                            }}>
+                            {reassignBusy ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : "Move Team"}
+                        </Button>
+                    </>
+                }
+            />
 
             <Snackbar open={snack.open} autoHideDuration={4000}
                 onClose={() => setSnack(s => ({ ...s, open: false }))}

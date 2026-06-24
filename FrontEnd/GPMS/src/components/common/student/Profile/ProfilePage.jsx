@@ -95,21 +95,22 @@ export default function ProfilePage() {
         // and ensures the setup modal only opens after we know the full context)
         if (!isAdmin && !uniLoaded) return;
 
-        const profileDone = sessionStorage.getItem("gpms_profile_done");
+       const profileDone = localStorage.getItem("gpms_profile_done");
 
         studentApi.getProfile()
             .then((d) => {
                 const normalized = normalizeProfile(d);
                 setProfile(normalized);
                 // Only open setup modal if the profile is genuinely empty
-                if (!isAdmin && isProfileEmpty(normalized) && !profileDone) {
-                    setSetupOpen(true);
-                }
+              if (!isAdmin && isProfileEmpty(normalized) && !profileDone) {
+    // لا تفتح إلا لو الـ profile فعلاً null أو فارغة من الباكند
+    setSetupOpen(true);
+}
             })
             .catch((err) => {
                 setProfile(null);
                 const status = err?.response?.status;
-                if (!isAdmin && status === 404 && !profileDone) {
+               if (!isAdmin && (status === 404 || status === 400) && !profileDone) {
                     setSetupOpen(true);
                 }
             })

@@ -172,7 +172,7 @@ export default function ProfileSetupModal({ open, onDone, role = "student", uniD
 
         try {
             await studentApi.createProfile(data);
-            sessionStorage.setItem("gpms_profile_done", "true");
+          localStorage.setItem("gpms_profile_done", "true");
             onDone(data);
         } catch (e) {
             const status  = e?.response?.status;

@@ -43,9 +43,21 @@ namespace GP_BackEnd.Services
 
             if (dto.IsApproved)
             {
+                // Count current students across all active teams for this supervisor
+                var currentStudentCount = await _context.TeamMembers
+                    .Include(tm => tm.Team)
+                    .Where(tm => tm.Team.SupervisorId == supervisorId && tm.Team.Status == "Active")
+                    .CountAsync();
+
+                // Count students in the pending team being approved
+                var newTeamStudentCount = team.TeamMembers.Count;
+
+                // Block if approving would exceed 18 students
+                if (currentStudentCount + newTeamStudentCount > 18)
+                    return false;
+
                 team.Status = "Active";
 
-                // Notify all team members
                 foreach (var member in team.TeamMembers)
                 {
                     _context.Notifications.Add(new Notification
@@ -61,7 +73,6 @@ namespace GP_BackEnd.Services
             {
                 team.Status = "Rejected";
 
-                // Notify all team members
                 foreach (var member in team.TeamMembers)
                 {
                     _context.Notifications.Add(new Notification
@@ -73,7 +84,6 @@ namespace GP_BackEnd.Services
                     });
                 }
                 _context.TeamMembers.RemoveRange(team.TeamMembers);
-
             }
 
             await _context.SaveChangesAsync();

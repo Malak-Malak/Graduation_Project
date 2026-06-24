@@ -29,6 +29,7 @@ import HowToRegOutlinedIcon from "@mui/icons-material/HowToRegOutlined";
 import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined";
 import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 import SchoolOutlinedIcon from "@mui/icons-material/SchoolOutlined"; // ← HOD icon
+import SummarizeOutlinedIcon from "@mui/icons-material/SummarizeOutlined";
 
 import { useAuth } from "../contexts/AuthContext";
 import { useThemeContext } from "../contexts/ThemeContext";
@@ -51,7 +52,7 @@ const NAV_ITEMS = {
         { label: "Pending Requests", icon: <PendingActionsOutlinedIcon />, path: "/supervisor/requests" },
         { label: "Files", icon: <FolderOutlinedIcon />, path: "/supervisor/files" },
         { label: "Meetings", icon: <CalendarMonthOutlinedIcon />, path: "/supervisor/meetings" },
-        { label: "AI Reports", icon: <AutoAwesomeOutlinedIcon />, path: "/supervisor/ai-reports" },
+        { label: "Reports", icon: <SummarizeOutlinedIcon />, path: "/supervisor/ai-reports" },
       
         { label: "Project Archive", icon: <SearchOutlinedIcon />, path: "/supervisor/archive" },
         // ↓ يظهر فقط لرئيس القسم — hodOnly: true

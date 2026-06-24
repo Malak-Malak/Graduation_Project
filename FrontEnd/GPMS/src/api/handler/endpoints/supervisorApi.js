@@ -68,6 +68,57 @@ export const getSupervisorTotalTeams = async () => {
     return res.data;
 };
 
+// ─── Teams Overview (merged from /teams-overview + /my-teams) ────────────────
+
+/**
+ * Fetches teams overview by combining two endpoints in parallel:
+ *   GET /api/Supervisor/teams-overview  → tasks (phase1+phase2) + files
+ *   GET /api/Supervisor/my-teams        → members + projectTitle + projectDescription
+ *
+ * The two responses are merged by teamId so the rest of the app
+ * gets a single unified object per team.
+ *
+ * @returns {Promise<Array>}
+ */
+export const getTeamsOverview = async () => {
+    const [overviewRes, myTeamsRes] = await Promise.all([
+        axiosInstance.get("/Supervisor/teams-overview"),
+        axiosInstance.get("/Supervisor/my-teams"),
+    ]);
+
+    // Normalise both responses — handle wrapped vs. unwrapped shapes
+    const overviewData = (() => {
+        const d = overviewRes.data;
+        if (Array.isArray(d))              return d;
+        if (d && Array.isArray(d.data))    return d.data;
+        if (d && Array.isArray(d.teams))   return d.teams;
+        return [];
+    })();
+
+    const myTeamsData = (() => {
+        const d = myTeamsRes.data;
+        if (Array.isArray(d))              return d;
+        if (d && Array.isArray(d.data))    return d.data;
+        if (d && Array.isArray(d.teams))   return d.teams;
+        return [];
+    })();
+
+    // Merge: inject members + project info from /my-teams into each overview item
+    return overviewData.map(team => {
+        const teamId = team.teamId ?? team.id;
+        const match  = myTeamsData.find(t =>
+            (t.id != null    && t.id    === teamId) ||
+            (t.teamId != null && t.teamId === teamId)
+        );
+        return {
+            ...team,
+            members:             match?.members             ?? [],
+            projectTitle:        match?.projectTitle        ?? team.teamName ?? team.projectTitle ?? "—",
+            projectDescription:  match?.projectDescription  ?? "",
+        };
+    });
+};
+
 // ─── Office Hours ─────────────────────────────────────────────────────────────
 
 /**
@@ -87,8 +138,8 @@ export const createOfficeHour = async (payload) => {
     const res = await axiosInstance.post("/Supervisor/office-hours", {
         dayOfWeek: payload.dayOfWeek,
         startTime: payload.startTime,
-        endTime: payload.endTime,
-        isOnline: payload.isOnline ?? false,   // ✅ NEW
+        endTime:   payload.endTime,
+        isOnline:  payload.isOnline ?? false,
     });
     return res.data;
 };
@@ -103,7 +154,7 @@ export const createOfficeHour = async (payload) => {
  *   dayOfWeek    : string,
  *   startTime    : string,
  *   endTime      : string,
- *   isOnline     : boolean,   // ✅ must be returned by backend
+ *   isOnline     : boolean,
  * }
  */
 export const getOfficeHours = async () => {
@@ -164,8 +215,8 @@ export const getPendingAppointments = async () => {
 export const respondToAppointment = async (payload) => {
     const res = await axiosInstance.post("/Supervisor/respond-to-appointment", {
         appointmentId: payload.appointmentId,
-        isApproved: payload.isApproved,
-        link: payload.link ?? "",
+        isApproved:    payload.isApproved,
+        link:          payload.link ?? "",
     });
     return res.data;
 };

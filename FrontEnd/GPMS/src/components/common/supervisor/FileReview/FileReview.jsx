@@ -158,13 +158,13 @@ export default function FileReview() {
         }
     }, []);
 
-    // ── fetch student files + feedback ────────────────────────────────────────
+    // ── fetch student files + feedback (filtered by team) ─────────────────────
     const loadStudentData = useCallback(async (teamIdStr) => {
         if (!teamIdStr) return;
         setFilesLoading(true); setFilesError(null);
         setStudentFiles([]); setFeedbackMap({});
         try {
-            const filesData = await fileSystemApi.getStudentFiles();
+            const filesData = await fileSystemApi.getStudentFiles(teamIdStr);
             const files = Array.isArray(filesData) ? filesData : [];
             setStudentFiles(files);
 

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import {
     Box, Grid, Typography, Paper, Stack, Avatar, Chip, Button,
     LinearProgress, AvatarGroup, CircularProgress, IconButton, Tooltip,
+    Divider,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { useNavigate } from "react-router-dom";
@@ -17,9 +18,11 @@ import LocationOnOutlinedIcon     from "@mui/icons-material/LocationOnOutlined";
 import CheckCircleOutlineIcon     from "@mui/icons-material/CheckCircleOutline";
 import RefreshOutlinedIcon        from "@mui/icons-material/RefreshOutlined";
 import DoneAllIcon                from "@mui/icons-material/DoneAll";
+import PeopleOutlinedIcon         from "@mui/icons-material/PeopleOutlined";
+import NotesOutlinedIcon          from "@mui/icons-material/NotesOutlined";
 
 import { useAuth }               from "../../../../contexts/AuthContext";
-import { getKanbanBoard } from "../../../../api/handler/endpoints/Kanbanapi";
+import { getKanbanBoard }       from "../../../../api/handler/endpoints/KanbanApi";
 import { notificationApi }       from "../../../../api/handler/endpoints/notificationApi";
 import { getMyDiscussionSlot }   from "../../../../api/handler/endpoints/headOfDepartmentApi";
 import studentApi                from "../../../../api/handler/endpoints/studentApi";
@@ -52,11 +55,9 @@ const timeAgo = (dateStr) => {
 };
 
 // ── Parse kanban board ────────────────────────────────────────────────────────
-// API returns: { toDo: [...], inProgress: [...], done: [...] }
 function parseKanbanBoard(board) {
     if (!board) return { tasks: [], counts: { toDo: 0, inProgress: 0, done: 0 } };
 
-    // New format: object with toDo / inProgress / done
     if (!Array.isArray(board) && typeof board === "object") {
         const toDo       = board.toDo       ?? board.todo       ?? [];
         const inProgress = board.inProgress  ?? board.InProgress ?? [];
@@ -70,7 +71,6 @@ function parseKanbanBoard(board) {
         return { tasks, counts: { toDo: toDo.length, inProgress: inProgress.length, done: done.length } };
     }
 
-    // Old array format fallback
     if (Array.isArray(board)) {
         const tasks = board.flatMap(col =>
             (col.tasks ?? []).map(tk => ({ ...tk, status: col.title ?? tk.status }))
@@ -86,7 +86,6 @@ function parseKanbanBoard(board) {
     return { tasks: [], counts: { toDo: 0, inProgress: 0, done: 0 } };
 }
 
-// Normalize assignees — API uses assignedMembers OR assignedUsers OR assignees
 const getAssignees = (task) =>
     task.assignedMembers ?? task.assignedUsers ?? task.assignees ?? [];
 
@@ -129,8 +128,8 @@ function Confetti({ accent }) {
             document.head.appendChild(style);
         }
         launch();
-        const t = setTimeout(launch, 2800);
-        return () => clearTimeout(t);
+        const timer = setTimeout(launch, 2800);
+        return () => clearTimeout(timer);
     }, []);
 
     return (
@@ -142,9 +141,9 @@ function Confetti({ accent }) {
     );
 }
 
-// ── Discussion Slot Card ──────────────────────────────────────────────────────
+// ── Discussion Slot Card (Student view) ───────────────────────────────────────
 function DiscussionSlotCard({ t, accent }) {
-    const [slot, setSlot]       = useState(null);
+    const [slot,    setSlot]    = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -155,6 +154,12 @@ function DiscussionSlotCard({ t, accent }) {
     }, []);
 
     if (loading || !slot) return null;
+
+    // Parse committee members from instructors string
+    const instructors = slot.instructors ?? slot.committee ?? null;
+    const committeeMembers = instructors
+        ? instructors.split(",").map(s => s.trim()).filter(Boolean)
+        : [];
 
     return (
         <Paper elevation={1} sx={{
@@ -168,10 +173,13 @@ function DiscussionSlotCard({ t, accent }) {
             },
         }}>
             <Confetti accent={accent} />
-            <Stack direction="row" alignItems="center" gap={1} mb={1.2}>
+
+            {/* Title row */}
+            <Stack direction="row" alignItems="center" gap={1} mb={1.5}>
                 <Box sx={{
                     width: 32, height: 32, borderRadius: "10px",
-                    bgcolor: `${accent}15`, display: "flex", alignItems: "center", justifyContent: "center",
+                    bgcolor: `${accent}15`, display: "flex",
+                    alignItems: "center", justifyContent: "center",
                 }}>
                     <EventOutlinedIcon sx={{ fontSize: 17, color: accent }} />
                 </Box>
@@ -184,7 +192,9 @@ function DiscussionSlotCard({ t, accent }) {
                     bgcolor: "#3a9e6f18", color: "#3a9e6f", borderRadius: "6px",
                 }} />
             </Stack>
-            <Stack direction={{ xs: "column", sm: "row" }} gap={2}>
+
+            {/* Date & Location */}
+            <Stack direction={{ xs: "column", sm: "row" }} gap={2} mb={1.2}>
                 <Stack direction="row" alignItems="center" gap={0.8}>
                     <EventOutlinedIcon sx={{ fontSize: 14, color: t.textSecondary }} />
                     <Typography fontSize="0.84rem" fontWeight={600} sx={{ color: t.textPrimary }}>
@@ -198,12 +208,48 @@ function DiscussionSlotCard({ t, accent }) {
                     </Typography>
                 </Stack>
             </Stack>
-            {slot.notes && (
-                <Typography fontSize="0.75rem" sx={{ color: t.textTertiary, mt: 0.8 }}>
-                    {slot.notes}
-                </Typography>
+
+            {/* Discussion Committee */}
+            {committeeMembers.length > 0 && (
+                <>
+                    <Divider sx={{ my: 1, borderColor: `${accent}20` }} />
+                    <Stack direction="row" alignItems="flex-start" gap={0.8}>
+                        <PeopleOutlinedIcon sx={{ fontSize: 15, color: accent, mt: "2px" }} />
+                        <Box>
+                            <Typography fontSize="0.72rem" fontWeight={600}
+                                sx={{ color: t.textTertiary, mb: 0.6 }}>
+                                Discussion Committee
+                            </Typography>
+                            <Stack direction="row" gap={0.6} flexWrap="wrap">
+                                {committeeMembers.map((member, i) => (
+                                    <Chip
+                                        key={i}
+                                        label={member}
+                                        size="small"
+                                        sx={{
+                                            height: 22, fontSize: "0.68rem", fontWeight: 600,
+                                            bgcolor: `${accent}15`, color: accent,
+                                            borderRadius: "7px",
+                                        }}
+                                    />
+                                ))}
+                            </Stack>
+                        </Box>
+                    </Stack>
+                </>
             )}
-            <Typography fontSize="0.75rem" sx={{ color: accent, fontWeight: 600, mt: 0.8 }}>
+
+            {/* Notes */}
+            {slot.notes && (
+                <Stack direction="row" alignItems="flex-start" gap={0.6} mt={1}>
+                    <NotesOutlinedIcon sx={{ fontSize: 13, color: t.textTertiary, mt: "2px" }} />
+                    <Typography fontSize="0.75rem" sx={{ color: t.textTertiary }}>
+                        {slot.notes}
+                    </Typography>
+                </Stack>
+            )}
+
+            <Typography fontSize="0.75rem" sx={{ color: accent, fontWeight: 600, mt: 1 }}>
                 🏆 Congratulations! Your team's hard work paid off.
             </Typography>
         </Paper>
@@ -241,17 +287,14 @@ export default function StudentDashboard() {
     const t        = theme.palette.custom;
     const accent   = t.accentPrimary ?? "#B46F4C";
 
-    // ── state ────────────────────────────────────────────────────────────────
     const [tasks,        setTasks]        = useState([]);
     const [taskCounts,   setTaskCounts]   = useState({ toDo: 0, inProgress: 0, done: 0 });
     const [tasksLoading, setTasksLoading] = useState(true);
 
-    // Meetings: count approved ones from getMyAppointments
-    const [meetingCount,   setMeetingCount]   = useState(null);   // null = loading
+    const [meetingCount,   setMeetingCount]   = useState(null);
     const [meetingLoading, setMeetingLoading] = useState(true);
 
-    // Files: count from getStudentFiles
-    const [fileCount,   setFileCount]   = useState(null);         // null = loading
+    const [fileCount,   setFileCount]   = useState(null);
     const [fileLoading, setFileLoading] = useState(true);
 
     const [notifications, setNotifications] = useState([]);
@@ -268,8 +311,6 @@ export default function StudentDashboard() {
                       : "0/0";
 
     // ── loaders ───────────────────────────────────────────────────────────────
-
-    // Kanban board → { toDo, inProgress, done }
     const loadTasks = useCallback(async () => {
         setTasksLoading(true);
         try {
@@ -286,13 +327,11 @@ export default function StudentDashboard() {
         }
     }, []);
 
-    // Meetings — getMyAppointments returns array; count Approved ones
     const loadMeetings = useCallback(async () => {
         setMeetingLoading(true);
         try {
-            const data = await studentApi.getMyAppointments();
-            const list = Array.isArray(data) ? data : (data?.data ?? []);
-            // Show total count (all statuses), or filter to Approved only — adjust as needed
+            const data    = await studentApi.getMyAppointments();
+            const list    = Array.isArray(data) ? data : (data?.data ?? []);
             const approved = list.filter(m => (m.status ?? "").toLowerCase() === "approved");
             setMeetingCount(approved.length);
         } catch {
@@ -302,7 +341,6 @@ export default function StudentDashboard() {
         }
     }, []);
 
-    // Files — getStudentFiles returns array
     const loadFiles = useCallback(async () => {
         setFileLoading(true);
         try {
@@ -316,7 +354,6 @@ export default function StudentDashboard() {
         }
     }, []);
 
-    // Notifications
     const loadNotifications = useCallback(async () => {
         setNotiLoading(true);
         try {
@@ -330,7 +367,6 @@ export default function StudentDashboard() {
         }
     }, []);
 
-    // Team
     const loadTeam = useCallback(async () => {
         try {
             const d = await studentApi.getMyTeam();
@@ -348,7 +384,6 @@ export default function StudentDashboard() {
         loadTeam();
     }, [loadTasks, loadMeetings, loadFiles, loadNotifications, loadTeam]);
 
-    // ── mark all read ─────────────────────────────────────────────────────────
     const handleMarkAllRead = async () => {
         try {
             await notificationApi.markAllAsRead();
@@ -392,7 +427,6 @@ export default function StudentDashboard() {
         },
     ];
 
-    // Recent tasks — not-done first, max 4
     const recentTasks = [...tasks]
         .sort((a, b) => (a.status === "Done" ? 1 : -1))
         .slice(0, 4);

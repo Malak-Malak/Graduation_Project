@@ -921,6 +921,48 @@ function TeamCard({ team, onView }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   ARCHIVE SEARCH BANNER
+   — shown above the grid only when a server-side search is active
+═══════════════════════════════════════════════════════════════ */
+function ArchiveSearchBanner({ query, resultCount, onClear }) {
+    const theme = useTheme();
+    const isDark = theme.palette.mode === "dark";
+    const tPri = theme.palette.text.primary;
+    const tSec = theme.palette.text.secondary;
+
+    return (
+        <Stack
+            direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}
+            sx={{
+                mb: 2.5, px: 2, py: 1.2, borderRadius: "12px",
+                bgcolor: `${ACCENT}0D`,
+                border: `1px solid ${ACCENT}30`,
+            }}
+        >
+            <Stack direction="row" alignItems="center" gap={1} minWidth={0}>
+                <SearchIcon sx={{ fontSize: 16, color: ACCENT, flexShrink: 0 }} />
+                <Typography fontSize=".82rem" sx={{ color: tPri }} noWrap>
+                    Search results for <Box component="span" sx={{ fontWeight: 700, color: ACCENT }}>&ldquo;{query}&rdquo;</Box>
+                    <Box component="span" sx={{ color: tSec }}> · {resultCount} {resultCount === 1 ? "project" : "projects"}</Box>
+                </Typography>
+            </Stack>
+            <Button
+                onClick={onClear}
+                size="small"
+                startIcon={<CloseIcon sx={{ fontSize: 13 }} />}
+                sx={{
+                    flexShrink: 0, textTransform: "none", fontSize: ".74rem", fontWeight: 600,
+                    color: tSec, borderRadius: "8px", px: 1.2,
+                    "&:hover": { bgcolor: isDark ? "rgba(255,255,255,.06)" : "rgba(0,0,0,.05)", color: ACCENT },
+                }}
+            >
+                Clear search
+            </Button>
+        </Stack>
+    );
+}
+
+/* ═══════════════════════════════════════════════════════════════
    DISCOVERY HUB — MAIN
 ═══════════════════════════════════════════════════════════════ */
 export default function DiscoveryHub() {
@@ -952,6 +994,50 @@ export default function DiscoveryHub() {
     const [archiveDetailOpen, setArchiveDetailOpen] = useState(false);
     const [snack, setSnack] = useState({ open: false, msg: "", sev: "success" });
     const snap = (msg, sev = "success") => setSnack({ open: true, msg, sev });
+
+    // ── Server-side archive search state ──────────────────────────
+    // activeQuery = the query that was actually submitted (Enter / icon click).
+    // It can differ from `searchArchive` (the live input value) while typing.
+    const [archiveSearchResults, setArchiveSearchResults] = useState(null); // null = no active search
+    const [activeArchiveQuery, setActiveArchiveQuery] = useState("");
+    const [searchingArchive, setSearchingArchive] = useState(false);
+    const archiveSearchSeq = useRef(0); // guards against stale responses
+
+    const runArchiveSearch = useCallback(async (rawQuery) => {
+        const q = (rawQuery ?? "").trim();
+        if (!q) {
+            // empty query → fall back to the original full list, no request
+            setArchiveSearchResults(null);
+            setActiveArchiveQuery("");
+            setArchivePage(1);
+            return;
+        }
+        const seq = ++archiveSearchSeq.current;
+        setSearchingArchive(true);
+        try {
+            const d = await archiveApi.searchArchive(q);
+            if (seq !== archiveSearchSeq.current) return; // a newer search superseded this one
+            setArchiveSearchResults(extractArray(d));
+            setActiveArchiveQuery(q);
+            setArchivePage(1);
+        } catch {
+            if (seq !== archiveSearchSeq.current) return;
+            snap("Search failed, showing full list instead", "error");
+            setArchiveSearchResults(null);
+            setActiveArchiveQuery("");
+        } finally {
+            if (seq === archiveSearchSeq.current) setSearchingArchive(false);
+        }
+    }, []);
+
+    const clearArchiveSearch = useCallback(() => {
+        archiveSearchSeq.current++; // invalidate any in-flight request
+        setSearchArchive("");
+        setArchiveSearchResults(null);
+        setActiveArchiveQuery("");
+        setSearchingArchive(false);
+        setArchivePage(1);
+    }, []);
 
     // Swipe handlers
     const touchStartX = useRef(null);
@@ -1014,7 +1100,6 @@ export default function DiscoveryHub() {
 
     useEffect(() => { setStudentPage(1); }, [searchStudents]);
     useEffect(() => { setTeamPage(1); }, [searchTeams]);
-    useEffect(() => { setArchivePage(1); }, [searchArchive]);
     useEffect(() => { setStudentPage(1); setTeamPage(1); setArchivePage(1); }, [tab]);
 
     const filteredStudents = students.filter(s => {
@@ -1027,21 +1112,18 @@ export default function DiscoveryHub() {
         const q = searchTeams.toLowerCase();
         return (t.projectTitle ?? "").toLowerCase().includes(q) || (t.projectDescription ?? "").toLowerCase().includes(q) || (t.supervisorName ?? "").toLowerCase().includes(q);
     });
-    const filteredArchive = archivedProjects.filter(p => {
-        if (!searchArchive) return true;
-        const q = searchArchive.toLowerCase();
-        return (p.projectName ?? "").toLowerCase().includes(q)
-            || (p.projectDescription ?? "").toLowerCase().includes(q)
-            || (p.supervisorName ?? "").toLowerCase().includes(q)
-            || (p.department ?? "").toLowerCase().includes(q);
-    });
+
+    // Archive tab: server-driven search results take over when active,
+    // otherwise fall back to the originally loaded full list.
+    const isArchiveSearchActive = archiveSearchResults !== null;
+    const archiveSource = isArchiveSearchActive ? archiveSearchResults : archivedProjects;
 
     const totalStudentPages = Math.ceil(filteredStudents.length / CARDS_PER_PAGE);
     const pagedStudents = filteredStudents.slice((studentPage - 1) * CARDS_PER_PAGE, studentPage * CARDS_PER_PAGE);
     const totalTeamPages = Math.ceil(filteredTeams.length / CARDS_PER_PAGE);
     const pagedTeams = filteredTeams.slice((teamPage - 1) * CARDS_PER_PAGE, teamPage * CARDS_PER_PAGE);
-    const totalArchivePages = Math.ceil(filteredArchive.length / CARDS_PER_PAGE);
-    const pagedArchive = filteredArchive.slice((archivePage - 1) * CARDS_PER_PAGE, archivePage * CARDS_PER_PAGE);
+    const totalArchivePages = Math.ceil(archiveSource.length / CARDS_PER_PAGE);
+    const pagedArchive = archiveSource.slice((archivePage - 1) * CARDS_PER_PAGE, archivePage * CARDS_PER_PAGE);
 
     const gridCols = { xs: "1fr", sm: "1fr 1fr", md: "1fr 1fr 1fr" };
 
@@ -1094,7 +1176,7 @@ export default function DiscoveryHub() {
                     }}>
                         <Tab label={<Stack direction="row" alignItems="center" gap={.9}><PeopleOutlineIcon sx={{ fontSize: 17 }} /><span>Students</span>{students.length > 0 && <Chip label={filteredStudents.length} size="small" sx={{ height: 19, minWidth: 24, bgcolor: `${ACCENT}18`, color: ACCENT, fontWeight: 700, fontSize: ".68rem", border: `1px solid ${ACCENT}25`, borderRadius: "6px" }} />}</Stack>} />
                         <Tab label={<Stack direction="row" alignItems="center" gap={.9}><GroupsOutlinedIcon sx={{ fontSize: 17 }} /><span>Teams</span>{teams.length > 0 && <Chip label={filteredTeams.length} size="small" sx={{ height: 19, minWidth: 24, bgcolor: `${ACCENT}18`, color: ACCENT, fontWeight: 700, fontSize: ".68rem", border: `1px solid ${ACCENT}25`, borderRadius: "6px" }} />}</Stack>} />
-                        <Tab label={<Stack direction="row" alignItems="center" gap={.9}><ArchiveOutlinedIcon sx={{ fontSize: 17 }} /><span>Archive</span>{archivedProjects.length > 0 && <Chip label={filteredArchive.length} size="small" sx={{ height: 19, minWidth: 24, bgcolor: `${ACCENT}18`, color: ACCENT, fontWeight: 700, fontSize: ".68rem", border: `1px solid ${ACCENT}25`, borderRadius: "6px" }} />}</Stack>} />
+                        <Tab label={<Stack direction="row" alignItems="center" gap={.9}><ArchiveOutlinedIcon sx={{ fontSize: 17 }} /><span>Archive</span>{archivedProjects.length > 0 && <Chip label={archiveSource.length} size="small" sx={{ height: 19, minWidth: 24, bgcolor: `${ACCENT}18`, color: ACCENT, fontWeight: 700, fontSize: ".68rem", border: `1px solid ${ACCENT}25`, borderRadius: "6px" }} />}</Stack>} />
                     </Tabs>
                 </Box>
 
@@ -1141,9 +1223,59 @@ export default function DiscoveryHub() {
                 {/* ── Archive tab ── */}
                 {tab === 2 && (
                     <Box>
-                        <TextField fullWidth size="small" placeholder="Search by project, supervisor or department…" value={searchArchive} onChange={e => setSearchArchive(e.target.value)} sx={{ mb: 3, ...searchSx }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 17, color: tSec }} /></InputAdornment> }} />
+                        <TextField
+                            fullWidth size="small"
+                            placeholder="Search by project, supervisor or department… (press Enter)"
+                            value={searchArchive}
+                            onChange={e => {
+                                const v = e.target.value;
+                                setSearchArchive(v);
+                                // typing alone never triggers a request — only Enter / icon click do.
+                                // if the user clears the box completely, drop back to the full list right away.
+                                if (!v.trim() && isArchiveSearchActive) clearArchiveSearch();
+                            }}
+                            onKeyDown={e => { if (e.key === "Enter") runArchiveSearch(searchArchive); }}
+                            sx={{ mb: 2.5, ...searchSx }}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => runArchiveSearch(searchArchive)}
+                                            disabled={searchingArchive}
+                                            sx={{ width: 26, height: 26, "&:hover": { bgcolor: `${ACCENT}14` } }}
+                                        >
+                                            {searchingArchive
+                                                ? <CircularProgress size={15} sx={{ color: ACCENT }} />
+                                                : <SearchIcon sx={{ fontSize: 17, color: tSec }} />}
+                                        </IconButton>
+                                    </InputAdornment>
+                                ),
+                                endAdornment: searchArchive && (
+                                    <InputAdornment position="end">
+                                        <IconButton size="small" onClick={clearArchiveSearch} sx={{ width: 24, height: 24 }}>
+                                            <CloseIcon sx={{ fontSize: 14, color: tSec }} />
+                                        </IconButton>
+                                    </InputAdornment>
+                                ),
+                            }}
+                        />
+
+                        {isArchiveSearchActive && (
+                            <ArchiveSearchBanner
+                                query={activeArchiveQuery}
+                                resultCount={archiveSource.length}
+                                onClear={clearArchiveSearch}
+                            />
+                        )}
+
                         {loadingArchive ? <Box display="flex" justifyContent="center" py={10}><CircularProgress size={36} sx={{ color: ACCENT }} /></Box>
-                            : filteredArchive.length === 0 ? <EmptyState msg="No archived projects" sub={searchArchive ? "Try a different search term" : "No projects have been archived yet"} />
+                            : archiveSource.length === 0 ? (
+                                <EmptyState
+                                    msg={isArchiveSearchActive ? "No matching projects" : "No archived projects"}
+                                    sub={isArchiveSearchActive ? "Try a different search term" : "No projects have been archived yet"}
+                                />
+                            )
                                 : <>
                                     <Box sx={{ display: "grid", gridTemplateColumns: gridCols, gap: "20px", mb: 3 }}>
                                         {pagedArchive.map((project, i) => (
@@ -1157,7 +1289,7 @@ export default function DiscoveryHub() {
                                     {totalArchivePages > 1 && (
                                         <Stack alignItems="center" gap={.8} sx={{ pt: 2.5, borderTop: `1px solid ${brd}` }}>
                                             <Pagination count={totalArchivePages} page={archivePage} onChange={(_, v) => { setArchivePage(v); window.scrollTo({ top: 0, behavior: "smooth" }); }} size="small" sx={paginationSx} />
-                                            <Typography fontSize=".71rem" sx={{ color: tSec }}>Showing {(archivePage - 1) * CARDS_PER_PAGE + 1}–{Math.min(archivePage * CARDS_PER_PAGE, filteredArchive.length)} of {filteredArchive.length} projects</Typography>
+                                            <Typography fontSize=".71rem" sx={{ color: tSec }}>Showing {(archivePage - 1) * CARDS_PER_PAGE + 1}–{Math.min(archivePage * CARDS_PER_PAGE, archiveSource.length)} of {archiveSource.length} projects</Typography>
                                         </Stack>
                                     )}
                                 </>}

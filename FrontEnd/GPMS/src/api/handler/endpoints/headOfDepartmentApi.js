@@ -61,7 +61,7 @@ export const getSlots = () =>
 
 /**
  * POST /api/head/assign-team-to-slot
- * @param {{ teamId: number, slotId: number }} payload
+ * @param {{ teamId: number, slotId: number, instructors: string }} payload
  */
 export const assignTeamToSlot = (payload) =>
     axiosInstance.post("/head/assign-team-to-slot", payload).then(r => r.data);
@@ -69,7 +69,7 @@ export const assignTeamToSlot = (payload) =>
 /**
  * PUT /api/head/update-team-slot
  * Move a team from its current slot to a different slot.
- * @param {{ teamId: number, newSlotId: number }} payload
+ * @param {{ teamId: number, newSlotId: number, instructors: string }} payload
  */
 export const updateTeamSlot = (payload) =>
     axiosInstance.put("/head/update-team-slot", payload).then(r => r.data);

@@ -45,7 +45,7 @@ const SUPERVISOR_SKILLS = [
     "Distributed Systems & Blockchain",
 ];
 
-// ── Steps: students skip department, supervisors keep it ──────────────────────
+// ── Steps ─────────────────────────────────────────────────────────────────────
 const STUDENT_STEPS = [
     { id: "skills",  label: "Skills",       icon: CodeOutlinedIcon,  desc: "Pick your skills — teammates will find you based on these" },
     { id: "contact", label: "Contact Info", icon: BadgeOutlinedIcon, desc: "Let teammates know how to reach you" },
@@ -53,10 +53,10 @@ const STUDENT_STEPS = [
 ];
 
 const SUPERVISOR_STEPS = [
-    { id: "department", label: "Department",   icon: SchoolOutlinedIcon, desc: "Select your engineering department" },
-    { id: "skills",     label: "Research Areas", icon: CodeOutlinedIcon,   desc: "Select your academic research specializations" },
-    { id: "contact",    label: "Contact Info",   icon: BadgeOutlinedIcon,  desc: "Let students know how to reach you" },
-    { id: "bio",        label: "About You",      icon: PersonOutlineIcon,  desc: "Write a short bio about yourself" },
+    { id: "department", label: "Department",      icon: SchoolOutlinedIcon, desc: "Select your engineering department" },
+    { id: "skills",     label: "Research Areas",  icon: CodeOutlinedIcon,   desc: "Select your academic research specializations" },
+    { id: "contact",    label: "Contact Info",    icon: BadgeOutlinedIcon,  desc: "Let students know how to reach you" },
+    { id: "bio",        label: "About You",       icon: PersonOutlineIcon,  desc: "Write a short bio about yourself" },
 ];
 
 const INPUT_SX = {
@@ -93,6 +93,7 @@ function InnerCard({ icon: Icon, title, count, action, children, border, cardAlt
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function ProfileSetupModal({ open, onDone, role = "student", uniDepartment = "" }) {
+    // ── ALL HOOKS MUST COME FIRST — before any conditional return ────────────
     const theme  = useTheme();
     const isDark = theme.palette.mode === "dark";
 
@@ -101,20 +102,16 @@ export default function ProfileSetupModal({ open, onDone, role = "student", uniD
     const isAdmin        = normalizedRole === "admin";
     const isStudent      = normalizedRole === "student";
 
-    if (isAdmin || !open) return null;
-
-    // Steps depend on role — students skip department picker
+    // Steps depend on role
     const steps = isSupervisor ? SUPERVISOR_STEPS : STUDENT_STEPS;
 
-    // Skills suggestions: supervisors use fixed list, students use department-based list
+    // Skills suggestions
     const suggestedSkills = isSupervisor
         ? SUPERVISOR_SKILLS
         : getSkillsForDepartment(uniDepartment);
 
-    const skillsStepLabel = isSupervisor ? "Research Areas" : "Skills";
-
     const [step,             setStep]             = useState(0);
-    const [department,       setDepartment]       = useState("");   // supervisors only
+    const [department,       setDepartment]       = useState("");
     const [skills,           setSkills]           = useState([]);
     const [customSkillInput, setCustomSkillInput] = useState("");
     const [fullName,         setFullName]         = useState("");
@@ -125,6 +122,9 @@ export default function ProfileSetupModal({ open, onDone, role = "student", uniD
     const [bio,              setBio]              = useState("");
     const [saving,           setSaving]           = useState(false);
     const [error,            setError]            = useState("");
+
+    // ── NOW it's safe to conditionally render nothing ────────────────────────
+    if (isAdmin || !open) return null;
 
     /* ── Design tokens ── */
     const accent  = "#d0895b";
@@ -166,7 +166,6 @@ export default function ProfileSetupModal({ open, onDone, role = "student", uniD
     const handleNext = async () => {
         if (step < steps.length - 1) { setStep((s) => s + 1); return; }
 
-        // Students use uniDepartment; supervisors use their chosen department
         const resolvedDepartment = isStudent ? uniDepartment : department;
         const data = { department: resolvedDepartment, skills, fullName, email, phoneNumber, linkedin, github, bio };
         setSaving(true);
@@ -178,11 +177,13 @@ export default function ProfileSetupModal({ open, onDone, role = "student", uniD
             onDone(data);
         } catch (e) {
             const status  = e?.response?.status;
-            const message = e?.response?.data?.message ?? e?.response?.data ?? "";
+            const rawMsg  = e?.response?.data?.message ?? e?.response?.data ?? "";
+            // Safely convert error message to string
+            const message = typeof rawMsg === "object" ? JSON.stringify(rawMsg) : String(rawMsg ?? "");
+
             const isExists =
                 status === 409 ||
-                (status === 400 && typeof message === "string" &&
-                    message.toLowerCase().includes("exist"));
+                (status === 400 && message.toLowerCase().includes("exist"));
 
             if (isExists) {
                 try {
@@ -190,7 +191,8 @@ export default function ProfileSetupModal({ open, onDone, role = "student", uniD
                     sessionStorage.setItem("gpms_profile_done", "true");
                     onDone(data);
                 } catch (e2) {
-                    setError(e2?.response?.data?.message ?? "Failed to update profile.");
+                    const msg2 = e2?.response?.data?.message ?? e2?.response?.data ?? "Failed to update profile.";
+                    setError(typeof msg2 === "object" ? JSON.stringify(msg2) : String(msg2));
                 }
             } else {
                 setError(message || "Failed to save profile, please try again.");

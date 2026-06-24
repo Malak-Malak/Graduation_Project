@@ -18,7 +18,7 @@ import PersonSearchOutlinedIcon from "@mui/icons-material/PersonSearchOutlined";
 import EditProfileModal from "./EditProfileModal";
 import ProfileSetupModal from "./ProfileSetupModal";
 import { useAuth } from "../../../../contexts/AuthContext";
-import studentApi, { decodeField, getSkillsForDepartment } from "../../../../api/handler/endpoints/studentApi";
+import studentApi, { decodeField } from "../../../../api/handler/endpoints/studentApi";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const SKILL_COLORS = ["#B46F4C", "#6D8A7D", "#C49A6C", "#7E9FC4", "#9B7EC8", "#C47E7E"];
@@ -34,19 +34,26 @@ const normalizeProfile = (raw) => {
     if (!raw) return null;
     const skillsFromField = decodeField(raw.field ?? "");
     return {
-        fullName:    raw.fullName     ?? "",
-        phoneNumber: raw.phoneNumber  ?? "",
-        department:  raw.department   ?? "",
+        fullName:    raw.fullName      ?? "",
+        phoneNumber: raw.phoneNumber   ?? "",
+        department:  raw.department    ?? "",
         skills:      skillsFromField,
-        github:      raw.gitHubLink   ?? raw.github   ?? "",
-        linkedin:    raw.linkedinLink ?? raw.linkedin  ?? "",
-        email:       raw.personalEmail ?? raw.email   ?? "",
-        bio:         raw.bio          ?? "",
+        github:      raw.gitHubLink    ?? raw.github   ?? "",
+        linkedin:    raw.linkedinLink  ?? raw.linkedin  ?? "",
+        email:       raw.personalEmail ?? raw.email    ?? "",
+        bio:         raw.bio           ?? "",
     };
 };
 
 const isProfileEmpty = (p) =>
     !p || (!p.fullName && !p.email && !p.department);
+
+// Safely extract a string error message from any API error
+const extractErrorMessage = (e) => {
+    const raw = e?.response?.data?.message ?? e?.response?.data ?? e?.message ?? "";
+    if (typeof raw === "object" && raw !== null) return JSON.stringify(raw);
+    return String(raw ?? "");
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function ProfilePage() {
@@ -65,7 +72,6 @@ export default function ProfilePage() {
     const [setupOpen,     setSetupOpen]     = useState(false);
     const [myTeam,        setMyTeam]        = useState(null);
     const [teamLoading,   setTeamLoading]   = useState(true);
-    // University info (department locked from backend)
     const [uniDepartment, setUniDepartment] = useState("");
 
     // ── Fetch university info once (students only) ──────────────────────────
@@ -114,17 +120,27 @@ export default function ProfilePage() {
         const payload = { ...updated, department };
         try {
             await studentApi.updateProfile(payload);
-            setProfile(normalizeProfile({
-                fullName:      payload.fullName,
-                phoneNumber:   payload.phoneNumber,
-                department:    payload.department,
-                field:         (payload.skills ?? []).join(","),
-                gitHubLink:    payload.github,
-                linkedinLink:  payload.linkedin,
-                personalEmail: payload.email,
-                bio:           payload.bio,
-            }));
-        } catch { /* keep UI as-is */ }
+            // Re-fetch to get the correctly encoded/decoded profile from backend
+            const fresh = await studentApi.getProfile().catch(() => null);
+            if (fresh) {
+                setProfile(normalizeProfile(fresh));
+            } else {
+                // Fallback: build from payload using proper encoding path
+                setProfile(normalizeProfile({
+                    fullName:      payload.fullName,
+                    phoneNumber:   payload.phoneNumber,
+                    department:    payload.department,
+                    // encodeField happens inside updateProfile; decode what we sent
+                    field:         (payload.skills ?? []).join(","),
+                    gitHubLink:    payload.github,
+                    linkedinLink:  payload.linkedin,
+                    personalEmail: payload.email,
+                    bio:           payload.bio,
+                }));
+            }
+        } catch (e) {
+            console.error("Profile update failed:", extractErrorMessage(e));
+        }
         setEditOpen(false);
     };
 
@@ -328,7 +344,7 @@ export default function ProfilePage() {
                         )}
                     </Stack>
 
-                    {/* Department: read-only badge for students, editable chip for others */}
+                    {/* Department badge */}
                     {displayDepartment && (
                         <Box sx={{ mt: 1.5, display: "flex", alignItems: "center", gap: 1 }}>
                             <Chip
@@ -342,7 +358,6 @@ export default function ProfilePage() {
                                     border: `1px solid ${a22}`,
                                 }}
                             />
-                            {/* Lock icon hint for students */}
                             {isStudent && (
                                 <Typography fontSize="0.68rem" sx={{ color: textSec, opacity: 0.6 }}>
                                     from university
@@ -377,7 +392,7 @@ export default function ProfilePage() {
                                         )}
                                     </Box>
                                     {myTeam.status && (
-                                        <Chip label={myTeam.status} size="small" sx={{
+                                        <Chip label={String(myTeam.status)} size="small" sx={{
                                             height: 22, borderRadius: 1, fontSize: "0.68rem", fontWeight: 700,
                                             bgcolor: myTeam.status === "Active" ? "rgba(76,175,80,0.10)" : a10,
                                             color: myTeam.status === "Active" ? "#4caf50" : accent,
@@ -459,7 +474,7 @@ export default function ProfilePage() {
                     children: profile?.skills?.length > 0 ? (
                         <Stack direction="row" flexWrap="wrap" gap={1}>
                             {profile.skills.map((skill, i) => (
-                                <Chip key={skill} label={skill} sx={{
+                                <Chip key={skill} label={String(skill)} sx={{
                                     height: 27, borderRadius: 1.5,
                                     fontSize: "0.75rem", fontWeight: 600,
                                     bgcolor: `${SKILL_COLORS[i % SKILL_COLORS.length]}14`,

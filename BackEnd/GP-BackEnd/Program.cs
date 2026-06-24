@@ -100,7 +100,7 @@ builder.Services.AddScoped<ArchiveService>();
 builder.Services.AddScoped<HeadOfDepartmentService>();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddHostedService<TaskNotificationService>();
-
+builder.Services.AddScoped<UserService>();
 
 var app = builder.Build();
 

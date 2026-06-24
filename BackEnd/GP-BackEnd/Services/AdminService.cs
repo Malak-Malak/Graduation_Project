@@ -1,8 +1,9 @@
-﻿using GP_BackEnd.Data;
+﻿using BCrypt.Net;
+using GP_BackEnd.Data;
 using GP_BackEnd.DTOs.Admin;
+using GP_BackEnd.DTOs.User;
 using GP_BackEnd.Models;
 using Microsoft.EntityFrameworkCore;
-using BCrypt.Net;
 
 namespace GP_BackEnd.Services
 {
@@ -186,30 +187,39 @@ namespace GP_BackEnd.Services
             return true;
         }
 
-        // Clear all data except admin account
-        public async Task ClearAllDataAsync()
-        {
-            _context.TeamJoinRequests.RemoveRange(_context.TeamJoinRequests);
-            _context.TeamMembers.RemoveRange(_context.TeamMembers);
-            _context.Notifications.RemoveRange(_context.Notifications);
-            _context.Feedbacks.RemoveRange(_context.Feedbacks);
-            _context.ProjectFiles.RemoveRange(_context.ProjectFiles);
-            _context.TaskItems.RemoveRange(_context.TaskItems);
-            _context.Appointments.RemoveRange(_context.Appointments);
-            _context.TeamProgressReports.RemoveRange(_context.TeamProgressReports);
-            _context.Teams.RemoveRange(_context.Teams);
-            _context.Projects.RemoveRange(_context.Projects);
-            _context.UserProfiles.RemoveRange(_context.UserProfiles);
-            _context.RegistrationRequests.RemoveRange(_context.RegistrationRequests);
-            _context.UniversityRecords.RemoveRange(_context.UniversityRecords);
+        //// Clear all data except admin account
+        //public async Task<bool> ClearAllDataAsync()
+        //{
+        //    _context.TeamDiscussionSlots.RemoveRange(_context.TeamDiscussionSlots);
+        //    _context.DiscussionSlots.RemoveRange(_context.DiscussionSlots);
+        //    _context.TaskAssignments.RemoveRange(_context.TaskAssignments);
+        //    _context.Feedbacks.RemoveRange(_context.Feedbacks);
+        //    _context.TaskItems.RemoveRange(_context.TaskItems);
+        //    _context.ProjectFiles.RemoveRange(_context.ProjectFiles);
+        //    _context.Appointments.RemoveRange(_context.Appointments);
+        //    _context.OfficeHours.RemoveRange(_context.OfficeHours);
+        //    _context.TeamProgressReports.RemoveRange(_context.TeamProgressReports);
+        //    _context.Requirements.RemoveRange(_context.Requirements);
+        //    _context.TeamJoinRequests.RemoveRange(_context.TeamJoinRequests);
+        //    _context.TeamMembers.RemoveRange(_context.TeamMembers);
+        //    _context.Notifications.RemoveRange(_context.Notifications);
+        //    _context.Teams.RemoveRange(_context.Teams);
+        //    _context.Projects.RemoveRange(_context.Projects);
+        //    _context.RegistrationRequests.RemoveRange(_context.RegistrationRequests);
+        //    _context.UniversityRecords.RemoveRange(_context.UniversityRecords);
+        //    _context.UserProfiles.RemoveRange(_context.UserProfiles);
+        //    _context.ArchivedFiles.RemoveRange(_context.ArchivedFiles);
+        //    await _context.SaveChangesAsync();
 
-            var nonAdminUsers = await _context.Users
-                .Where(u => u.Role != "Admin")
-                .ToListAsync();
-            _context.Users.RemoveRange(nonAdminUsers);
+        //    // Delete all users except admin in a separate save
+        //    var nonAdmins = await _context.Users
+        //        .Where(u => u.Role != "Admin")
+        //        .ToListAsync();
+        //    _context.Users.RemoveRange(nonAdmins);
 
-            await _context.SaveChangesAsync();
-        }
+        //    await _context.SaveChangesAsync();
+        //    return true;
+        //}
 
         // Delete a specific registration request
         public async Task<bool> DeleteRegistrationRequestAsync(int requestId)
@@ -444,5 +454,6 @@ namespace GP_BackEnd.Services
             await _context.SaveChangesAsync();
             return (true, "Head of department status removed successfully.");
         }
+      
     }
 }

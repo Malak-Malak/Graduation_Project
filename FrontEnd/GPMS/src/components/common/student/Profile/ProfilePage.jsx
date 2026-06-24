@@ -74,13 +74,14 @@ export default function ProfilePage() {
     const [teamLoading,   setTeamLoading]   = useState(true);
     const [uniDepartment, setUniDepartment] = useState("");
 
-    // ── Fetch university info once (students only) ──────────────────────────
+    // ── Fetch university info for ALL non-admin roles ───────────────────────
+    // ✅ FIX: was `if (!isStudent) return` — supervisors also need the department
     useEffect(() => {
-        if (!isStudent) return;
+        if (isAdmin) return;
         studentApi.getUniversityInfo()
             .then((d) => setUniDepartment(d?.department ?? ""))
             .catch(() => setUniDepartment(""));
-    }, [isStudent]);
+    }, [isAdmin]);
 
     // ── Fetch profile ───────────────────────────────────────────────────────
     useEffect(() => {
@@ -115,8 +116,8 @@ export default function ProfilePage() {
 
     // ── Save edits ──────────────────────────────────────────────────────────
     const handleSave = async (updated) => {
-        // Always use university-locked department for students
-        const department = isStudent ? uniDepartment : updated.department;
+        // Always use university-locked department for students; supervisors use their chosen/uni department
+        const department = uniDepartment || updated.department;
         const payload = { ...updated, department };
         try {
             await studentApi.updateProfile(payload);
@@ -130,7 +131,6 @@ export default function ProfilePage() {
                     fullName:      payload.fullName,
                     phoneNumber:   payload.phoneNumber,
                     department:    payload.department,
-                    // encodeField happens inside updateProfile; decode what we sent
                     field:         (payload.skills ?? []).join(","),
                     gitHubLink:    payload.github,
                     linkedinLink:  payload.linkedin,
@@ -145,7 +145,7 @@ export default function ProfilePage() {
     };
 
     const handleSetupDone = (data) => {
-        const department = isStudent ? uniDepartment : data.department;
+        const department = uniDepartment || data.department;
         setProfile(normalizeProfile({
             fullName:      data.fullName,
             phoneNumber:   data.phoneNumber,
@@ -162,10 +162,8 @@ export default function ProfilePage() {
     const displayName  = profile?.fullName || user?.name || user?.username || "User";
     const avatarLetter = displayName.charAt(0).toUpperCase();
 
-    // Department shown in the UI: prefer uni info for students
-    const displayDepartment = isStudent
-        ? (uniDepartment || profile?.department || "")
-        : (profile?.department || "");
+    // Department shown in the UI: prefer uni info for all non-admin roles
+    const displayDepartment = uniDepartment || profile?.department || "";
 
     if (loading) return (
         <Box display="flex" justifyContent="center" alignItems="center" minHeight={300}>
@@ -358,7 +356,8 @@ export default function ProfilePage() {
                                     border: `1px solid ${a22}`,
                                 }}
                             />
-                            {isStudent && (
+                            {/* Show "from university" label for both students and supervisors */}
+                            {!isAdmin && (
                                 <Typography fontSize="0.68rem" sx={{ color: textSec, opacity: 0.6 }}>
                                     from university
                                 </Typography>

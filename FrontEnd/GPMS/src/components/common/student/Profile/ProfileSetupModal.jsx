@@ -18,17 +18,7 @@ import AddIcon from "@mui/icons-material/Add";
 import IconButton from "@mui/material/IconButton";
 import studentApi, { getSkillsForDepartment } from "../../../../api/handler/endpoints/studentApi";
 
-// ── Departments (supervisors only) ───────────────────────────────────────────
-const ALL_DEPARTMENTS = [
-    "Computer Engineering",
-    "Electrical Engineering",
-    "Mechanical Engineering",
-    "Mechatronics Engineering",
-    "Telecommunications Engineering",
-    "Power & Energy Engineering",
-];
-
-// ── Supervisor research areas ─────────────────────────────────────────────────
+// ── Supervisor research areas (fallback if department has no mapped skills) ───
 const SUPERVISOR_SKILLS = [
     "Artificial Intelligence",
     "Machine Learning",
@@ -46,6 +36,7 @@ const SUPERVISOR_SKILLS = [
 ];
 
 // ── Steps ─────────────────────────────────────────────────────────────────────
+// ✅ Supervisor no longer has a "department" step — it comes from getUniversityInfo
 const STUDENT_STEPS = [
     { id: "skills",  label: "Skills",       icon: CodeOutlinedIcon,  desc: "Pick your skills — teammates will find you based on these" },
     { id: "contact", label: "Contact Info", icon: BadgeOutlinedIcon, desc: "Let teammates know how to reach you" },
@@ -53,10 +44,9 @@ const STUDENT_STEPS = [
 ];
 
 const SUPERVISOR_STEPS = [
-    { id: "department", label: "Department",      icon: SchoolOutlinedIcon, desc: "Select your engineering department" },
-    { id: "skills",     label: "Research Areas",  icon: CodeOutlinedIcon,   desc: "Select your academic research specializations" },
-    { id: "contact",    label: "Contact Info",    icon: BadgeOutlinedIcon,  desc: "Let students know how to reach you" },
-    { id: "bio",        label: "About You",       icon: PersonOutlineIcon,  desc: "Write a short bio about yourself" },
+    { id: "skills",  label: "Research Areas", icon: CodeOutlinedIcon,  desc: "Select your academic research specializations" },
+    { id: "contact", label: "Contact Info",   icon: BadgeOutlinedIcon, desc: "Let students know how to reach you" },
+    { id: "bio",     label: "About You",      icon: PersonOutlineIcon, desc: "Write a short bio about yourself" },
 ];
 
 const INPUT_SX = {
@@ -105,13 +95,15 @@ export default function ProfileSetupModal({ open, onDone, role = "student", uniD
     // Steps depend on role
     const steps = isSupervisor ? SUPERVISOR_STEPS : STUDENT_STEPS;
 
-    // Skills suggestions
-    const suggestedSkills = isSupervisor
-        ? SUPERVISOR_SKILLS
-        : getSkillsForDepartment(uniDepartment);
+    // ✅ Both roles use uniDepartment from getUniversityInfo (passed as prop).
+    //    For supervisors: use department-mapped skills, fall back to SUPERVISOR_SKILLS.
+    //    For students: use department-mapped skills as usual.
+    const departmentSkills = getSkillsForDepartment(uniDepartment);
+    const suggestedSkills  = isSupervisor
+        ? (departmentSkills && departmentSkills.length > 0 ? departmentSkills : SUPERVISOR_SKILLS)
+        : departmentSkills;
 
     const [step,             setStep]             = useState(0);
-    const [department,       setDepartment]       = useState("");
     const [skills,           setSkills]           = useState([]);
     const [customSkillInput, setCustomSkillInput] = useState("");
     const [fullName,         setFullName]         = useState("");
@@ -166,8 +158,8 @@ export default function ProfileSetupModal({ open, onDone, role = "student", uniD
     const handleNext = async () => {
         if (step < steps.length - 1) { setStep((s) => s + 1); return; }
 
-        const resolvedDepartment = isStudent ? uniDepartment : department;
-        const data = { department: resolvedDepartment, skills, fullName, email, phoneNumber, linkedin, github, bio };
+        // ✅ uniDepartment comes from the parent (via getUniversityInfo) for both roles
+        const data = { department: uniDepartment, skills, fullName, email, phoneNumber, linkedin, github, bio };
         setSaving(true);
         setError("");
 
@@ -178,7 +170,6 @@ export default function ProfileSetupModal({ open, onDone, role = "student", uniD
         } catch (e) {
             const status  = e?.response?.status;
             const rawMsg  = e?.response?.data?.message ?? e?.response?.data ?? "";
-            // Safely convert error message to string
             const message = typeof rawMsg === "object" ? JSON.stringify(rawMsg) : String(rawMsg ?? "");
 
             const isExists =
@@ -205,8 +196,7 @@ export default function ProfileSetupModal({ open, onDone, role = "student", uniD
     // Validate current step before allowing Next
     const currentStepId = steps[step]?.id;
     const canNext =
-        currentStepId === "department" ? Boolean(department) :
-        currentStepId === "contact"    ? Boolean(fullName.trim()) && Boolean(email.trim()) :
+        currentStepId === "contact" ? Boolean(fullName.trim()) && Boolean(email.trim()) :
         true;
 
     const CurrentIcon = steps[step].icon;
@@ -307,44 +297,11 @@ export default function ProfileSetupModal({ open, onDone, role = "student", uniD
             {/* Content */}
             <DialogContent sx={{ px: 3.5, py: 3, overflowY: "auto" }}>
 
-                {/* DEPARTMENT — supervisors only */}
-                {currentStepId === "department" && isSupervisor && (
-                    <Stack spacing={2}>
-                        <InnerCard {...cardProps} icon={SchoolOutlinedIcon} title="Selected">
-                            {department ? (
-                                <Stack direction="row" alignItems="center" gap={1.5}>
-                                    <Box sx={{
-                                        width: 32, height: 32, borderRadius: 1.5,
-                                        bgcolor: accent, flexShrink: 0,
-                                        display: "flex", alignItems: "center", justifyContent: "center",
-                                    }}>
-                                        <Box component="span" sx={{ fontSize: 14, color: "#fff", fontWeight: 700 }}>✓</Box>
-                                    </Box>
-                                    <Box>
-                                        <Typography fontWeight={700} fontSize="0.88rem" sx={{ color: textPri }}>{department}</Typography>
-                                        <Typography fontSize="0.72rem" sx={{ color: textSec }}>Your engineering department</Typography>
-                                    </Box>
-                                </Stack>
-                            ) : (
-                                <Typography fontSize="0.82rem" sx={{ color: textSec }}>No department selected yet</Typography>
-                            )}
-                        </InnerCard>
-
-                        <InnerCard {...cardProps} icon={SchoolOutlinedIcon} title="Choose Department *">
-                            <Stack direction="row" flexWrap="wrap" gap={1}>
-                                {ALL_DEPARTMENTS.map((d) => (
-                                    <Chip key={d} label={d} onClick={() => setDepartment(d)} sx={chipSx(department === d)} />
-                                ))}
-                            </Stack>
-                        </InnerCard>
-                    </Stack>
-                )}
-
                 {/* SKILLS / RESEARCH AREAS */}
                 {currentStepId === "skills" && (
                     <Stack spacing={2}>
-                        {/* University department badge — students only */}
-                        {isStudent && uniDepartment && (
+                        {/* Department badge — shown for both roles, auto-filled from uniDepartment */}
+                        {uniDepartment && (
                             <Box sx={{
                                 display: "flex", alignItems: "center", gap: 1, px: 2, py: 1.2,
                                 borderRadius: 2, bgcolor: a10, border: `1px solid ${a22}`,
@@ -354,7 +311,7 @@ export default function ProfileSetupModal({ open, onDone, role = "student", uniD
                                     {uniDepartment}
                                 </Typography>
                                 <Typography fontSize="0.72rem" sx={{ color: textSec, opacity: 0.7 }}>
-                                    · skills tailored to your department
+                                    · {isSupervisor ? "research areas tailored to your department" : "skills tailored to your department"}
                                 </Typography>
                             </Box>
                         )}

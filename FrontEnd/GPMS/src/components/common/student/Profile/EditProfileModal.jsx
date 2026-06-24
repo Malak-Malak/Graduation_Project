@@ -19,18 +19,7 @@ import CodeOutlinedIcon from "@mui/icons-material/CodeOutlined";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import ContactPhoneOutlinedIcon from "@mui/icons-material/ContactPhoneOutlined";
 import AddIcon from "@mui/icons-material/Add";
-import CheckIcon from "@mui/icons-material/Check";
 import { getSkillsForDepartment } from "../../../../api/handler/endpoints/studentApi";
-
-// ── Departments (supervisors only) ───────────────────────────────────────────
-const ALL_DEPARTMENTS = [
-    "Computer Engineering",
-    "Electrical Engineering",
-    "Mechanical Engineering",
-    "Mechatronics Engineering",
-    "Telecommunications Engineering",
-    "Power & Energy Engineering",
-];
 
 // ── Supervisor research areas ─────────────────────────────────────────────────
 const SUPERVISOR_SKILLS = [
@@ -49,12 +38,11 @@ const SUPERVISOR_SKILLS = [
     "Distributed Systems & Blockchain",
 ];
 
-// ── All sections; department is filtered out for students ─────────────────────
+// ── Sections — department removed for both roles (comes from API) ─────────────
 const ALL_SECTIONS = [
-    { id: "department", label: "Department", icon: SchoolOutlinedIcon },
-    { id: "skills",     label: "Skills",      icon: CodeOutlinedIcon },
-    { id: "contact",    label: "Contact",     icon: ContactPhoneOutlinedIcon },
-    { id: "bio",        label: "Bio",         icon: PersonOutlineIcon },
+    { id: "skills",  label: "Skills",   icon: CodeOutlinedIcon },
+    { id: "contact", label: "Contact",  icon: ContactPhoneOutlinedIcon },
+    { id: "bio",     label: "Bio",      icon: PersonOutlineIcon },
 ];
 
 const INPUT_SX = {
@@ -104,13 +92,11 @@ export default function EditProfileModal({ open, profile, onSave, onClose, role 
 
     const normalizedRole = (role ?? "student").toLowerCase();
     const isSupervisor   = normalizedRole === "supervisor";
-    const isStudent      = normalizedRole === "student";
 
-    // Students don't see the department section — it's locked from university
-    const sections = ALL_SECTIONS.filter(s => !(isStudent && s.id === "department"));
+    // Department is always from uniDepartment prop for both roles — no section needed
+    const sections = ALL_SECTIONS;
 
     const [activeSection,    setActiveSection]    = useState(sections[0]?.id ?? "skills");
-    const [department,       setDepartment]       = useState("");   // supervisors only
     const [skills,           setSkills]           = useState([]);
     const [customSkillInput, setCustomSkillInput] = useState("");
     const [fullName,         setFullName]         = useState("");
@@ -123,7 +109,6 @@ export default function EditProfileModal({ open, profile, onSave, onClose, role 
     useEffect(() => {
         if (open) {
             setActiveSection(sections[0]?.id ?? "skills");
-            setDepartment(profile?.department || "");
             setSkills(profile?.skills || []);
             setCustomSkillInput("");
             setFullName(profile?.fullName || "");
@@ -133,7 +118,7 @@ export default function EditProfileModal({ open, profile, onSave, onClose, role 
             setGithub(profile?.github || "");
             setBio(profile?.bio || "");
         }
-    }, [open, profile]);   // eslint-disable-line react-hooks/exhaustive-deps
+    }, [open, profile]); // eslint-disable-line react-hooks/exhaustive-deps
 
     /* ── Design tokens ── */
     const accent       = "#d0895b";
@@ -154,7 +139,7 @@ export default function EditProfileModal({ open, profile, onSave, onClose, role 
     const headerBaseProps = { accent, border, isDark, labelSx, accentSoft, accentBorder };
 
     /* ── Dynamic skill suggestions ─────────────────────────────────────────── */
-    // Students: suggestions based on uniDepartment (from /my-university-info)
+    // Both roles: use uniDepartment from /my-university-info
     // Supervisors: fixed research areas list
     const suggestedSkills = isSupervisor
         ? SUPERVISOR_SKILLS
@@ -173,13 +158,21 @@ export default function EditProfileModal({ open, profile, onSave, onClose, role 
     const removeSkill = (s) => setSkills((p) => p.filter((x) => x !== s));
 
     const handleSave = () => {
-        // Students use uniDepartment; supervisors use their chosen department
-        const resolvedDepartment = isStudent ? uniDepartment : department;
-        onSave({ department: resolvedDepartment, skills, fullName, email, phoneNumber, linkedin, github, bio });
+        // Both roles: department always comes from uniDepartment prop
+        onSave({
+            department:  uniDepartment,
+            skills,
+            fullName,
+            email,
+            phoneNumber,
+            linkedin,
+            github,
+            bio,
+        });
     };
 
-    const canSave = Boolean(fullName.trim()) && Boolean(email.trim()) &&
-        (isStudent ? Boolean(uniDepartment) : Boolean(department));
+    // canSave: name + email required; department must exist (from uniDepartment)
+    const canSave = Boolean(fullName.trim()) && Boolean(email.trim()) && Boolean(uniDepartment);
 
     const sectionIndex = sections.findIndex(s => s.id === activeSection);
 
@@ -214,13 +207,20 @@ export default function EditProfileModal({ open, profile, onSave, onClose, role 
                         <Typography fontWeight={700} fontSize="0.9rem" sx={{ color: textPri }}>
                             Edit Profile
                         </Typography>
-                        {/* Show locked department for students */}
-                        {isStudent && uniDepartment && (
+                        {/* Department badge — locked for both roles, comes from university */}
+                        {uniDepartment ? (
                             <Stack direction="row" alignItems="center" gap={0.6} mt={0.3}>
                                 <SchoolOutlinedIcon sx={{ fontSize: 11, color: textSec }} />
                                 <Typography fontSize="0.68rem" sx={{ color: textSec }}>
                                     {uniDepartment}
                                     <Box component="span" sx={{ opacity: 0.55, ml: 0.5 }}>· from university</Box>
+                                </Typography>
+                            </Stack>
+                        ) : (
+                            <Stack direction="row" alignItems="center" gap={0.6} mt={0.3}>
+                                <SchoolOutlinedIcon sx={{ fontSize: 11, color: "error.main" }} />
+                                <Typography fontSize="0.68rem" sx={{ color: "error.main" }}>
+                                    Department not loaded — please refresh.
                                 </Typography>
                             </Stack>
                         )}
@@ -284,61 +284,11 @@ export default function EditProfileModal({ open, profile, onSave, onClose, role 
 
                         <DialogContent sx={{ flex: 1, px: 3, py: 3, overflowY: "auto" }}>
 
-                            {/* DEPARTMENT (supervisors only) */}
-                            {activeSection === "department" && !isStudent && (
-                                <Stack spacing={2}>
-                                    <InnerCard {...cardBaseProps}>
-                                        <CardHeader {...headerBaseProps} icon={SchoolOutlinedIcon} title="Selected Department" />
-                                        <Box sx={{ px: 2.5, py: 2 }}>
-                                            {department ? (
-                                                <Stack direction="row" alignItems="center" gap={1.5}>
-                                                    <Box sx={{
-                                                        width: 36, height: 36, borderRadius: 2,
-                                                        bgcolor: accent, display: "flex",
-                                                        alignItems: "center", justifyContent: "center", flexShrink: 0,
-                                                    }}>
-                                                        <CheckIcon sx={{ fontSize: 18, color: "#fff" }} />
-                                                    </Box>
-                                                    <Box>
-                                                        <Typography fontWeight={700} fontSize="0.88rem" sx={{ color: textPri }}>{department}</Typography>
-                                                        <Typography fontSize="0.72rem" sx={{ color: textSec }}>Your engineering department</Typography>
-                                                    </Box>
-                                                </Stack>
-                                            ) : (
-                                                <Typography fontSize="0.82rem" sx={{ color: textSec }}>No department selected yet</Typography>
-                                            )}
-                                        </Box>
-                                    </InnerCard>
-
-                                    <InnerCard {...cardBaseProps}>
-                                        <CardHeader {...headerBaseProps} icon={SchoolOutlinedIcon} title="Choose Department *" />
-                                        <Box sx={{ px: 2.5, py: 2 }}>
-                                            <Stack direction="row" flexWrap="wrap" gap={1}>
-                                                {ALL_DEPARTMENTS.map((d) => {
-                                                    const sel = department === d;
-                                                    return (
-                                                        <Chip key={d} label={d} onClick={() => setDepartment(d)} sx={{
-                                                            height: 30, borderRadius: 1.5,
-                                                            fontSize: "0.78rem", fontWeight: sel ? 700 : 400,
-                                                            bgcolor: sel ? accent : "transparent",
-                                                            color: sel ? "#fff" : textSec,
-                                                            border: `1px solid ${sel ? accent : border}`,
-                                                            cursor: "pointer",
-                                                            "&:hover": { bgcolor: sel ? "#be7a4f" : accentSoft, borderColor: sel ? "#be7a4f" : accentBorder },
-                                                        }} />
-                                                    );
-                                                })}
-                                            </Stack>
-                                        </Box>
-                                    </InnerCard>
-                                </Stack>
-                            )}
-
                             {/* SKILLS / RESEARCH AREAS */}
                             {activeSection === "skills" && (
                                 <Stack spacing={2}>
-                                    {/* University department badge — students only */}
-                                    {isStudent && uniDepartment && (
+                                    {/* Department badge — shown for both roles */}
+                                    {uniDepartment && (
                                         <Box sx={{
                                             display: "flex", alignItems: "center", gap: 1, px: 2, py: 1.2,
                                             borderRadius: 2, bgcolor: accentSoft, border: `1px solid ${accentBorder}`,
@@ -348,7 +298,7 @@ export default function EditProfileModal({ open, profile, onSave, onClose, role 
                                                 {uniDepartment}
                                             </Typography>
                                             <Typography fontSize="0.72rem" sx={{ color: textSec, opacity: 0.7 }}>
-                                                · skills tailored to your department
+                                                · {isSupervisor ? "research areas tailored to your department" : "skills tailored to your department"}
                                             </Typography>
                                         </Box>
                                     )}
@@ -514,7 +464,7 @@ export default function EditProfileModal({ open, profile, onSave, onClose, role 
                                                 Tips for a great bio
                                             </Typography>
                                             <Stack spacing={0.3}>
-                                                {isSupervisor ? [
+                                                {(isSupervisor ? [
                                                     "Your research interests and specializations",
                                                     "Publications or academic contributions",
                                                     "Industry experience or projects",
@@ -524,7 +474,7 @@ export default function EditProfileModal({ open, profile, onSave, onClose, role 
                                                     "Frameworks & tools: React, Django, Flutter…",
                                                     "Previous projects or experience",
                                                     "Competitions or contributions (e.g. hackathons)",
-                                                ].map((tip) => (
+                                                ]).map((tip) => (
                                                     <Typography key={tip} fontSize="0.76rem" sx={{ color: textSec }}>· {tip}</Typography>
                                                 ))}
                                             </Stack>

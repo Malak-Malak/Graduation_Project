@@ -36,7 +36,6 @@ const SUPERVISOR_SKILLS = [
 ];
 
 // ── Steps ─────────────────────────────────────────────────────────────────────
-// ✅ Supervisor no longer has a "department" step — it comes from getUniversityInfo
 const STUDENT_STEPS = [
     { id: "skills",  label: "Skills",       icon: CodeOutlinedIcon,  desc: "Pick your skills — teammates will find you based on these" },
     { id: "contact", label: "Contact Info", icon: BadgeOutlinedIcon, desc: "Let teammates know how to reach you" },
@@ -83,21 +82,16 @@ function InnerCard({ icon: Icon, title, count, action, children, border, cardAlt
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function ProfileSetupModal({ open, onDone, role = "student", uniDepartment = "" }) {
-    // ── ALL HOOKS MUST COME FIRST — before any conditional return ────────────
     const theme  = useTheme();
     const isDark = theme.palette.mode === "dark";
 
     const normalizedRole = (role ?? "student").toLowerCase();
     const isSupervisor   = normalizedRole === "supervisor";
     const isAdmin        = normalizedRole === "admin";
-    const isStudent      = normalizedRole === "student";
 
-    // Steps depend on role
     const steps = isSupervisor ? SUPERVISOR_STEPS : STUDENT_STEPS;
 
-    // ✅ Both roles use uniDepartment from getUniversityInfo (passed as prop).
-    //    For supervisors: use department-mapped skills, fall back to SUPERVISOR_SKILLS.
-    //    For students: use department-mapped skills as usual.
+    // Both roles: uniDepartment comes from getUniversityInfo (passed as prop)
     const departmentSkills = getSkillsForDepartment(uniDepartment);
     const suggestedSkills  = isSupervisor
         ? (departmentSkills && departmentSkills.length > 0 ? departmentSkills : SUPERVISOR_SKILLS)
@@ -115,7 +109,6 @@ export default function ProfileSetupModal({ open, onDone, role = "student", uniD
     const [saving,           setSaving]           = useState(false);
     const [error,            setError]            = useState("");
 
-    // ── NOW it's safe to conditionally render nothing ────────────────────────
     if (isAdmin || !open) return null;
 
     /* ── Design tokens ── */
@@ -158,8 +151,23 @@ export default function ProfileSetupModal({ open, onDone, role = "student", uniD
     const handleNext = async () => {
         if (step < steps.length - 1) { setStep((s) => s + 1); return; }
 
-        // ✅ uniDepartment comes from the parent (via getUniversityInfo) for both roles
-        const data = { department: uniDepartment, skills, fullName, email, phoneNumber, linkedin, github, bio };
+        // Guard: department must be present (required by backend for both roles)
+        if (!uniDepartment) {
+            setError("Department information is missing. Please refresh and try again.");
+            return;
+        }
+
+        const data = {
+            department:  uniDepartment,
+            skills,
+            fullName,
+            email,
+            phoneNumber,
+            linkedin,
+            github,
+            bio,
+        };
+
         setSaving(true);
         setError("");
 
@@ -196,8 +204,9 @@ export default function ProfileSetupModal({ open, onDone, role = "student", uniD
     // Validate current step before allowing Next
     const currentStepId = steps[step]?.id;
     const canNext =
-        currentStepId === "contact" ? Boolean(fullName.trim()) && Boolean(email.trim()) :
-        true;
+        currentStepId === "contact"
+            ? Boolean(fullName.trim()) && Boolean(email.trim())
+            : true;
 
     const CurrentIcon = steps[step].icon;
 
@@ -300,8 +309,8 @@ export default function ProfileSetupModal({ open, onDone, role = "student", uniD
                 {/* SKILLS / RESEARCH AREAS */}
                 {currentStepId === "skills" && (
                     <Stack spacing={2}>
-                        {/* Department badge — shown for both roles, auto-filled from uniDepartment */}
-                        {uniDepartment && (
+                        {/* Department badge — auto-filled from uniDepartment for BOTH roles */}
+                        {uniDepartment ? (
                             <Box sx={{
                                 display: "flex", alignItems: "center", gap: 1, px: 2, py: 1.2,
                                 borderRadius: 2, bgcolor: a10, border: `1px solid ${a22}`,
@@ -312,6 +321,19 @@ export default function ProfileSetupModal({ open, onDone, role = "student", uniD
                                 </Typography>
                                 <Typography fontSize="0.72rem" sx={{ color: textSec, opacity: 0.7 }}>
                                     · {isSupervisor ? "research areas tailored to your department" : "skills tailored to your department"}
+                                </Typography>
+                            </Box>
+                        ) : (
+                            // Warn if department is missing
+                            <Box sx={{
+                                display: "flex", alignItems: "center", gap: 1, px: 2, py: 1.2,
+                                borderRadius: 2,
+                                bgcolor: isDark ? "rgba(211,47,47,0.12)" : "rgba(211,47,47,0.07)",
+                                border: `1px solid rgba(211,47,47,0.25)`,
+                            }}>
+                                <SchoolOutlinedIcon sx={{ fontSize: 14, color: "error.main" }} />
+                                <Typography fontSize="0.78rem" fontWeight={600} sx={{ color: "error.main" }}>
+                                    Department not loaded — please refresh the page.
                                 </Typography>
                             </Box>
                         )}
@@ -492,12 +514,17 @@ export default function ProfileSetupModal({ open, onDone, role = "student", uniD
                             Back
                         </Button>
                     )}
-                    <Button variant="contained" onClick={handleNext} disabled={!canNext || saving} sx={{
-                        bgcolor: accent, "&:hover": { bgcolor: "#be7a4f", boxShadow: "none" },
-                        borderRadius: 2, px: 3, textTransform: "none",
-                        fontWeight: 700, fontSize: "0.85rem", boxShadow: "none",
-                        "&.Mui-disabled": { opacity: 0.45 },
-                    }}>
+                    <Button
+                        variant="contained"
+                        onClick={handleNext}
+                        disabled={!canNext || saving || (step === steps.length - 1 && !uniDepartment)}
+                        sx={{
+                            bgcolor: accent, "&:hover": { bgcolor: "#be7a4f", boxShadow: "none" },
+                            borderRadius: 2, px: 3, textTransform: "none",
+                            fontWeight: 700, fontSize: "0.85rem", boxShadow: "none",
+                            "&.Mui-disabled": { opacity: 0.45 },
+                        }}
+                    >
                         {saving ? "Saving…" : step === steps.length - 1 ? "Finish" : "Next"}
                     </Button>
                 </Stack>

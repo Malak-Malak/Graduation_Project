@@ -91,7 +91,6 @@ export default function ProfileSetupModal({ open, onDone, role = "student", uniD
 
     const steps = isSupervisor ? SUPERVISOR_STEPS : STUDENT_STEPS;
 
-    // Both roles: uniDepartment comes from getUniversityInfo (passed as prop)
     const departmentSkills = getSkillsForDepartment(uniDepartment);
     const suggestedSkills  = isSupervisor
         ? (departmentSkills && departmentSkills.length > 0 ? departmentSkills : SUPERVISOR_SKILLS)
@@ -109,6 +108,7 @@ export default function ProfileSetupModal({ open, onDone, role = "student", uniD
     const [saving,           setSaving]           = useState(false);
     const [error,            setError]            = useState("");
 
+    // ── Guard: don't render for admins or when closed ────────────────────────
     if (isAdmin || !open) return null;
 
     /* ── Design tokens ── */
@@ -151,7 +151,6 @@ export default function ProfileSetupModal({ open, onDone, role = "student", uniD
     const handleNext = async () => {
         if (step < steps.length - 1) { setStep((s) => s + 1); return; }
 
-        // Guard: department must be present (required by backend for both roles)
         if (!uniDepartment) {
             setError("Department information is missing. Please refresh and try again.");
             return;
@@ -201,7 +200,6 @@ export default function ProfileSetupModal({ open, onDone, role = "student", uniD
         }
     };
 
-    // Validate current step before allowing Next
     const currentStepId = steps[step]?.id;
     const canNext =
         currentStepId === "contact"
@@ -309,7 +307,6 @@ export default function ProfileSetupModal({ open, onDone, role = "student", uniD
                 {/* SKILLS / RESEARCH AREAS */}
                 {currentStepId === "skills" && (
                     <Stack spacing={2}>
-                        {/* Department badge — auto-filled from uniDepartment for BOTH roles */}
                         {uniDepartment ? (
                             <Box sx={{
                                 display: "flex", alignItems: "center", gap: 1, px: 2, py: 1.2,
@@ -324,7 +321,6 @@ export default function ProfileSetupModal({ open, onDone, role = "student", uniD
                                 </Typography>
                             </Box>
                         ) : (
-                            // Warn if department is missing
                             <Box sx={{
                                 display: "flex", alignItems: "center", gap: 1, px: 2, py: 1.2,
                                 borderRadius: 2,
@@ -339,7 +335,6 @@ export default function ProfileSetupModal({ open, onDone, role = "student", uniD
                         )}
 
                         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                            {/* Custom input — students only */}
                             {!isSupervisor && (
                                 <InnerCard {...cardProps} icon={AddIcon} title="Add Custom Skill">
                                     <TextField

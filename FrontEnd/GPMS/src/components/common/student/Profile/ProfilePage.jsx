@@ -45,8 +45,10 @@ const normalizeProfile = (raw) => {
     };
 };
 
+// ── Profile is considered empty only if core fields are missing ──────────────
+// Department excluded because it always comes from university, not the profile itself
 const isProfileEmpty = (p) =>
-    !p || (!p.fullName && !p.email && !p.department);
+    !p || (!p.fullName && !p.email && !p.skills?.length && !p.bio);
 
 // Safely extract a string error message from any API error
 const extractErrorMessage = (e) => {
@@ -74,23 +76,32 @@ export default function ProfilePage() {
     const [teamLoading,   setTeamLoading]   = useState(true);
     const [uniDepartment, setUniDepartment] = useState("");
 
-    // ── Fetch university info for ALL non-admin roles ───────────────────────
-    // ✅ FIX: was `if (!isStudent) return` — supervisors also need the department
+    // ── Track when university info has finished loading ──────────────────────
+    // Admins don't need it, so we mark it as already loaded for them
+    const [uniLoaded, setUniLoaded] = useState(isAdmin);
+
+    // ── Fetch university info for ALL non-admin roles ────────────────────────
     useEffect(() => {
         if (isAdmin) return;
         studentApi.getUniversityInfo()
             .then((d) => setUniDepartment(d?.department ?? ""))
-            .catch(() => setUniDepartment(""));
+            .catch(() => setUniDepartment(""))
+            .finally(() => setUniLoaded(true)); // ← signal that uni info is ready
     }, [isAdmin]);
 
-    // ── Fetch profile ───────────────────────────────────────────────────────
+    // ── Fetch profile — wait for uniLoaded first to avoid race condition ─────
     useEffect(() => {
+        // Don't run until university info is ready (prevents blank department flicker
+        // and ensures the setup modal only opens after we know the full context)
+        if (!isAdmin && !uniLoaded) return;
+
         const profileDone = sessionStorage.getItem("gpms_profile_done");
 
         studentApi.getProfile()
             .then((d) => {
                 const normalized = normalizeProfile(d);
                 setProfile(normalized);
+                // Only open setup modal if the profile is genuinely empty
                 if (!isAdmin && isProfileEmpty(normalized) && !profileDone) {
                     setSetupOpen(true);
                 }
@@ -103,7 +114,7 @@ export default function ProfilePage() {
                 }
             })
             .finally(() => setLoading(false));
-    }, [isAdmin]);
+    }, [isAdmin, uniLoaded]); // ← uniLoaded as dependency ensures correct order
 
     // ── Fetch my team (students only) ───────────────────────────────────────
     useEffect(() => {
@@ -116,17 +127,14 @@ export default function ProfilePage() {
 
     // ── Save edits ──────────────────────────────────────────────────────────
     const handleSave = async (updated) => {
-        // Always use university-locked department for students; supervisors use their chosen/uni department
         const department = uniDepartment || updated.department;
         const payload = { ...updated, department };
         try {
             await studentApi.updateProfile(payload);
-            // Re-fetch to get the correctly encoded/decoded profile from backend
             const fresh = await studentApi.getProfile().catch(() => null);
             if (fresh) {
                 setProfile(normalizeProfile(fresh));
             } else {
-                // Fallback: build from payload using proper encoding path
                 setProfile(normalizeProfile({
                     fullName:      payload.fullName,
                     phoneNumber:   payload.phoneNumber,
@@ -162,10 +170,10 @@ export default function ProfilePage() {
     const displayName  = profile?.fullName || user?.name || user?.username || "User";
     const avatarLetter = displayName.charAt(0).toUpperCase();
 
-    // Department shown in the UI: prefer uni info for all non-admin roles
     const displayDepartment = uniDepartment || profile?.department || "";
 
-    if (loading) return (
+    // ── Show loader until BOTH university info and profile are ready ─────────
+    if (loading || (!isAdmin && !uniLoaded)) return (
         <Box display="flex" justifyContent="center" alignItems="center" minHeight={300}>
             <CircularProgress size={26} sx={{ color: getAccent(role) }} />
         </Box>
@@ -356,7 +364,6 @@ export default function ProfilePage() {
                                     border: `1px solid ${a22}`,
                                 }}
                             />
-                            {/* Show "from university" label for both students and supervisors */}
                             {!isAdmin && (
                                 <Typography fontSize="0.68rem" sx={{ color: textSec, opacity: 0.6 }}>
                                     from university

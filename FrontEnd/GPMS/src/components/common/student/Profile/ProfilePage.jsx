@@ -106,9 +106,9 @@ export default function ProfilePage() {
             .catch((err) => {
                 setProfile(null);
                 const status = err?.response?.status;
-               if (!isAdmin && (status === 404 || status === 400) && !profileDone) {
-                    setSetupOpen(true);
-                }
+            //    if (!isAdmin && (status === 404 || status === 400) && !profileDone) {
+            //         setSetupOpen(true);
+            //     }
             })
             .finally(() => setLoading(false));
     }, [isAdmin, uniLoaded]); // ← uniLoaded as dependency ensures correct order
